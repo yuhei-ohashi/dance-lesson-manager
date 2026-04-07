@@ -1033,70 +1033,98 @@ function openStudentModal(s) {
   const ticket  = getTicket(s.id, s.ticket);
   const history = getMemoHistory(s);
 
-  const ticketChips = TICKET_TYPES.map(t => `
-    <button onclick="selectStudentTicket(this,'${t.id}',${s.id})"
-      data-ticket="${t.id}"
-      style="padding:5px 10px;border-radius:20px;font-size:11px;font-weight:700;border:1.5px solid ${t.id===ticket.id?t.color:'#e5e7eb'};cursor:pointer;font-family:inherit;
-        background:${t.id===ticket.id?t.bg:'#fafafa'};color:${t.id===ticket.id?t.color:'#9ca3af'};">
-      ${t.label}
-    </button>`).join('');
+  // DOM操作でモーダルを直接構築（innerHTML の複雑なネストを回避）
+  const overlay = document.getElementById('modal-overlay');
+  const content = document.getElementById('modal-content');
+  content.innerHTML = '';
 
-  const historyHtml = history.map((h, i) => `
-    <div style="padding:10px 0;${i<history.length-1?'border-bottom:1px solid #f3f4f6;':''}">
-      <div style="font-size:10px;font-weight:700;color:#9ca3af;margin-bottom:4px;">${h.date}</div>
-      <p style="font-size:12px;color:#374151;line-height:1.6;margin:0 0 4px;">${h.memo}</p>
-      ${h.goal ? `<p style="font-size:11px;color:#6366f1;line-height:1.5;margin:0;"><span style="font-weight:700;">→ 次回目標: </span>${h.goal}</p>` : ''}
-    </div>`).join('');
+  // ── ヘッダー ──────────────────────────────
+  const header = el('div', 'padding:16px 20px 12px;border-bottom:1px solid #f3f4f6;');
+  const hRow   = el('div', 'display:flex;align-items:center;gap:12px;');
+  const icon   = el('div', 'width:56px;height:56px;border-radius:18px;background:' + st.light + ';color:' + st.accent + ';display:flex;align-items:center;justify-content:center;font-size:26px;font-weight:800;flex-shrink:0;');
+  icon.textContent = s.name.charAt(0);
+  const info   = el('div', '');
+  const nameRow = el('div', 'display:flex;align-items:center;gap:7px;margin-bottom:2px;flex-wrap:wrap;');
+  const nameEl = el('span', 'font-size:20px;font-weight:800;color:#111827;'); nameEl.textContent = s.name;
+  const tkBadge = el('span', 'font-size:10px;font-weight:700;padding:2px 7px;border-radius:5px;background:' + ticket.bg + ';color:' + ticket.color + ';'); tkBadge.textContent = ticket.label;
+  nameRow.append(nameEl, tkBadge);
+  const furiEl = el('p', 'font-size:11px;color:#9ca3af;margin:0;'); furiEl.textContent = s.furi;
+  const infoEl = el('p', 'font-size:12px;color:#6b7280;margin:4px 0 0;'); infoEl.textContent = s.dances + ' · ' + s.since + '〜';
+  info.append(nameRow, furiEl, infoEl);
+  hRow.append(icon, info);
+  header.append(hRow);
 
-  openModal(`
-    <div style="padding:16px 20px 12px;border-bottom:1px solid #f3f4f6;">
-      <div style="display:flex;align-items:center;gap:12px;">
-        <div style="width:56px;height:56px;border-radius:18px;background:${st.light};color:${st.accent};display:flex;align-items:center;justify-content:center;font-size:26px;font-weight:800;flex-shrink:0;">${s.name.charAt(0)}</div>
-        <div>
-          <div style="display:flex;align-items:center;gap:7px;margin-bottom:2px;flex-wrap:wrap;">
-            <span style="font-size:20px;font-weight:800;color:#111827;">${s.name}</span>
-            <span style="font-size:10px;font-weight:700;padding:2px 7px;border-radius:5px;background:${ticket.bg};color:${ticket.color};">${ticket.label}</span>
-          </div>
-          <p style="font-size:11px;color:#9ca3af;">${s.furi}</p>
-          <p style="font-size:12px;color:#6b7280;margin-top:2px;">${s.dances} · ${s.since}〜</p>
-        </div>
-      </div>
-    </div>
-    <div style="padding:14px 20px;display:flex;flex-direction:column;gap:14px;">
-      <!-- チケット種別 -->
-      <div>
-        <label style="display:block;font-size:11px;font-weight:700;color:#6b7280;letter-spacing:0.07em;text-transform:uppercase;margin-bottom:8px;">🎫 チケット種別</label>
-        <div id="student-ticket-chips" style="display:flex;gap:6px;flex-wrap:wrap;">${ticketChips}</div>
-      </div>
-      <!-- 受講実績 -->
-      <div style="background:#f9fafb;border-radius:14px;padding:12px;">
-        <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:8px;">
-          <div style="text-align:center;background:white;border-radius:12px;padding:10px;box-shadow:0 1px 3px rgba(0,0,0,0.05);">
-            <div style="font-size:22px;font-weight:900;color:#6366f1;line-height:1;">${history.length}</div>
-            <div style="font-size:9px;color:#9ca3af;margin-top:3px;">メモ件数</div>
-          </div>
-          <div style="text-align:center;background:white;border-radius:12px;padding:10px;box-shadow:0 1px 3px rgba(0,0,0,0.05);">
-            <div style="font-size:22px;font-weight:900;color:#059669;line-height:1;">${hasLessonToday(s.name)?'本日':'—'}</div>
-            <div style="font-size:9px;color:#9ca3af;margin-top:3px;">今日の予定</div>
-          </div>
-          <div style="text-align:center;background:white;border-radius:12px;padding:10px;box-shadow:0 1px 3px rgba(0,0,0,0.05);">
-            <div style="font-size:14px;font-weight:900;color:#f59e0b;line-height:1;margin-top:4px;">${s.lastLesson}</div>
-            <div style="font-size:9px;color:#9ca3af;margin-top:3px;">最終レッスン</div>
-          </div>
-        </div>
-      </div>
-      <!-- メモ履歴 -->
-      <div>
-        <label style="display:block;font-size:11px;font-weight:700;color:#6b7280;letter-spacing:0.07em;text-transform:uppercase;margin-bottom:8px;">📂 レッスン履歴 (${history.length}件)</label>
-        <div style="background:#f8f9fa;border-radius:14px;padding:4px 12px;max-height:220px;overflow-y:auto;">
-          ${historyHtml || '<p style="font-size:12px;color:#9ca3af;text-align:center;padding:16px 0;">まだメモがありません</p>'}
-        </div>
-      </div>
-    </div>
-    <div style="padding:4px 20px 32px;display:flex;gap:10px;">
-      <button onclick="closeModal()"
-        style="flex:1;background:#f3f4f6;color:#6b7280;font-weight:700;padding:15px;border-radius:16px;border:none;font-size:14px;cursor:pointer;font-family:inherit;">閉じる</button>
-    </div>`);
+  // ── ボディ ──────────────────────────────
+  const body = el('div', 'padding:14px 20px;display:flex;flex-direction:column;gap:14px;overflow-y:auto;max-height:calc(88dvh - 180px);');
+
+  // チケット種別
+  const ticketSection = el('div', '');
+  const tkLabel = el('div', 'font-size:11px;font-weight:700;color:#6b7280;text-transform:uppercase;letter-spacing:0.07em;margin-bottom:8px;'); tkLabel.textContent = '🎫 チケット種別';
+  const tkChips = el('div', 'display:flex;gap:6px;flex-wrap:wrap;'); tkChips.id = 'student-ticket-chips';
+  TICKET_TYPES.forEach(t => {
+    const active = (t.id === ticket.id);
+    const btn = el('button', 'padding:5px 10px;border-radius:20px;font-size:11px;font-weight:700;cursor:pointer;font-family:inherit;border:1.5px solid ' + (active ? t.color : '#e5e7eb') + ';background:' + (active ? t.bg : '#fafafa') + ';color:' + (active ? t.color : '#9ca3af') + ';');
+    btn.textContent = t.label;
+    btn.dataset.ticket = t.id;
+    btn.onclick = function() { selectStudentTicket(this, t.id, s.id); };
+    tkChips.appendChild(btn);
+  });
+  ticketSection.append(tkLabel, tkChips);
+
+  // 受講実績（3列）
+  const statsBox = el('div', 'background:#f9fafb;border-radius:14px;padding:12px;');
+  const statsGrid = el('div', 'display:grid;grid-template-columns:1fr 1fr 1fr;gap:8px;');
+  [[history.length, 'メモ件数', '#6366f1'], [hasLessonToday(s.name) ? '本日' : '—', '今日の予定', '#059669'], [s.lastLesson, '最終', '#f59e0b']].forEach(([val, lbl, col]) => {
+    const cell = el('div', 'text-align:center;background:white;border-radius:12px;padding:10px;box-shadow:0 1px 3px rgba(0,0,0,0.05);');
+    const v = el('div', 'font-size:' + (String(val).length > 3 ? '13' : '22') + 'px;font-weight:900;color:' + col + ';line-height:1.2;'); v.textContent = val;
+    const l = el('div', 'font-size:9px;color:#9ca3af;margin-top:3px;'); l.textContent = lbl;
+    cell.append(v, l); statsGrid.appendChild(cell);
+  });
+  statsBox.appendChild(statsGrid);
+
+  // レッスン履歴
+  const histSection = el('div', '');
+  const histLabel = el('div', 'font-size:11px;font-weight:700;color:#6b7280;text-transform:uppercase;letter-spacing:0.07em;margin-bottom:8px;'); histLabel.textContent = '📂 レッスン履歴 (' + history.length + '件)';
+  const histBox = el('div', 'background:#f8f9fa;border-radius:14px;padding:4px 12px;max-height:200px;overflow-y:auto;');
+  if (history.length === 0) {
+    const emp = el('p', 'font-size:12px;color:#9ca3af;text-align:center;padding:16px 0;'); emp.textContent = 'まだメモがありません'; histBox.appendChild(emp);
+  } else {
+    history.forEach((h, i) => {
+      const row = el('div', 'padding:10px 0;' + (i < history.length-1 ? 'border-bottom:1px solid #f3f4f6;' : ''));
+      const d = el('div', 'font-size:10px;font-weight:700;color:#9ca3af;margin-bottom:4px;'); d.textContent = h.date;
+      const m = el('p', 'font-size:12px;color:#374151;line-height:1.6;margin:0 0 4px;'); m.textContent = h.memo;
+      row.append(d, m);
+      if (h.goal) {
+        const g = el('p', 'font-size:11px;color:#6366f1;line-height:1.5;margin:0;');
+        const s = el('span', 'font-weight:700;'); s.textContent = '→ 次回目標: ';
+        g.append(s); g.append(document.createTextNode(h.goal));
+        row.appendChild(g);
+      }
+      histBox.appendChild(row);
+    });
+  }
+  histSection.append(histLabel, histBox);
+  body.append(ticketSection, statsBox, histSection);
+
+  // ── フッター ──────────────────────────────
+  const footer = el('div', 'padding:4px 20px 32px;');
+  const closeBtn = el('button', 'width:100%;background:#f3f4f6;color:#6b7280;font-weight:700;padding:15px;border-radius:16px;border:none;font-size:14px;cursor:pointer;font-family:inherit;');
+  closeBtn.textContent = '閉じる'; closeBtn.onclick = closeModal;
+  footer.appendChild(closeBtn);
+
+  content.append(header, body, footer);
+
+  overlay.style.display = 'flex';
+  overlay.offsetHeight;
+  overlay.style.opacity = '1';
+  document.getElementById('modal-sheet').style.transform = 'translateY(0)';
+}
+
+// DOM要素生成ヘルパー
+function el(tag, css) {
+  const d = document.createElement(tag);
+  if (css) d.style.cssText = css;
+  return d;
 }
 
 function selectStudentTicket(btn, ticketId, studentId) {
