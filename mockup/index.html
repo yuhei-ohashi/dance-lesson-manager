@@ -144,16 +144,16 @@
     <div id="tab-calendar" class="absolute inset-0 calendar-scroll">
       <!-- Location legend -->
       <div style="display:flex;align-items:center;gap:6px;padding:6px 14px;background:white;border-bottom:1px solid #f9fafb;flex-wrap:wrap;">
-        <div style="display:flex;align-items:center;gap:4px;font-size:10px;font-weight:700;color:#1d4ed8;background:#dbeafe;padding:3px 8px;border-radius:6px;">
-          <div style="width:6px;height:6px;border-radius:50%;background:#3b82f6;"></div>
+        <div style="display:flex;align-items:center;gap:4px;font-size:10px;font-weight:700;color:#3f6212;background:#ecfccb;padding:3px 8px;border-radius:6px;">
+          <div style="width:6px;height:6px;border-radius:50%;background:#84cc16;"></div>
           @齊藤DG
         </div>
-        <div style="display:flex;align-items:center;gap:4px;font-size:10px;font-weight:700;color:#15803d;background:#dcfce7;padding:3px 8px;border-radius:6px;">
-          <div style="width:6px;height:6px;border-radius:50%;background:#22c55e;"></div>
+        <div style="display:flex;align-items:center;gap:4px;font-size:10px;font-weight:700;color:#9a3412;background:#ffedd5;padding:3px 8px;border-radius:6px;">
+          <div style="width:6px;height:6px;border-radius:50%;background:#f97316;"></div>
           @仙台SS
         </div>
-        <div style="display:flex;align-items:center;gap:4px;font-size:10px;font-weight:700;color:#92400e;background:#fef3c7;padding:3px 8px;border-radius:6px;">
-          <div style="width:6px;height:6px;border-radius:50%;background:#f59e0b;"></div>
+        <div style="display:flex;align-items:center;gap:4px;font-size:10px;font-weight:700;color:#1e40af;background:#dbeafe;padding:3px 8px;border-radius:6px;">
+          <div style="width:6px;height:6px;border-radius:50%;background:#3b82f6;"></div>
           @泉中央
         </div>
       </div>
@@ -239,6 +239,9 @@ const S = {
   amber:   { bg:'#fffbeb', border:'#fcd34d', text:'#92400e', accent:'#f59e0b', light:'#fef3c7' },
   gray:    { bg:'#f9fafb', border:'#e5e7eb', text:'#4b5563', accent:'#9ca3af', light:'#f3f4f6' },
   purple:  { bg:'#faf5ff', border:'#c4b5fd', text:'#4c1d95', accent:'#8b5cf6', light:'#ede9fe' },
+  lime:    { bg:'#f7fee7', border:'#a3e635', text:'#3f6212', accent:'#84cc16', light:'#ecfccb' },
+  orange:  { bg:'#fff7ed', border:'#fb923c', text:'#9a3412', accent:'#f97316', light:'#ffedd5' },
+  blue:    { bg:'#eff6ff', border:'#93c5fd', text:'#1e40af', accent:'#3b82f6', light:'#dbeafe' },
 };
 const LV = {
   '初級': { bg:'#dbeafe', text:'#1e40af' },
@@ -252,55 +255,55 @@ const DAY_DATES  = [6,7,8,9,10,11,12];
 
 // スタジオゾーン設定（SSoT: ここだけ変更すれば全体に反映）
 const STUDIOS = {
-  saito:    { loc:'齊藤DG',  bg:'#eff6ff', zb:'#93c5fd', style:'indigo'  },
-  sendai:   { loc:'仙台SS',  bg:'#f0fdf4', zb:'#86efac', style:'emerald' },
-  izumi:    { loc:'泉中央',  bg:'#fffbeb', zb:'#fcd34d', style:'amber'   },
+  saito:    { loc:'齊藤DG',  bg:'#f7fee7', zb:'#a3e635', style:'lime'   },  // 黄緑
+  sendai:   { loc:'仙台SS',  bg:'#fff7ed', zb:'#fb923c', style:'orange' },  // オレンジ
+  izumi:    { loc:'泉中央',  bg:'#eff6ff', zb:'#93c5fd', style:'blue'   },  // 青
 };
 
 const WEEK_EVENTS = {
   0: [
     { type:'zone', start:[10,0], end:[13,0], ...STUDIOS.saito },
-    { type:'lesson', id:11, start:[10,0],  end:[11,0],  name:'田中 花子', loc:'@齊藤DG', level:'初級', style:'indigo' },
-    { type:'lesson', id:12, start:[11,30], end:[12,30], name:'小林 あい',  loc:'@齊藤DG', level:'中級', style:'indigo' },
+    { type:'lesson', id:11, start:[10,0],  end:[11,0],  name:'田中 花子', loc:'@齊藤DG', level:'初級', style:'lime' },
+    { type:'lesson', id:12, start:[11,30], end:[12,30], name:'小林 あい',  loc:'@齊藤DG', level:'中級', style:'lime' },
     { type:'block',  id:13, start:[14,0],  end:[18,0],  label:'プライベート', sub:'', repeat:true, style:'gray' },
   ],
   1: [
     { type:'zone', start:[9,0], end:[12,30], ...STUDIOS.sendai },
-    { type:'lesson', id:14, start:[9,0],   end:[10,0],  name:'伊藤 健太', loc:'@仙台SS', level:'中級', style:'emerald' },
-    { type:'lesson', id:15, start:[10,30], end:[11,30], name:'鈴木 美咲', loc:'@仙台SS', level:'初級', style:'emerald' },
+    { type:'lesson', id:14, start:[9,0],   end:[10,0],  name:'伊藤 健太', loc:'@仙台SS', level:'中級', style:'orange' },
+    { type:'lesson', id:15, start:[10,30], end:[11,30], name:'鈴木 美咲', loc:'@仙台SS', level:'初級', style:'orange' },
     { type:'block',  id:16, start:[12,0],  end:[12,30], label:'移動', sub:'仙台SS → 齊藤DG', repeat:false, style:'gray' },
   ],
   2: [
     { type:'zone', start:[9,0],   end:[11,30], ...STUDIOS.saito  },
     { type:'zone', start:[11,30], end:[17,30], ...STUDIOS.sendai },
     { type:'zone', start:[18,30], end:[20,30], ...STUDIOS.izumi  },
-    { type:'lesson', id:1, start:[9,0],   end:[10,0],  name:'田中 花子', loc:'@齊藤DG', level:'初級', style:'indigo'  },
-    { type:'lesson', id:2, start:[10,0],  end:[11,0],  name:'松本 由美', loc:'@齊藤DG', level:'中級', style:'indigo'  },
+    { type:'lesson', id:1, start:[9,0],   end:[10,0],  name:'田中 花子', loc:'@齊藤DG', level:'初級', style:'lime'   },
+    { type:'lesson', id:2, start:[10,0],  end:[11,0],  name:'松本 由美', loc:'@齊藤DG', level:'中級', style:'lime'   },
     { type:'block',  id:20, start:[11,0], end:[11,30], label:'移動', sub:'齊藤DG → 仙台SS', repeat:false, style:'gray' },
-    { type:'lesson', id:3, start:[11,30], end:[12,30], name:'山田 悟',   loc:'@仙台SS', level:'上級', style:'emerald' },
-    { type:'block',  id:21, start:[12,30],end:[14,0],  label:'昼休憩',  sub:'',                repeat:true,  style:'amber'  },
-    { type:'lesson', id:4, start:[14,0],  end:[15,0],  name:'鈴木 美咲', loc:'@仙台SS', level:'初級', style:'emerald' },
-    { type:'lesson', id:5, start:[15,30], end:[16,30], name:'伊藤 健太', loc:'@仙台SS', level:'中級', style:'emerald' },
+    { type:'lesson', id:3, start:[11,30], end:[12,30], name:'山田 悟',   loc:'@仙台SS', level:'上級', style:'orange' },
+    { type:'block',  id:21, start:[12,30],end:[14,0],  label:'昼休憩',  sub:'',                repeat:true,  style:'gray'   },
+    { type:'lesson', id:4, start:[14,0],  end:[15,0],  name:'鈴木 美咲', loc:'@仙台SS', level:'初級', style:'orange' },
+    { type:'lesson', id:5, start:[15,30], end:[16,30], name:'伊藤 健太', loc:'@仙台SS', level:'中級', style:'orange' },
     { type:'block',  id:22, start:[17,0], end:[17,30], label:'移動', sub:'仙台SS → 泉中央', repeat:false, style:'gray' },
-    { type:'lesson', id:6, start:[18,30], end:[19,30], name:'渡辺 麻衣', loc:'@泉中央', level:'中級', style:'amber'   },
-    { type:'lesson', id:7, start:[19,30], end:[20,30], name:'佐藤 義雄', loc:'@泉中央', level:'初級', style:'amber'   },
+    { type:'lesson', id:6, start:[18,30], end:[19,30], name:'渡辺 麻衣', loc:'@泉中央', level:'中級', style:'blue'   },
+    { type:'lesson', id:7, start:[19,30], end:[20,30], name:'佐藤 義雄', loc:'@泉中央', level:'初級', style:'blue'   },
   ],
   3: [
     { type:'zone', start:[13,0], end:[20,0], ...STUDIOS.izumi },
-    { type:'lesson', id:17, start:[13,0],  end:[14,0],  name:'渡辺 麻衣', loc:'@泉中央', level:'中級', style:'amber' },
-    { type:'lesson', id:18, start:[14,30], end:[15,30], name:'松本 由美', loc:'@泉中央', level:'中級', style:'amber' },
-    { type:'lesson', id:19, start:[16,0],  end:[17,0],  name:'山田 悟',   loc:'@泉中央', level:'上級', style:'amber' },
-    { type:'lesson', id:23, start:[18,0],  end:[19,0],  name:'佐藤 義雄', loc:'@泉中央', level:'初級', style:'amber' },
+    { type:'lesson', id:17, start:[13,0],  end:[14,0],  name:'渡辺 麻衣', loc:'@泉中央', level:'中級', style:'blue' },
+    { type:'lesson', id:18, start:[14,30], end:[15,30], name:'松本 由美', loc:'@泉中央', level:'中級', style:'blue' },
+    { type:'lesson', id:19, start:[16,0],  end:[17,0],  name:'山田 悟',   loc:'@泉中央', level:'上級', style:'blue' },
+    { type:'lesson', id:23, start:[18,0],  end:[19,0],  name:'佐藤 義雄', loc:'@泉中央', level:'初級', style:'blue' },
   ],
   4: [
     { type:'block', id:30, start:[8,0], end:[22,0], label:'休日', sub:'', repeat:true, style:'gray' },
   ],
   5: [
     { type:'zone', start:[10,0], end:[17,0], ...STUDIOS.sendai },
-    { type:'lesson', id:24, start:[10,0],  end:[11,0],  name:'田中 花子', loc:'@仙台SS', level:'初級', style:'emerald' },
-    { type:'lesson', id:25, start:[11,30], end:[12,30], name:'小林 あい',  loc:'@仙台SS', level:'中級', style:'emerald' },
-    { type:'lesson', id:26, start:[14,0],  end:[15,0],  name:'渡辺 麻衣', loc:'@仙台SS', level:'中級', style:'emerald' },
-    { type:'lesson', id:27, start:[15,30], end:[16,30], name:'松本 由美', loc:'@仙台SS', level:'中級', style:'emerald' },
+    { type:'lesson', id:24, start:[10,0],  end:[11,0],  name:'田中 花子', loc:'@仙台SS', level:'初級', style:'orange' },
+    { type:'lesson', id:25, start:[11,30], end:[12,30], name:'小林 あい',  loc:'@仙台SS', level:'中級', style:'orange' },
+    { type:'lesson', id:26, start:[14,0],  end:[15,0],  name:'渡辺 麻衣', loc:'@仙台SS', level:'中級', style:'orange' },
+    { type:'lesson', id:27, start:[15,30], end:[16,30], name:'松本 由美', loc:'@仙台SS', level:'中級', style:'orange' },
   ],
   6: [],
 };
@@ -784,7 +787,7 @@ function showAddEvent() {
       <div>
         <label style="display:block;font-size:11px;font-weight:700;color:#6b7280;margin-bottom:8px;text-transform:uppercase;letter-spacing:0.06em;">場所</label>
         <div style="display:flex;gap:8px;">
-          <button onclick="setLoc(this)" style="flex:1;padding:10px;border-radius:12px;font-size:11px;font-weight:700;border:1.5px solid #93c5fd;cursor:pointer;background:#eff6ff;color:#1d4ed8;font-family:inherit;transition:all 0.1s;">@齊藤DG</button>
+          <button onclick="setLoc(this)" style="flex:1;padding:10px;border-radius:12px;font-size:11px;font-weight:700;border:1.5px solid #a3e635;cursor:pointer;background:#ecfccb;color:#3f6212;font-family:inherit;transition:all 0.1s;">@齊藤DG</button>
           <button onclick="setLoc(this)" style="flex:1;padding:10px;border-radius:12px;font-size:11px;font-weight:600;border:1.5px solid #e5e7eb;cursor:pointer;background:#f9fafb;color:#4b5563;font-family:inherit;transition:all 0.1s;">@仙台SS</button>
           <button onclick="setLoc(this)" style="flex:1;padding:10px;border-radius:12px;font-size:11px;font-weight:600;border:1.5px solid #e5e7eb;cursor:pointer;background:#f9fafb;color:#4b5563;font-family:inherit;transition:all 0.1s;">@泉中央</button>
         </div>
