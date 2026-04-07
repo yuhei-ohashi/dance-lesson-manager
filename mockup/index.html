@@ -243,12 +243,6 @@ const S = {
   orange:  { bg:'#fff7ed', border:'#fb923c', text:'#9a3412', accent:'#f97316', light:'#ffedd5' },
   blue:    { bg:'#eff6ff', border:'#93c5fd', text:'#1e40af', accent:'#3b82f6', light:'#dbeafe' },
 };
-const LV = {
-  '初級': { bg:'#dbeafe', text:'#1e40af' },
-  '中級': { bg:'#fce7f3', text:'#9d174d' },
-  '上級': { bg:'#dcfce7', text:'#14532d' },
-};
-
 // ─── WEEK DATA ────────────────────────────────────────────────────────────────
 const DAY_LABELS = ['月','火','水','木','金','土','日'];
 const DAY_DATES  = [6,7,8,9,10,11,12];
@@ -308,31 +302,56 @@ const WEEK_EVENTS = {
   6: [],
 };
 
+// チケット種別定義（SSoT）
+const TICKET_TYPES = [
+  { id:'single',    label:'単回券',   color:'#4b5563', bg:'#f3f4f6' },
+  { id:'bundle3',   label:'3枚綴り',  color:'#1d4ed8', bg:'#dbeafe' },
+  { id:'bundle5',   label:'5枚綴り',  color:'#6d28d9', bg:'#ede9fe' },
+  { id:'bundle10',  label:'10枚綴り', color:'#065f46', bg:'#d1fae5' },
+  { id:'monthly',   label:'月謝制',   color:'#92400e', bg:'#fef3c7' },
+];
+
 const STUDENTS = [
-  { id:1,  name:'田中 花子', furi:'タナカ ハナコ', since:'2024年3月',  level:'初級', dances:'ワルツ・タンゴ',           lastLesson:'4月8日', color:'indigo',
-    prevMemo:'ワルツのナチュラルターンで軸がブレる。体の向きを意識させた。右足の踏み込みがやや強め。',
-    nextGoal:'ナチュラルターンの軸固め。足の踏み込みを柔らかく。次回はリバースターンへ進む。' },
-  { id:2,  name:'松本 由美', furi:'マツモト ユミ', since:'2023年9月',  level:'中級', dances:'ワルツ・クイックステップ', lastLesson:'4月8日', color:'indigo',
-    prevMemo:'クイックステップのロックステップが安定してきた。フォールアウェーの方向確認が課題。',
-    nextGoal:'ティプルチェイスの練習。スピードを上げても乱れないよう体幹強化。' },
-  { id:3,  name:'山田 悟',   furi:'ヤマダ サトル', since:'2022年6月',  level:'上級', dances:'タンゴ・ヴィエニーズワルツ',lastLesson:'4月8日', color:'emerald',
-    prevMemo:'ヴィエニーズのナチュラルターンのコネクション改善。パートナーとの距離感がよくなってきた。',
-    nextGoal:'競技会（5月）に向けてフロアクラフト練習。テレビジョンの精度を上げる。' },
-  { id:4,  name:'鈴木 美咲', furi:'スズキ ミサキ', since:'2024年11月', level:'初級', dances:'ワルツ',                 lastLesson:'4月8日', color:'emerald',
-    prevMemo:'5回目のレッスン。ライズ＆フォールの感覚を掴んできた。姿勢が以前より改善。',
-    nextGoal:'フェザーステップの導入。腕の使い方（ホールド）を丁寧に指導する。' },
-  { id:5,  name:'伊藤 健太', furi:'イトウ ケンタ', since:'2024年1月',  level:'中級', dances:'タンゴ・ルンバ',         lastLesson:'4月8日', color:'emerald',
-    prevMemo:'ルンバのキューバン・モーション改善中。腰の動かし方を別の比喩で説明したら理解度アップ。',
-    nextGoal:'ファン・ポジションのリズム安定。アレマーナへの移行をスムーズに。' },
-  { id:6,  name:'渡辺 麻衣', furi:'ワタナベ マイ', since:'2023年4月',  level:'中級', dances:'ワルツ・フォックストロット',lastLesson:'4月8日', color:'indigo',
-    prevMemo:'フォックストロットのフェザー〜スリーステップが流れるようになってきた。',
-    nextGoal:'スローテンポでの安定感を養う。バウンシーフォールアウェーの導入検討。' },
-  { id:7,  name:'佐藤 義雄', furi:'サトウ ヨシオ', since:'2025年1月',  level:'初級', dances:'ワルツ',                 lastLesson:'4月8日', color:'indigo',
-    prevMemo:'男性リードの練習中。左手の使い方が硬い。呼吸と一緒に動くよう誘導。',
-    nextGoal:'ナチュラルターンのリードを完成させる。立ち方（コア）の意識継続。' },
-  { id:8,  name:'小林 あい',  furi:'コバヤシ アイ', since:'2023年12月', level:'中級', dances:'サンバ・チャチャチャ',   lastLesson:'4月6日', color:'purple',
-    prevMemo:'サンバのボタフォゴが右足でズレる。リズムカウントを変えて練習したら改善傾向。',
-    nextGoal:'ボタフォゴ連続でのキープ。ヴォルタへの移行確認。' },
+  { id:1, name:'田中 花子', furi:'タナカ ハナコ', since:'2024年3月',  ticket:'bundle5',  dances:'ワルツ・タンゴ',            lastLesson:'4月8日', lastUpdate:'2026-04-08', color:'lime',
+    memoHistory:[
+      { date:'4月8日',  memo:'ワルツのナチュラルターンで軸がブレる。体の向きを意識させた。右足の踏み込みがやや強め。', goal:'ナチュラルターンの軸固め。足の踏み込みを柔らかく。次回はリバースターンへ進む。' },
+      { date:'4月1日',  memo:'ホールドの形がだいぶ安定してきた。右肩が上がりすぎる癖あり。', goal:'肩のポジション意識。ナチュラルターンの予備練習。' },
+    ] },
+  { id:2, name:'松本 由美', furi:'マツモト ユミ', since:'2023年9月',  ticket:'bundle10', dances:'ワルツ・クイックステップ',  lastLesson:'4月8日', lastUpdate:'2026-04-08', color:'lime',
+    memoHistory:[
+      { date:'4月8日',  memo:'クイックステップのロックステップが安定してきた。フォールアウェーの方向確認が課題。', goal:'ティプルチェイスの練習。スピードを上げても乱れないよう体幹強化。' },
+      { date:'3月25日', memo:'プロムナードポジションの角度が浅い。意識させたら改善。', goal:'ロックステップのリズムを体に染み込ませる。' },
+    ] },
+  { id:3, name:'山田 悟',   furi:'ヤマダ サトル', since:'2022年6月',  ticket:'bundle10', dances:'タンゴ・ヴィエニーズワルツ', lastLesson:'4月8日', lastUpdate:'2026-04-08', color:'orange',
+    memoHistory:[
+      { date:'4月8日',  memo:'ヴィエニーズのナチュラルターンのコネクション改善。パートナーとの距離感がよくなってきた。', goal:'競技会（5月）に向けてフロアクラフト練習。テレビジョンの精度を上げる。' },
+      { date:'4月1日',  memo:'タンゴのコルテのリードが強すぎる。パートナーへの配慮を促した。', goal:'コルテの力加減を調整。ヴィエニーズの練習継続。' },
+    ] },
+  { id:4, name:'鈴木 美咲', furi:'スズキ ミサキ', since:'2024年11月', ticket:'single',   dances:'ワルツ',                   lastLesson:'4月8日', lastUpdate:'2026-04-08', color:'orange',
+    memoHistory:[
+      { date:'4月8日',  memo:'5回目のレッスン。ライズ＆フォールの感覚を掴んできた。姿勢が以前より改善。', goal:'フェザーステップの導入。腕の使い方（ホールド）を丁寧に指導する。' },
+      { date:'3月18日', memo:'ウォークの歩き方が確認できた。体重移動がまだぎこちない。', goal:'体重移動を意識した反復練習。' },
+    ] },
+  { id:5, name:'伊藤 健太', furi:'イトウ ケンタ', since:'2024年1月',  ticket:'bundle5',  dances:'タンゴ・ルンバ',            lastLesson:'4月8日', lastUpdate:'2026-04-08', color:'orange',
+    memoHistory:[
+      { date:'4月8日',  memo:'ルンバのキューバン・モーション改善中。腰の動かし方を別の比喩で説明したら理解度アップ。', goal:'ファン・ポジションのリズム安定。アレマーナへの移行をスムーズに。' },
+      { date:'4月1日',  memo:'タンゴのウォークが単調。音楽の鋭さを体で表現するよう指導。', goal:'キューバンモーションの反復。音楽感覚を養う。' },
+    ] },
+  { id:6, name:'渡辺 麻衣', furi:'ワタナベ マイ', since:'2023年4月',  ticket:'bundle10', dances:'ワルツ・フォックストロット', lastLesson:'4月8日', lastUpdate:'2026-04-08', color:'blue',
+    memoHistory:[
+      { date:'4月8日',  memo:'フォックストロットのフェザー〜スリーステップが流れるようになってきた。', goal:'スローテンポでの安定感を養う。バウンシーフォールアウェーの導入検討。' },
+      { date:'3月28日', memo:'ワルツのスウェイが大きくなりすぎる。腰ではなく肩甲骨から動かすよう修正。', goal:'スウェイの質を上げる。フォックスのリズム感強化。' },
+    ] },
+  { id:7, name:'佐藤 義雄', furi:'サトウ ヨシオ', since:'2025年1月',  ticket:'single',   dances:'ワルツ',                   lastLesson:'4月8日', lastUpdate:'2026-04-08', color:'blue',
+    memoHistory:[
+      { date:'4月8日',  memo:'男性リードの練習中。左手の使い方が硬い。呼吸と一緒に動くよう誘導。', goal:'ナチュラルターンのリードを完成させる。立ち方（コア）の意識継続。' },
+      { date:'4月1日',  memo:'基本姿勢の確認。背中が丸まりやすい。鏡を使って自己確認させた。', goal:'姿勢の習慣化。ウォークの安定。' },
+    ] },
+  { id:8, name:'小林 あい',  furi:'コバヤシ アイ', since:'2023年12月', ticket:'bundle5',  dances:'サンバ・チャチャチャ',     lastLesson:'4月6日', lastUpdate:'2026-04-06', color:'purple',
+    memoHistory:[
+      { date:'4月6日',  memo:'サンバのボタフォゴが右足でズレる。リズムカウントを変えて練習したら改善傾向。', goal:'ボタフォゴ連続でのキープ。ヴォルタへの移行確認。' },
+      { date:'3月30日', memo:'チャチャチャのシャッセが遅れる。音の取り方を練習。', goal:'シャッセのリズム安定。サンバのボタフォゴ予習。' },
+    ] },
 ];
 
 let taskData = [
@@ -344,14 +363,33 @@ let taskData = [
   { id:6, text:'領収書整理（3月分）',                       done:true,  urgent:false },
 ];
 
-let noteData   = {};
+let studentTicketData  = {};  // { studentId: ticketId } 手動変更を記憶
+let studentMemoHistory = {};  // { studentId: [{date, memo, goal}] } 追加分を蓄積
+let studentSortMode    = 'today';   // 'today' | 'update' | 'name'
+let studentSearchQuery = '';
 let currentDay = 2;
 let currentTab = 'calendar';
+
+// ─── ヘルパー ──────────────────────────────────────────────────────────────────
+function lessonCountForEvt(evt) {
+  return Math.max(1, Math.round(durMins(evt.start, evt.end) / 25));
+}
+function getTicket(studentId, fallbackTicketId) {
+  const id = studentTicketData[studentId] || fallbackTicketId || 'single';
+  return TICKET_TYPES.find(t => t.id === id) || TICKET_TYPES[0];
+}
+function getMemoHistory(student) {
+  const extra = studentMemoHistory[student.id] || [];
+  return [...extra, ...student.memoHistory]; // 新しい順
+}
+function hasLessonToday(studentName) {
+  return (WEEK_EVENTS[currentDay] || []).some(e => e.type === 'lesson' && e.name === studentName);
+}
 
 // ─── INIT ─────────────────────────────────────────────────────────────────────
 document.addEventListener('DOMContentLoaded', () => {
   buildDaySelector();
-  renderCalendar(currentDay);
+  selectDay(currentDay);
   buildStudents();
   buildTasks();
   setTabActive('calendar');
@@ -388,10 +426,11 @@ function selectDay(idx) {
   currentDay = idx;
   highlightDay(idx);
   renderCalendar(idx);
-  const cnt = (WEEK_EVENTS[idx]||[]).filter(e=>e.type==='lesson').length;
+  const lessons = (WEEK_EVENTS[idx]||[]).filter(e=>e.type==='lesson');
+  const totalCount = lessons.reduce((sum, e) => sum + lessonCountForEvt(e), 0);
   const day = ['月','火','水','木','金','土','日'][idx];
   document.getElementById('date-subtitle').textContent =
-    `4月${DAY_DATES[idx]}日（${day}）· ${cnt > 0 ? `${cnt}レッスン` : idx === 6 ? '🌸 完全休日' : '予定なし'}`;
+    `4月${DAY_DATES[idx]}日（${day}）· ${totalCount > 0 ? `本日 ${totalCount}レッスン` : idx === 6 ? '🌸 完全休日' : '予定なし'}`;
 }
 
 function highlightDay(active) {
@@ -477,10 +516,12 @@ function renderCalendar(dayIdx) {
     `;
 
     if (evt.type === 'lesson') {
-      const lv = LV[evt.level] || LV['初級'];
-      const showLoc  = hp >= 72;
-      const showTime = hp >= 82;
-      const showLv   = hp >= 52;
+      const student   = STUDENTS.find(st => st.name === evt.name);
+      const ticket    = getTicket(student?.id, student?.ticket);
+      const lCount    = lessonCountForEvt(evt);
+      const showLoc   = hp >= 72;
+      const showTime  = hp >= 82;
+      const showBadge = hp >= 52;
       el.innerHTML = `
         <div style="display:flex;align-items:flex-start;justify-content:space-between;gap:4px;height:100%;">
           <div style="flex:1;min-width:0;overflow:hidden;">
@@ -488,8 +529,9 @@ function renderCalendar(dayIdx) {
             ${showLoc ? `<div style="font-size:10px;color:${s.accent};margin-top:2px;font-weight:600;">${evt.loc}</div>` : ''}
           </div>
           <div style="display:flex;flex-direction:column;align-items:flex-end;gap:2px;flex-shrink:0;">
-            ${showLv ? `<span style="font-size:9px;font-weight:700;padding:2px 5px;border-radius:4px;white-space:nowrap;background:${lv.bg};color:${lv.text};">${evt.level}</span>` : ''}
-            ${showTime ? `<span style="font-size:9px;color:#9ca3af;white-space:nowrap;">${fmtTime(evt.start)}–${fmtTime(evt.end)}</span>` : ''}
+            ${showBadge ? `<span style="font-size:9px;font-weight:700;padding:2px 5px;border-radius:4px;white-space:nowrap;background:${ticket.bg};color:${ticket.color};">${ticket.label}</span>` : ''}
+            ${showBadge ? `<span style="font-size:9px;font-weight:700;color:${s.accent};white-space:nowrap;">${lCount}レッスン</span>` : ''}
+            ${showTime  ? `<span style="font-size:9px;color:#9ca3af;white-space:nowrap;">${fmtTime(evt.start)}–${fmtTime(evt.end)}</span>` : ''}
           </div>
         </div>`;
       el.addEventListener('click', () => openLessonModal(evt));
@@ -523,36 +565,89 @@ function mkAbsDiv(parent, css) {
 // ─── STUDENTS LIST ────────────────────────────────────────────────────────────
 function buildStudents() {
   const cont = document.getElementById('students-container');
+
+  const sortLabels = { today:'今日順', update:'更新順', name:'名前順' };
+  const sortKeys   = ['today','update','name'];
+
   cont.innerHTML = `
-    <div style="margin-bottom:16px;">
+    <div style="margin-bottom:12px;">
       <h2 style="font-size:17px;font-weight:800;color:#111827;">生徒メモ帳</h2>
-      <p style="font-size:12px;color:#9ca3af;margin-top:3px;">タップしてメモ・課題を確認・編集</p>
+    </div>
+    <!-- 検索 -->
+    <div style="position:relative;margin-bottom:10px;">
+      <span style="position:absolute;left:12px;top:50%;transform:translateY(-50%);font-size:14px;pointer-events:none;">🔍</span>
+      <input id="student-search" type="text" placeholder="生徒名で検索..."
+        value="${studentSearchQuery}"
+        oninput="studentSearchQuery=this.value;buildStudents();"
+        style="width:100%;font-size:13px;background:white;border-radius:12px;padding:9px 12px 9px 34px;border:1.5px solid #e5e7eb;font-family:inherit;color:#111827;box-sizing:border-box;">
+    </div>
+    <!-- ソートタブ -->
+    <div style="display:flex;gap:6px;margin-bottom:14px;">
+      ${sortKeys.map(k => `
+        <button onclick="studentSortMode='${k}';buildStudents();"
+          style="padding:6px 12px;border-radius:20px;font-size:11px;font-weight:700;border:none;cursor:pointer;font-family:inherit;transition:all 0.1s;
+            background:${studentSortMode===k?'#6366f1':'#f3f4f6'};
+            color:${studentSortMode===k?'white':'#6b7280'};">
+          ${sortLabels[k]}
+        </button>`).join('')}
     </div>
     <div id="student-cards" style="display:flex;flex-direction:column;gap:10px;"></div>`;
 
+  // フィルタ
+  let list = STUDENTS.filter(s =>
+    studentSearchQuery === '' || s.name.includes(studentSearchQuery) || s.furi.includes(studentSearchQuery)
+  );
+
+  // ソート
+  if (studentSortMode === 'today') {
+    list = [...list].sort((a,b) => {
+      const aT = hasLessonToday(a.name) ? 0 : 1;
+      const bT = hasLessonToday(b.name) ? 0 : 1;
+      return aT - bT || a.furi.localeCompare(b.furi, 'ja');
+    });
+  } else if (studentSortMode === 'update') {
+    list = [...list].sort((a,b) => b.lastUpdate.localeCompare(a.lastUpdate));
+  } else {
+    list = [...list].sort((a,b) => a.furi.localeCompare(b.furi, 'ja'));
+  }
+
   const cards = document.getElementById('student-cards');
-  STUDENTS.forEach(s => {
-    const st = S[s.color] || S.indigo;
-    const lv = LV[s.level] || LV['初級'];
+  if (list.length === 0) {
+    cards.innerHTML = `<p style="text-align:center;color:#9ca3af;font-size:13px;padding:24px 0;">該当する生徒が見つかりません</p>`;
+    return;
+  }
+
+  list.forEach(s => {
+    const st      = S[s.color] || S.indigo;
+    const ticket  = getTicket(s.id, s.ticket);
+    const history = getMemoHistory(s);
+    const latest  = history[0];
+    const todayFlag = hasLessonToday(s.name);
+
     const card = document.createElement('div');
     card.className = 'student-card';
-    card.style.cssText = 'background:white;border-radius:18px;padding:14px;border:1px solid #f3f4f6;box-shadow:0 1px 4px rgba(0,0,0,0.06);';
+    card.style.cssText = `background:white;border-radius:18px;padding:14px;border:1.5px solid ${todayFlag ? '#a5b4fc' : '#f3f4f6'};box-shadow:0 1px 4px rgba(0,0,0,0.06);`;
     card.innerHTML = `
       <div style="display:flex;gap:12px;align-items:flex-start;">
-        <div style="width:46px;height:46px;border-radius:14px;background:${st.light};color:${st.accent};display:flex;align-items:center;justify-content:center;font-size:20px;font-weight:800;flex-shrink:0;">${s.name.charAt(0)}</div>
+        <div style="position:relative;">
+          <div style="width:46px;height:46px;border-radius:14px;background:${st.light};color:${st.accent};display:flex;align-items:center;justify-content:center;font-size:20px;font-weight:800;flex-shrink:0;">${s.name.charAt(0)}</div>
+          ${todayFlag ? '<div style="position:absolute;top:-3px;right:-3px;width:10px;height:10px;border-radius:50%;background:#6366f1;border:2px solid white;"></div>' : ''}
+        </div>
         <div style="flex:1;min-width:0;">
-          <div style="display:flex;align-items:center;gap:6px;margin-bottom:2px;">
+          <div style="display:flex;align-items:center;gap:6px;margin-bottom:2px;flex-wrap:wrap;">
             <span style="font-size:14px;font-weight:700;color:#111827;">${s.name}</span>
-            <span style="font-size:9px;font-weight:700;padding:2px 6px;border-radius:4px;background:${lv.bg};color:${lv.text};">${s.level}</span>
+            <span style="font-size:9px;font-weight:700;padding:2px 6px;border-radius:4px;background:${ticket.bg};color:${ticket.color};">${ticket.label}</span>
+            ${todayFlag ? '<span style="font-size:9px;font-weight:700;padding:2px 6px;border-radius:4px;background:#ede9fe;color:#6d28d9;">本日レッスン</span>' : ''}
           </div>
           <div style="font-size:11px;color:#9ca3af;margin-bottom:7px;">${s.dances} · ${s.since}〜</div>
+          ${latest ? `
           <div style="font-size:11px;color:#4b5563;line-height:1.55;background:#f8f9fa;border-radius:10px;padding:8px 10px;display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden;">
-            <span style="font-weight:700;color:#6b7280;">前回: </span>${s.prevMemo}
-          </div>
+            <span style="font-weight:700;color:#6b7280;">${latest.date}: </span>${latest.memo}
+          </div>` : ''}
         </div>
       </div>
       <div style="margin-top:10px;padding-top:10px;border-top:1px solid #f3f4f6;display:flex;justify-content:space-between;align-items:center;">
-        <span style="font-size:11px;color:#9ca3af;">最終レッスン: ${s.lastLesson}</span>
+        <span style="font-size:11px;color:#9ca3af;">計 ${history.length} 件のメモ · 最終: ${s.lastLesson}</span>
         <span style="font-size:11px;font-weight:700;color:#6366f1;">詳細・編集 →</span>
       </div>`;
     card.addEventListener('click', () => openStudentModal(s));
@@ -649,106 +744,162 @@ function closeModal() {
 
 function openLessonModal(evt) {
   const student = STUDENTS.find(s => s.name === evt.name);
-  const notes   = noteData[evt.id] || { prev: student?.prevMemo || '', next: student?.nextGoal || '' };
-  const s  = S[evt.style] || S.gray;
-  const lv = LV[evt.level] || LV['初級'];
+  const s       = S[evt.style] || S.gray;
+  const ticket  = getTicket(student?.id, student?.ticket);
+  const lCount  = lessonCountForEvt(evt);
+  const history = student ? getMemoHistory(student) : [];
+
+  const ticketChips = TICKET_TYPES.map(t => `
+    <button onclick="selectLessonTicket(this,'${t.id}',${student?.id||0})"
+      data-ticket="${t.id}"
+      style="padding:5px 10px;border-radius:20px;font-size:11px;font-weight:700;border:1.5px solid ${t.id===ticket.id?t.color:'#e5e7eb'};cursor:pointer;font-family:inherit;transition:all 0.1s;
+        background:${t.id===ticket.id?t.bg:'#fafafa'};color:${t.id===ticket.id?t.color:'#9ca3af'};">
+      ${t.label}
+    </button>`).join('');
+
   openModal(`
     <div style="padding:16px 20px 12px;border-bottom:1px solid #f3f4f6;">
       <div style="display:flex;align-items:center;gap:12px;">
         <div style="width:50px;height:50px;border-radius:16px;background:${s.light};color:${s.accent};display:flex;align-items:center;justify-content:center;font-size:24px;font-weight:800;flex-shrink:0;">${evt.name.charAt(0)}</div>
         <div style="flex:1;">
-          <div style="display:flex;align-items:center;gap:7px;margin-bottom:3px;">
+          <div style="display:flex;align-items:center;gap:7px;margin-bottom:3px;flex-wrap:wrap;">
             <span style="font-size:19px;font-weight:800;color:#111827;">${evt.name}</span>
-            <span style="font-size:10px;font-weight:700;padding:2px 7px;border-radius:5px;background:${lv.bg};color:${lv.text};">${evt.level}</span>
+            <span style="font-size:10px;font-weight:700;padding:2px 7px;border-radius:5px;background:${ticket.bg};color:${ticket.color};">${ticket.label}</span>
+            <span style="font-size:10px;font-weight:700;padding:2px 7px;border-radius:5px;background:#f0fdf4;color:#065f46;">${lCount}レッスン分</span>
           </div>
           <p style="font-size:12px;color:#9ca3af;">${fmtTime(evt.start)} – ${fmtTime(evt.end)} · ${evt.loc}</p>
         </div>
       </div>
     </div>
-    <div style="padding:16px 20px;display:flex;flex-direction:column;gap:14px;">
+    <div style="padding:14px 20px;display:flex;flex-direction:column;gap:14px;">
+      <!-- チケット種別 -->
+      <div>
+        <label style="display:block;font-size:11px;font-weight:700;color:#6b7280;letter-spacing:0.07em;text-transform:uppercase;margin-bottom:8px;">🎫 チケット種別</label>
+        <div id="ticket-chips" style="display:flex;gap:6px;flex-wrap:wrap;">${ticketChips}</div>
+      </div>
+      <!-- メモ入力 -->
       <div>
         <label style="display:block;font-size:11px;font-weight:700;color:#6b7280;letter-spacing:0.07em;text-transform:uppercase;margin-bottom:8px;">📝 本日のレッスンメモ</label>
-        <textarea id="note-prev" rows="4" placeholder="今日気づいたこと、改善点など..."
-          style="width:100%;font-size:13px;color:#111827;background:#f9fafb;border-radius:14px;padding:12px;border:1.5px solid #e5e7eb;resize:none;line-height:1.65;font-family:inherit;">${notes.prev}</textarea>
+        <textarea id="note-prev" rows="3" placeholder="今日気づいたこと、改善点など..."
+          style="width:100%;font-size:13px;color:#111827;background:#f9fafb;border-radius:14px;padding:12px;border:1.5px solid #e5e7eb;resize:none;line-height:1.65;font-family:inherit;"></textarea>
       </div>
       <div>
         <label style="display:block;font-size:11px;font-weight:700;color:#6b7280;letter-spacing:0.07em;text-transform:uppercase;margin-bottom:8px;">🎯 次回の課題・目標</label>
-        <textarea id="note-next" rows="3" placeholder="次回レッスンまでの課題..."
-          style="width:100%;font-size:13px;color:#111827;background:#f9fafb;border-radius:14px;padding:12px;border:1.5px solid #e5e7eb;resize:none;line-height:1.65;font-family:inherit;">${notes.next}</textarea>
+        <textarea id="note-next" rows="2" placeholder="次回レッスンまでの課題..."
+          style="width:100%;font-size:13px;color:#111827;background:#f9fafb;border-radius:14px;padding:12px;border:1.5px solid #e5e7eb;resize:none;line-height:1.65;font-family:inherit;"></textarea>
       </div>
-      ${student ? `
-      <div style="background:#f0f4ff;border-radius:14px;padding:12px 14px;">
-        <p style="font-size:11px;font-weight:700;color:#6366f1;margin-bottom:6px;">📚 生徒情報</p>
-        <div style="display:grid;grid-template-columns:1fr 1fr;gap:4px;font-size:11px;color:#4f46e5;">
-          <div><span style="font-weight:600;">種目:</span> ${student.dances}</div>
-          <div><span style="font-weight:600;">受講開始:</span> ${student.since}</div>
+      <!-- 直近メモ履歴 -->
+      ${history.length > 0 ? `
+      <div>
+        <label style="display:block;font-size:11px;font-weight:700;color:#6b7280;letter-spacing:0.07em;text-transform:uppercase;margin-bottom:8px;">📂 前回のメモ</label>
+        <div style="background:#f8f9fa;border-radius:12px;padding:10px 12px;font-size:11px;color:#4b5563;line-height:1.6;">
+          <span style="font-weight:700;color:#6b7280;">${history[0].date}: </span>${history[0].memo}
         </div>
       </div>` : ''}
     </div>
     <div style="padding:4px 20px 32px;display:flex;gap:10px;">
       <button onclick="closeModal()"
-        style="flex:1;background:#f3f4f6;color:#6b7280;font-weight:700;padding:15px;border-radius:16px;border:none;font-size:14px;cursor:pointer;font-family:inherit;">
-        閉じる
-      </button>
-      <button onclick="saveNote(${evt.id})" id="save-btn"
-        style="flex:2;background:#6366f1;color:white;font-weight:700;padding:15px;border-radius:16px;border:none;font-size:14px;cursor:pointer;font-family:inherit;box-shadow:0 4px 12px rgba(99,102,241,0.35);">
-        保存する
-      </button>
+        style="flex:1;background:#f3f4f6;color:#6b7280;font-weight:700;padding:15px;border-radius:16px;border:none;font-size:14px;cursor:pointer;font-family:inherit;">閉じる</button>
+      <button onclick="saveNote(${student?.id||0},'${evt.id}')" id="save-btn"
+        style="flex:2;background:#6366f1;color:white;font-weight:700;padding:15px;border-radius:16px;border:none;font-size:14px;cursor:pointer;font-family:inherit;box-shadow:0 4px 12px rgba(99,102,241,0.35);">保存する</button>
     </div>`);
 }
 
+function selectLessonTicket(btn, ticketId, studentId) {
+  if (studentId) studentTicketData[studentId] = ticketId;
+  const chips = document.getElementById('ticket-chips');
+  chips.querySelectorAll('button').forEach(b => {
+    const tid = b.dataset.ticket;
+    const t   = TICKET_TYPES.find(x => x.id === tid);
+    const active = tid === ticketId;
+    b.style.background   = active ? t.bg    : '#fafafa';
+    b.style.color        = active ? t.color : '#9ca3af';
+    b.style.borderColor  = active ? t.color : '#e5e7eb';
+  });
+}
+
 function openStudentModal(s) {
-  const st = S[s.color] || S.indigo;
-  const lv = LV[s.level] || LV['初級'];
+  const st      = S[s.color] || S.indigo;
+  const ticket  = getTicket(s.id, s.ticket);
+  const history = getMemoHistory(s);
+
+  const ticketChips = TICKET_TYPES.map(t => `
+    <button onclick="selectStudentTicket(this,'${t.id}',${s.id})"
+      data-ticket="${t.id}"
+      style="padding:5px 10px;border-radius:20px;font-size:11px;font-weight:700;border:1.5px solid ${t.id===ticket.id?t.color:'#e5e7eb'};cursor:pointer;font-family:inherit;
+        background:${t.id===ticket.id?t.bg:'#fafafa'};color:${t.id===ticket.id?t.color:'#9ca3af'};">
+      ${t.label}
+    </button>`).join('');
+
+  const historyHtml = history.map((h, i) => `
+    <div style="padding:10px 0;${i<history.length-1?'border-bottom:1px solid #f3f4f6;':''}">
+      <div style="font-size:10px;font-weight:700;color:#9ca3af;margin-bottom:4px;">${h.date}</div>
+      <p style="font-size:12px;color:#374151;line-height:1.6;margin:0 0 4px;">${h.memo}</p>
+      ${h.goal ? `<p style="font-size:11px;color:#6366f1;line-height:1.5;margin:0;"><span style="font-weight:700;">→ 次回目標: </span>${h.goal}</p>` : ''}
+    </div>`).join('');
+
   openModal(`
     <div style="padding:16px 20px 12px;border-bottom:1px solid #f3f4f6;">
       <div style="display:flex;align-items:center;gap:12px;">
         <div style="width:56px;height:56px;border-radius:18px;background:${st.light};color:${st.accent};display:flex;align-items:center;justify-content:center;font-size:26px;font-weight:800;flex-shrink:0;">${s.name.charAt(0)}</div>
         <div>
-          <div style="display:flex;align-items:center;gap:7px;margin-bottom:2px;">
+          <div style="display:flex;align-items:center;gap:7px;margin-bottom:2px;flex-wrap:wrap;">
             <span style="font-size:20px;font-weight:800;color:#111827;">${s.name}</span>
-            <span style="font-size:10px;font-weight:700;padding:2px 7px;border-radius:5px;background:${lv.bg};color:${lv.text};">${s.level}</span>
+            <span style="font-size:10px;font-weight:700;padding:2px 7px;border-radius:5px;background:${ticket.bg};color:${ticket.color};">${ticket.label}</span>
           </div>
           <p style="font-size:11px;color:#9ca3af;">${s.furi}</p>
           <p style="font-size:12px;color:#6b7280;margin-top:2px;">${s.dances} · ${s.since}〜</p>
         </div>
       </div>
     </div>
-    <div style="padding:16px 20px;display:flex;flex-direction:column;gap:14px;">
+    <div style="padding:14px 20px;display:flex;flex-direction:column;gap:14px;">
+      <!-- チケット種別 -->
       <div>
-        <label style="display:block;font-size:11px;font-weight:700;color:#6b7280;letter-spacing:0.07em;text-transform:uppercase;margin-bottom:8px;">📝 前回レッスンのメモ</label>
-        <textarea rows="4"
-          style="width:100%;font-size:13px;color:#111827;background:#f9fafb;border-radius:14px;padding:12px;border:1.5px solid #e5e7eb;resize:none;line-height:1.65;font-family:inherit;">${s.prevMemo}</textarea>
+        <label style="display:block;font-size:11px;font-weight:700;color:#6b7280;letter-spacing:0.07em;text-transform:uppercase;margin-bottom:8px;">🎫 チケット種別</label>
+        <div id="student-ticket-chips" style="display:flex;gap:6px;flex-wrap:wrap;">${ticketChips}</div>
       </div>
+      <!-- 受講実績 -->
+      <div style="background:#f9fafb;border-radius:14px;padding:12px;">
+        <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:8px;">
+          <div style="text-align:center;background:white;border-radius:12px;padding:10px;box-shadow:0 1px 3px rgba(0,0,0,0.05);">
+            <div style="font-size:22px;font-weight:900;color:#6366f1;line-height:1;">${history.length}</div>
+            <div style="font-size:9px;color:#9ca3af;margin-top:3px;">メモ件数</div>
+          </div>
+          <div style="text-align:center;background:white;border-radius:12px;padding:10px;box-shadow:0 1px 3px rgba(0,0,0,0.05);">
+            <div style="font-size:22px;font-weight:900;color:#059669;line-height:1;">${hasLessonToday(s.name)?'本日':'—'}</div>
+            <div style="font-size:9px;color:#9ca3af;margin-top:3px;">今日の予定</div>
+          </div>
+          <div style="text-align:center;background:white;border-radius:12px;padding:10px;box-shadow:0 1px 3px rgba(0,0,0,0.05);">
+            <div style="font-size:14px;font-weight:900;color:#f59e0b;line-height:1;margin-top:4px;">${s.lastLesson}</div>
+            <div style="font-size:9px;color:#9ca3af;margin-top:3px;">最終レッスン</div>
+          </div>
+        </div>
+      </div>
+      <!-- メモ履歴 -->
       <div>
-        <label style="display:block;font-size:11px;font-weight:700;color:#6b7280;letter-spacing:0.07em;text-transform:uppercase;margin-bottom:8px;">🎯 今後の課題・目標</label>
-        <textarea rows="3"
-          style="width:100%;font-size:13px;color:#111827;background:#f9fafb;border-radius:14px;padding:12px;border:1.5px solid #e5e7eb;resize:none;line-height:1.65;font-family:inherit;">${s.nextGoal}</textarea>
-      </div>
-      <div style="background:#f9fafb;border-radius:14px;padding:14px;">
-        <p style="font-size:11px;font-weight:700;color:#9ca3af;letter-spacing:0.07em;text-transform:uppercase;margin-bottom:10px;">受講実績</p>
-        <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;">
-          <div style="text-align:center;background:white;border-radius:12px;padding:12px;box-shadow:0 1px 3px rgba(0,0,0,0.05);">
-            <div style="font-size:28px;font-weight:900;color:#6366f1;line-height:1;">24</div>
-            <div style="font-size:10px;color:#9ca3af;margin-top:4px;">総レッスン回数</div>
-          </div>
-          <div style="text-align:center;background:white;border-radius:12px;padding:12px;box-shadow:0 1px 3px rgba(0,0,0,0.05);">
-            <div style="font-size:28px;font-weight:900;color:#10b981;line-height:1;">8</div>
-            <div style="font-size:10px;color:#9ca3af;margin-top:4px;">今月の回数</div>
-          </div>
+        <label style="display:block;font-size:11px;font-weight:700;color:#6b7280;letter-spacing:0.07em;text-transform:uppercase;margin-bottom:8px;">📂 レッスン履歴 (${history.length}件)</label>
+        <div style="background:#f8f9fa;border-radius:14px;padding:4px 12px;max-height:220px;overflow-y:auto;">
+          ${historyHtml || '<p style="font-size:12px;color:#9ca3af;text-align:center;padding:16px 0;">まだメモがありません</p>'}
         </div>
       </div>
     </div>
     <div style="padding:4px 20px 32px;display:flex;gap:10px;">
       <button onclick="closeModal()"
-        style="flex:1;background:#f3f4f6;color:#6b7280;font-weight:700;padding:15px;border-radius:16px;border:none;font-size:14px;cursor:pointer;font-family:inherit;">
-        閉じる
-      </button>
-      <button onclick="closeModal()"
-        style="flex:2;background:#6366f1;color:white;font-weight:700;padding:15px;border-radius:16px;border:none;font-size:14px;cursor:pointer;font-family:inherit;box-shadow:0 4px 12px rgba(99,102,241,0.35);">
-        保存する
-      </button>
+        style="flex:1;background:#f3f4f6;color:#6b7280;font-weight:700;padding:15px;border-radius:16px;border:none;font-size:14px;cursor:pointer;font-family:inherit;">閉じる</button>
     </div>`);
+}
+
+function selectStudentTicket(btn, ticketId, studentId) {
+  studentTicketData[studentId] = ticketId;
+  const chips = document.getElementById('student-ticket-chips');
+  chips.querySelectorAll('button').forEach(b => {
+    const tid = b.dataset.ticket;
+    const t   = TICKET_TYPES.find(x => x.id === tid);
+    const active = tid === ticketId;
+    b.style.background   = active ? t.bg    : '#fafafa';
+    b.style.color        = active ? t.color : '#9ca3af';
+    b.style.borderColor  = active ? t.color : '#e5e7eb';
+  });
 }
 
 function showAddEvent() {
@@ -827,10 +978,25 @@ function addTask() {
   setTimeout(buildTasks, 350);
 }
 
-function saveNote(evtId) {
-  const prev = document.getElementById('note-prev')?.value || '';
-  const next = document.getElementById('note-next')?.value || '';
-  noteData[evtId] = { prev, next };
+function saveNote(studentId, evtId) {
+  const memo = document.getElementById('note-prev')?.value?.trim() || '';
+  const goal = document.getElementById('note-next')?.value?.trim() || '';
+  if (!memo && !goal) { closeModal(); return; }
+
+  const today = new Date();
+  const dateLabel = `${today.getMonth()+1}月${today.getDate()}日`;
+
+  if (studentId) {
+    if (!studentMemoHistory[studentId]) studentMemoHistory[studentId] = [];
+    studentMemoHistory[studentId].unshift({ date: dateLabel, memo, goal });
+    // lastUpdate を更新
+    const student = STUDENTS.find(s => s.id === studentId);
+    if (student) {
+      student.lastLesson  = dateLabel;
+      student.lastUpdate  = new Date().toISOString().slice(0,10);
+    }
+  }
+
   const btn = document.getElementById('save-btn');
   if (btn) {
     btn.textContent = '✓ 保存しました！';
