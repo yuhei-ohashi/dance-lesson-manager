@@ -428,6 +428,14 @@ document.addEventListener('DOMContentLoaded', () => {
   setTimeout(() => {
     document.getElementById('tab-calendar').scrollTop = timeToTop(8, 45);
   }, 80);
+
+  // 生徒カードはイベント委譲で処理（動的再生成に対応）
+  document.getElementById('tab-students').addEventListener('click', function(e) {
+    const card = e.target.closest('.student-card');
+    if (!card) return;
+    const id = parseInt(card.dataset.studentId, 10);
+    if (!isNaN(id)) openStudentById(id);
+  });
 });
 
 // ─── DAY SELECTOR ─────────────────────────────────────────────────────────────
@@ -684,7 +692,7 @@ function buildStudents() {
         <span style="font-size:11px;color:#9ca3af;">計 ${history.length} 件のメモ · 最終: ${s.lastLesson}</span>
         <span style="font-size:11px;font-weight:700;color:#6366f1;">詳細・編集 →</span>
       </div>`;
-    card.setAttribute('onclick', `openStudentById(${s.id})`);
+    card.dataset.studentId = s.id;
     cards.appendChild(card);
   });
 }
@@ -1011,8 +1019,13 @@ function selectLessonTicket(btn, ticketId, studentId) {
 }
 
 function openStudentById(id) {
-  const s = STUDENTS.find(s => s.id === id);
-  if (s) openStudentModal(s);
+  const s = STUDENTS.find(st => st.id === id);
+  if (!s) return;
+  try {
+    openStudentModal(s);
+  } catch(err) {
+    console.error('openStudentModal error:', err);
+  }
 }
 
 function openStudentModal(s) {
