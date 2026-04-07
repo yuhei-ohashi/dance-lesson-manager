@@ -266,6 +266,19 @@ const S = {
 };
 // ─── WEEK DATA ────────────────────────────────────────────────────────────────
 const DAY_LABELS = ['月','火','水','木','金','土','日'];
+// 今週の月曜日を基準に動的に日付を計算（2026-04-06 = 今週月曜）
+const BASE_MONDAY = new Date(2026, 3, 6);
+function getWeekDates(weekOffset) {
+  return Array.from({length:7}, (_,i) => {
+    const d = new Date(BASE_MONDAY);
+    d.setDate(BASE_MONDAY.getDate() + weekOffset * 7 + i);
+    return { month: d.getMonth()+1, day: d.getDate() };
+  });
+}
+function getDateStr(dayIdx) {
+  const d = getWeekDates(currentWeekOffset)[dayIdx];
+  return `${d.month}月${d.day}日`;
+}
 const DAY_DATES  = [6,7,8,9,10,11,12];
 
 // スタジオゾーン設定（SSoT: ここだけ変更すれば全体に反映）
@@ -459,7 +472,7 @@ function buildDaySelector() {
     const lColor = isSun ? '#f87171' : isSat ? '#60a5fa' : '#9ca3af';
     btn.innerHTML = `
       <span id="dl-${i}" style="font-size:11px;font-weight:600;color:${lColor};">${lbl}</span>
-      <span id="dn-${i}" style="font-size:14px;font-weight:600;color:${isSun?'#f87171':isSat?'#60a5fa':'#374151'};width:28px;height:28px;display:flex;align-items:center;justify-content:center;border-radius:50%;margin:1px 0;">${DAY_DATES[i]}</span>
+      <span id="dn-${i}" style="font-size:14px;font-weight:600;color:${isSun?'#f87171':isSat?'#60a5fa':'#374151'};width:28px;height:28px;display:flex;align-items:center;justify-content:center;border-radius:50%;margin:1px 0;">${getWeekDates(0)[i].day}</span>
       <div id="dd-${i}" style="width:4px;height:4px;border-radius:50%;background:${lessonCount>0?'#a5b4fc':'transparent'};margin-top:1px;"></div>
     `;
     cont.appendChild(btn);
@@ -476,12 +489,15 @@ function getEventsForDay(dayIdx) {
   return [...recurring, ...extras];
 }
 
-// 週オフセット → ラベル
+// 週オフセット → ラベル（日付範囲付き）
 function weekLabel(offset) {
-  if (offset === 0)  return '今週';
-  if (offset === 1)  return '来週';
-  if (offset === -1) return '先週';
-  return offset > 0 ? `${offset}週後` : `${-offset}週前`;
+  const dates = getWeekDates(offset);
+  const mon = dates[0], sun = dates[6];
+  const range = `${mon.month}/${mon.day}〜${sun.month}/${sun.day}`;
+  if (offset === 0)  return `今週 (${range})`;
+  if (offset === 1)  return `来週 (${range})`;
+  if (offset === -1) return `先週 (${range})`;
+  return `${offset > 0 ? offset+'週後' : (-offset)+'週前'} (${range})`;
 }
 
 function selectDay(idx) {
@@ -491,9 +507,8 @@ function selectDay(idx) {
   const lessons    = getEventsForDay(idx).filter(e => e.type === 'lesson');
   const totalCount = lessons.reduce((sum, e) => sum + lessonCountForEvt(e), 0);
   const day = ['月','火','水','木','金','土','日'][idx];
-  const wk  = currentWeekOffset !== 0 ? `【${weekLabel(currentWeekOffset)}】 ` : '';
   document.getElementById('date-subtitle').textContent =
-    `${wk}4月${DAY_DATES[idx]}日（${day}）· ${totalCount > 0 ? `本日 ${totalCount}レッスン` : idx === 6 ? '🌸 完全休日' : '予定なし'}`;
+    `${getDateStr(idx)}（${day}）· ${totalCount > 0 ? `本日 ${totalCount}レッスン` : idx === 6 ? '🌸 完全休日' : '予定なし'}`;
 }
 
 function highlightDay(active) {
@@ -805,7 +820,7 @@ function addSalesEntry() {
   const memo   = document.getElementById('sales-memo')?.value?.trim() || '';
   if (!name || !amount) return;
   const day = ['月','火','水','木','金','土','日'][currentDay];
-  salesData.unshift({ id: Date.now(), name, amount, date: `4月${DAY_DATES[currentDay]}日`, memo });
+  salesData.unshift({ id: Date.now(), name, amount, date: getDateStr(currentDay), memo });
   closeModal();
   setTimeout(buildSales, 350);
 }
@@ -817,7 +832,7 @@ function deleteSales(id) {
 
 function exportSalesCSV() {
   const day = ['月','火','水','木','金','土','日'][currentDay];
-  const dateStr = `4月${DAY_DATES[currentDay]}日`;
+  const dateStr = getDateStr(currentDay);
   const header = '名称,金額,日付,メモ\n';
   const body = salesData.map(x => `${x.name},${x.amount},${x.date},${x.memo}`).join('\n');
   const total = salesData.reduce((s,x) => s + x.amount, 0);
@@ -1210,7 +1225,7 @@ function selectStudentTicket(btn, ticketId, studentId) {
 
 function showAddEvent() {
   _newEvtType = 'lesson'; _newEvtLoc = 'saito';
-  const dateLabel = `4月${DAY_DATES[currentDay]}日（${['月','火','水','木','金','土','日'][currentDay]}）`;
+  const dateLabel = `${getDateStr(currentDay)}（${['月','火','水','木','金','土','日'][currentDay]}）`;
   const opts = Array.from({length:28}, (_,i) => {
     const h = 8 + Math.floor(i/2), m = i % 2 * 30;
     const v = `${h}:${String(m).padStart(2,'0')}`;
@@ -1372,17 +1387,26 @@ function addEvent() {
   setTimeout(() => { selectDay(currentDay); }, 350);
 }
 
+function updateDayDateTabs() {
+  const dates = getWeekDates(currentWeekOffset);
+  dates.forEach((d, i) => {
+    const el = document.getElementById(`dn-${i}`);
+    if (el) el.textContent = d.day;
+  });
+}
+
 function changeWeek(dir) {
   currentWeekOffset += dir;
   const lbl = document.getElementById('week-nav-label');
   if (lbl) lbl.textContent = weekLabel(currentWeekOffset);
+  updateDayDateTabs();
   selectDay(currentDay);
 }
 
 // ─── 日報 ─────────────────────────────────────────────────────────────────────
 function showDailyReport() {
   const day     = ['月','火','水','木','金','土','日'][currentDay];
-  const dateStr = `4月${DAY_DATES[currentDay]}日（${day}）`;
+  const dateStr = `${getDateStr(currentDay)}（${day}）`;
   const lessons = getEventsForDay(currentDay).filter(e => e.type === 'lesson');
 
   const rows = lessons.map(evt => {
@@ -1443,7 +1467,7 @@ function showDailyReport() {
 
 function exportDailyCSV() {
   const day     = ['月','火','水','木','金','土','日'][currentDay];
-  const dateStr = `4月${DAY_DATES[currentDay]}日`;
+  const dateStr = getDateStr(currentDay);
   const lessons = getEventsForDay(currentDay).filter(e => e.type === 'lesson');
 
   const header = '生徒名,チケット種別,レッスン数,場所,状態\n';
