@@ -134,7 +134,7 @@
           <polyline points="15 18 9 12 15 6"/>
         </svg>
       </button>
-      <p style="flex:1;text-align:center;font-size:12px;font-weight:600;color:#6b7280;letter-spacing:0.05em;">2026年4月 第2週</p>
+      <p id="week-nav-label" style="flex:1;text-align:center;font-size:12px;font-weight:600;color:#6b7280;letter-spacing:0.05em;">今週</p>
       <button onclick="changeWeek(1)" class="nav-btn" style="width:28px;height:28px;display:flex;align-items:center;justify-content:center;background:transparent;border:none;cursor:pointer;">
         <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#9ca3af" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
           <polyline points="9 18 15 12 9 6"/>
@@ -390,9 +390,11 @@ let taskData = [
 let studentTicketData  = {};  // { studentId: ticketId }
 let studentMemoHistory = {};  // { studentId: [{date, memo, goal}] }
 let lessonCountOverrides = {}; // { evtId: count }  0=キャンセル
-let nextEventId = 200;       // 追加イベントのID
-let _newEvtType = 'lesson';  // 追加フォーム: 選択中の種別
-let _newEvtLoc  = 'saito';   // 追加フォーム: 選択中の場所
+let nextEventId = 200;        // 追加イベントのID
+let _newEvtType = 'lesson';   // 追加フォーム: 選択中の種別
+let _newEvtLoc  = 'saito';    // 追加フォーム: 選択中の場所
+let currentWeekOffset = 0;    // 0=今週 1=来週 -1=先週
+let weeklyAdditions   = {};   // { weekOffset: { dayIdx: [events] } }
 let salesData = [
   { id:1, name:'田中 花子', amount:5000, date:'4月8日', memo:'' },
   { id:2, name:'山田 悟',   amount:8000, date:'4月8日', memo:'月謝' },
@@ -465,15 +467,33 @@ function buildDaySelector() {
   highlightDay(2);
 }
 
+// 現在表示週の指定曜日イベントを返す
+function getEventsForDay(dayIdx) {
+  const base = WEEK_EVENTS[dayIdx] || [];
+  if (currentWeekOffset === 0) return base;
+  const recurring = base.filter(e => e.repeat);
+  const extras    = ((weeklyAdditions[currentWeekOffset] || {})[dayIdx]) || [];
+  return [...recurring, ...extras];
+}
+
+// 週オフセット → ラベル
+function weekLabel(offset) {
+  if (offset === 0)  return '今週';
+  if (offset === 1)  return '来週';
+  if (offset === -1) return '先週';
+  return offset > 0 ? `${offset}週後` : `${-offset}週前`;
+}
+
 function selectDay(idx) {
   currentDay = idx;
   highlightDay(idx);
   renderCalendar(idx);
-  const lessons = (WEEK_EVENTS[idx]||[]).filter(e=>e.type==='lesson');
+  const lessons    = getEventsForDay(idx).filter(e => e.type === 'lesson');
   const totalCount = lessons.reduce((sum, e) => sum + lessonCountForEvt(e), 0);
   const day = ['月','火','水','木','金','土','日'][idx];
+  const wk  = currentWeekOffset !== 0 ? `【${weekLabel(currentWeekOffset)}】 ` : '';
   document.getElementById('date-subtitle').textContent =
-    `4月${DAY_DATES[idx]}日（${day}）· ${totalCount > 0 ? `本日 ${totalCount}レッスン` : idx === 6 ? '🌸 完全休日' : '予定なし'}`;
+    `${wk}4月${DAY_DATES[idx]}日（${day}）· ${totalCount > 0 ? `本日 ${totalCount}レッスン` : idx === 6 ? '🌸 完全休日' : '予定なし'}`;
 }
 
 function highlightDay(active) {
@@ -518,7 +538,7 @@ function renderCalendar(dayIdx) {
     return;
   }
 
-  const dayEvents = WEEK_EVENTS[dayIdx] || [];
+  const dayEvents = getEventsForDay(dayIdx);
 
   // Zone backgrounds
   dayEvents.filter(e => e.type === 'zone').forEach(z => {
@@ -583,6 +603,7 @@ function renderCalendar(dayIdx) {
           <div style="display:flex;flex-direction:column;align-items:flex-end;gap:2px;flex-shrink:0;">
             ${showBadge ? `<span style="font-size:9px;font-weight:700;padding:2px 5px;border-radius:4px;white-space:nowrap;background:${ticket.bg};color:${ticket.color};">${ticket.label}</span>` : ''}
             ${showBadge ? `<span style="font-size:9px;font-weight:700;color:${s.accent};white-space:nowrap;">${lCount}レッスン</span>` : ''}
+            ${evt.repeat && showBadge ? `<span style="font-size:9px;color:#6366f1;font-weight:700;white-space:nowrap;">🔁</span>` : ''}
             ${showTime  ? `<span style="font-size:9px;color:#9ca3af;white-space:nowrap;">${fmtTime(evt.start)}–${fmtTime(evt.end)}</span>` : ''}
           </div>` : ''}
         </div>`;
@@ -943,6 +964,14 @@ function openLessonModal(evt) {
   xbtn.id='cancel-btn'; xbtn.textContent=cancelled?'解除':'キャンセル'; xbtn.onclick=()=>toggleCancel(evt.id);
   cr.append(mbtn,cw,pbtn,xbtn); cb.append(cl,cr);
 
+  // 毎週繰り返しトグル
+  const repeatRow = el('div','margin-top:10px;padding-top:10px;border-top:1px solid #e0e7ff;');
+  const repeatOn  = !!evt.repeat;
+  const rbtn = el('button','width:100%;padding:9px 14px;border-radius:12px;font-size:12px;font-weight:700;border:1.5px solid '+(repeatOn?'#c4b5fd':'#e5e7eb')+';cursor:pointer;font-family:inherit;background:'+(repeatOn?'#ede9fe':'#f3f4f6')+';color:'+(repeatOn?'#6d28d9':'#6b7280')+';text-align:left;');
+  rbtn.id='repeat-toggle-btn'; rbtn.textContent=(repeatOn?'🔁 毎週繰り返し：ON':'🔁 毎週繰り返し：OFF');
+  rbtn.onclick=()=>toggleRepeat(evt.id);
+  repeatRow.appendChild(rbtn); cb.appendChild(repeatRow);
+
   // チケット種別
   const ts = el('div','');
   const tl = el('div','font-size:11px;font-weight:700;color:#6b7280;text-transform:uppercase;letter-spacing:0.07em;margin-bottom:8px;'); tl.textContent='🎫 チケット種別';
@@ -1007,6 +1036,33 @@ function adjustLessonCount(evtId, delta) {
     btn.style.background = next === 0 ? '#fef2f2' : '#f3f4f6';
     btn.style.color      = next === 0 ? '#ef4444' : '#6b7280';
   }
+  renderCalendar(currentDay);
+}
+
+function toggleRepeat(evtId) {
+  // WEEK_EVENTS と weeklyAdditions を両方検索
+  let found = Object.values(WEEK_EVENTS).flat().find(e => e.id === evtId);
+  if (!found) {
+    for (const wk of Object.values(weeklyAdditions)) {
+      for (const day of Object.values(wk)) {
+        found = day.find(e => e.id === evtId);
+        if (found) break;
+      }
+      if (found) break;
+    }
+  }
+  if (!found) return;
+  found.repeat = !found.repeat;
+  // ボタン表示を更新
+  const btn = document.getElementById('repeat-toggle-btn');
+  if (btn) {
+    const on = found.repeat;
+    btn.textContent = on ? '🔁 毎週繰り返し：ON' : '🔁 毎週繰り返し：OFF';
+    btn.style.background   = on ? '#ede9fe' : '#f3f4f6';
+    btn.style.color        = on ? '#6d28d9' : '#6b7280';
+    btn.style.borderColor  = on ? '#c4b5fd' : '#e5e7eb';
+  }
+  // カレンダーを即時再描画
   renderCalendar(currentDay);
 }
 
@@ -1304,25 +1360,30 @@ function addEvent() {
   const newEvt = _newEvtType === 'lesson'
     ? { type:'lesson', id:nextEventId++, start:[sh,sm], end:[eh,em], name, loc:'@'+studio.loc, style:studio.style }
     : { type:'block',  id:nextEventId++, start:[sh,sm], end:[eh,em], label:name, sub:'', repeat:false, style:'gray' };
-  if (!WEEK_EVENTS[currentDay]) WEEK_EVENTS[currentDay] = [];
-  WEEK_EVENTS[currentDay].push(newEvt);
+  if (currentWeekOffset === 0) {
+    if (!WEEK_EVENTS[currentDay]) WEEK_EVENTS[currentDay] = [];
+    WEEK_EVENTS[currentDay].push(newEvt);
+  } else {
+    if (!weeklyAdditions[currentWeekOffset]) weeklyAdditions[currentWeekOffset] = {};
+    if (!weeklyAdditions[currentWeekOffset][currentDay]) weeklyAdditions[currentWeekOffset][currentDay] = [];
+    weeklyAdditions[currentWeekOffset][currentDay].push(newEvt);
+  }
   closeModal();
   setTimeout(() => { selectDay(currentDay); }, 350);
 }
 
 function changeWeek(dir) {
-  const toast = document.createElement('div');
-  toast.style.cssText = 'position:absolute;top:130px;left:50%;transform:translateX(-50%);background:rgba(17,24,39,0.82);color:white;font-size:12px;font-weight:600;padding:8px 18px;border-radius:20px;z-index:99;pointer-events:none;white-space:nowrap;backdrop-filter:blur(8px);';
-  toast.textContent = dir < 0 ? '← 前の週' : '次の週 →';
-  document.getElementById('app').appendChild(toast);
-  setTimeout(() => toast.remove(), 1200);
+  currentWeekOffset += dir;
+  const lbl = document.getElementById('week-nav-label');
+  if (lbl) lbl.textContent = weekLabel(currentWeekOffset);
+  selectDay(currentDay);
 }
 
 // ─── 日報 ─────────────────────────────────────────────────────────────────────
 function showDailyReport() {
   const day     = ['月','火','水','木','金','土','日'][currentDay];
   const dateStr = `4月${DAY_DATES[currentDay]}日（${day}）`;
-  const lessons = (WEEK_EVENTS[currentDay] || []).filter(e => e.type === 'lesson');
+  const lessons = getEventsForDay(currentDay).filter(e => e.type === 'lesson');
 
   const rows = lessons.map(evt => {
     const student  = STUDENTS.find(s => s.name === evt.name);
@@ -1383,7 +1444,7 @@ function showDailyReport() {
 function exportDailyCSV() {
   const day     = ['月','火','水','木','金','土','日'][currentDay];
   const dateStr = `4月${DAY_DATES[currentDay]}日`;
-  const lessons = (WEEK_EVENTS[currentDay] || []).filter(e => e.type === 'lesson');
+  const lessons = getEventsForDay(currentDay).filter(e => e.type === 'lesson');
 
   const header = '生徒名,チケット種別,レッスン数,場所,状態\n';
   const body = lessons.map(evt => {
