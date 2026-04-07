@@ -109,13 +109,22 @@
         <h1 style="font-size:22px;font-weight:900;color:#111827;letter-spacing:-0.5px;line-height:1.1;">ダンス手帳</h1>
         <p id="date-subtitle" style="font-size:12px;color:#9ca3af;margin-top:3px;">4月8日（水）· 本日 5レッスン</p>
       </div>
-      <button onclick="showAddEvent()"
-        style="width:40px;height:40px;background:#6366f1;border-radius:50%;display:flex;align-items:center;justify-content:center;border:none;cursor:pointer;box-shadow:0 4px 14px rgba(99,102,241,0.4);transition:transform 0.1s,box-shadow 0.1s;"
-        onmousedown="this.style.transform='scale(0.9)'" onmouseup="this.style.transform='scale(1)'" ontouchstart="this.style.transform='scale(0.9)'" ontouchend="this.style.transform='scale(1)'">
-        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="white" stroke-width="2.8" stroke-linecap="round">
-          <line x1="12" y1="4" x2="12" y2="20"/><line x1="4" y1="12" x2="20" y2="12"/>
-        </svg>
-      </button>
+      <div style="display:flex;align-items:center;gap:8px;">
+        <button onclick="showDailyReport()"
+          style="height:36px;padding:0 12px;background:#f0fdf4;color:#059669;border-radius:18px;display:flex;align-items:center;gap:5px;border:1.5px solid #bbf7d0;cursor:pointer;font-size:12px;font-weight:700;font-family:inherit;">
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#059669" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+            <path d="M14 2H6a2 2 0 00-2 2v16a2 2 0 002 2h12a2 2 0 002-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="16" y1="13" x2="8" y2="13"/><line x1="16" y1="17" x2="8" y2="17"/><polyline points="10 9 9 9 8 9"/>
+          </svg>
+          日報
+        </button>
+        <button onclick="showAddEvent()"
+          style="width:40px;height:40px;background:#6366f1;border-radius:50%;display:flex;align-items:center;justify-content:center;border:none;cursor:pointer;box-shadow:0 4px 14px rgba(99,102,241,0.4);transition:transform 0.1s,box-shadow 0.1s;"
+          onmousedown="this.style.transform='scale(0.9)'" onmouseup="this.style.transform='scale(1)'" ontouchstart="this.style.transform='scale(0.9)'" ontouchend="this.style.transform='scale(1)'">
+          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="white" stroke-width="2.8" stroke-linecap="round">
+            <line x1="12" y1="4" x2="12" y2="20"/><line x1="4" y1="12" x2="20" y2="12"/>
+          </svg>
+        </button>
+      </div>
     </div>
 
     <!-- Week nav -->
@@ -173,6 +182,11 @@
     <div id="tab-tasks" class="absolute inset-0 overflow-y-auto" style="display:none;background:#f8f9fa;">
       <div style="padding:16px;" id="tasks-container"></div>
     </div>
+
+    <!-- SALES TAB -->
+    <div id="tab-sales" class="absolute inset-0 overflow-y-auto" style="display:none;background:#f8f9fa;">
+      <div style="padding:16px;" id="sales-container"></div>
+    </div>
   </div>
 
   <!-- ── BOTTOM TAB BAR ── -->
@@ -200,6 +214,13 @@
           <path d="M9 11l3 3L22 4"/><path d="M21 12v7a2 2 0 01-2 2H5a2 2 0 01-2-2V5a2 2 0 012-2h11"/>
         </svg>
         <span data-tab-label="tasks" style="font-size:10px;font-weight:500;color:#9ca3af;">タスク</span>
+      </button>
+      <button onclick="switchTab('sales')" data-tab="sales" class="tab-btn"
+        style="flex:1;display:flex;flex-direction:column;align-items:center;padding:10px 0 8px;gap:3px;background:transparent;border:none;cursor:pointer;">
+        <svg data-tab-icon="sales" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="#9ca3af" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+          <line x1="12" y1="1" x2="12" y2="23"/><path d="M17 5H9.5a3.5 3.5 0 000 7h5a3.5 3.5 0 010 7H6"/>
+        </svg>
+        <span data-tab-label="sales" style="font-size:10px;font-weight:500;color:#9ca3af;">売上</span>
       </button>
     </div>
   </div>
@@ -304,11 +325,14 @@ const WEEK_EVENTS = {
 
 // チケット種別定義（SSoT）
 const TICKET_TYPES = [
-  { id:'single',    label:'単回券',   color:'#4b5563', bg:'#f3f4f6' },
-  { id:'bundle3',   label:'3枚綴り',  color:'#1d4ed8', bg:'#dbeafe' },
-  { id:'bundle5',   label:'5枚綴り',  color:'#6d28d9', bg:'#ede9fe' },
-  { id:'bundle10',  label:'10枚綴り', color:'#065f46', bg:'#d1fae5' },
-  { id:'monthly',   label:'月謝制',   color:'#92400e', bg:'#fef3c7' },
+  { id:'single',    label:'単発',         color:'#4b5563', bg:'#f3f4f6' },
+  { id:'bundle3',   label:'3枚',          color:'#1d4ed8', bg:'#dbeafe' },
+  { id:'bundle5',   label:'5枚',          color:'#6d28d9', bg:'#ede9fe' },
+  { id:'bundle10',  label:'10枚',         color:'#065f46', bg:'#d1fae5' },
+  { id:'bundle20',  label:'20枚',         color:'#9a3412', bg:'#ffedd5' },
+  { id:'passport',  label:'パスポート',    color:'#1e3a5f', bg:'#bfdbfe' },
+  { id:'nsp',       label:'NSP',          color:'#4c1d95', bg:'#ddd6fe' },
+  { id:'beginner',  label:'初心者',        color:'#713f12', bg:'#fef3c7' },
 ];
 
 const STUDENTS = [
@@ -363,17 +387,25 @@ let taskData = [
   { id:6, text:'領収書整理（3月分）',                       done:true,  urgent:false },
 ];
 
-let studentTicketData  = {};  // { studentId: ticketId } 手動変更を記憶
-let studentMemoHistory = {};  // { studentId: [{date, memo, goal}] } 追加分を蓄積
-let studentSortMode    = 'today';   // 'today' | 'update' | 'name'
+let studentTicketData  = {};  // { studentId: ticketId }
+let studentMemoHistory = {};  // { studentId: [{date, memo, goal}] }
+let lessonCountOverrides = {}; // { evtId: count }  0=キャンセル
+let salesData = [
+  { id:1, name:'田中 花子', amount:5000, date:'4月8日', memo:'' },
+  { id:2, name:'山田 悟',   amount:8000, date:'4月8日', memo:'月謝' },
+  { id:3, name:'松本 由美', amount:5000, date:'4月8日', memo:'' },
+];
+let studentSortMode    = 'today';
 let studentSearchQuery = '';
 let currentDay = 2;
 let currentTab = 'calendar';
 
 // ─── ヘルパー ──────────────────────────────────────────────────────────────────
 function lessonCountForEvt(evt) {
+  if (lessonCountOverrides[evt.id] !== undefined) return lessonCountOverrides[evt.id];
   return Math.max(1, Math.round(durMins(evt.start, evt.end) / 25));
 }
+function isCancelled(evt) { return lessonCountForEvt(evt) === 0; }
 function getTicket(studentId, fallbackTicketId) {
   const id = studentTicketData[studentId] || fallbackTicketId || 'single';
   return TICKET_TYPES.find(t => t.id === id) || TICKET_TYPES[0];
@@ -519,20 +551,29 @@ function renderCalendar(dayIdx) {
       const student   = STUDENTS.find(st => st.name === evt.name);
       const ticket    = getTicket(student?.id, student?.ticket);
       const lCount    = lessonCountForEvt(evt);
+      const cancelled = lCount === 0;
       const showLoc   = hp >= 72;
       const showTime  = hp >= 82;
       const showBadge = hp >= 52;
+      if (cancelled) {
+        el.style.opacity = '0.45';
+        el.style.background = '#f3f4f6';
+        el.style.borderColor = '#d1d5db';
+        el.style.borderLeft = '3px solid #9ca3af';
+      }
       el.innerHTML = `
         <div style="display:flex;align-items:flex-start;justify-content:space-between;gap:4px;height:100%;">
           <div style="flex:1;min-width:0;overflow:hidden;">
-            <div style="font-size:13px;font-weight:700;color:${s.text};white-space:nowrap;overflow:hidden;text-overflow:ellipsis;line-height:1.3;">${evt.name}</div>
-            ${showLoc ? `<div style="font-size:10px;color:${s.accent};margin-top:2px;font-weight:600;">${evt.loc}</div>` : ''}
+            <div style="font-size:13px;font-weight:700;color:${cancelled?'#9ca3af':s.text};white-space:nowrap;overflow:hidden;text-overflow:ellipsis;line-height:1.3;${cancelled?'text-decoration:line-through;':''}">${evt.name}</div>
+            ${showLoc && !cancelled ? `<div style="font-size:10px;color:${s.accent};margin-top:2px;font-weight:600;">${evt.loc}</div>` : ''}
+            ${cancelled ? `<div style="font-size:10px;color:#ef4444;font-weight:700;margin-top:2px;">キャンセル</div>` : ''}
           </div>
+          ${!cancelled ? `
           <div style="display:flex;flex-direction:column;align-items:flex-end;gap:2px;flex-shrink:0;">
             ${showBadge ? `<span style="font-size:9px;font-weight:700;padding:2px 5px;border-radius:4px;white-space:nowrap;background:${ticket.bg};color:${ticket.color};">${ticket.label}</span>` : ''}
             ${showBadge ? `<span style="font-size:9px;font-weight:700;color:${s.accent};white-space:nowrap;">${lCount}レッスン</span>` : ''}
             ${showTime  ? `<span style="font-size:9px;color:#9ca3af;white-space:nowrap;">${fmtTime(evt.start)}–${fmtTime(evt.end)}</span>` : ''}
-          </div>
+          </div>` : ''}
         </div>`;
       el.addEventListener('click', () => openLessonModal(evt));
     } else {
@@ -655,6 +696,115 @@ function buildStudents() {
   });
 }
 
+// ─── SALES ────────────────────────────────────────────────────────────────────
+function buildSales() {
+  const cont = document.getElementById('sales-container');
+  if (!cont) return;
+
+  const total = salesData.reduce((s, x) => s + x.amount, 0);
+  const fmt   = n => n.toLocaleString('ja-JP');
+
+  const rows = salesData.map(item => `
+    <div style="background:white;border-radius:14px;padding:12px 14px;display:flex;align-items:center;gap:10px;box-shadow:0 1px 4px rgba(0,0,0,0.06);border:1px solid #f3f4f6;">
+      <div style="width:40px;height:40px;border-radius:12px;background:#f0fdf4;color:#059669;display:flex;align-items:center;justify-content:center;font-size:18px;font-weight:800;flex-shrink:0;">${item.name.charAt(0)}</div>
+      <div style="flex:1;min-width:0;">
+        <div style="font-size:13px;font-weight:700;color:#111827;">${item.name}</div>
+        <div style="font-size:11px;color:#9ca3af;margin-top:1px;">${item.date}${item.memo ? ' · ' + item.memo : ''}</div>
+      </div>
+      <div style="font-size:16px;font-weight:800;color:#059669;flex-shrink:0;">¥${fmt(item.amount)}</div>
+      <button onclick="deleteSales(${item.id})"
+        style="width:28px;height:28px;border-radius:50%;background:#fff5f5;border:none;cursor:pointer;display:flex;align-items:center;justify-content:center;font-size:14px;flex-shrink:0;">×</button>
+    </div>`).join('');
+
+  cont.innerHTML = `
+    <div style="display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:14px;">
+      <div>
+        <h2 style="font-size:17px;font-weight:800;color:#111827;">売上記録</h2>
+        <p style="font-size:12px;color:#9ca3af;margin-top:3px;">4月8日（水）</p>
+      </div>
+      <button onclick="openAddSales()"
+        style="background:#059669;color:white;font-size:12px;font-weight:700;padding:7px 14px;border-radius:20px;border:none;cursor:pointer;box-shadow:0 3px 10px rgba(5,150,105,0.3);">
+        ＋ 追加
+      </button>
+    </div>
+    <!-- 合計バナー -->
+    <div style="background:linear-gradient(135deg,#059669,#10b981);border-radius:18px;padding:16px 20px;margin-bottom:14px;display:flex;justify-content:space-between;align-items:center;">
+      <div>
+        <div style="font-size:11px;font-weight:700;color:rgba(255,255,255,0.75);letter-spacing:0.06em;">本日の売上合計</div>
+        <div style="font-size:28px;font-weight:900;color:white;line-height:1.2;margin-top:4px;">¥${fmt(total)}</div>
+      </div>
+      <div style="font-size:36px;opacity:0.35;">💴</div>
+    </div>
+    <!-- 一覧 -->
+    <div style="display:flex;flex-direction:column;gap:8px;margin-bottom:14px;">${rows || '<p style="text-align:center;color:#9ca3af;font-size:13px;padding:24px 0;">まだ記録がありません</p>'}</div>
+    <!-- CSV保存 -->
+    ${salesData.length > 0 ? `
+    <button onclick="exportSalesCSV()"
+      style="width:100%;padding:12px;background:#f0fdf4;color:#059669;font-size:13px;font-weight:700;border-radius:14px;border:1.5px solid #bbf7d0;cursor:pointer;font-family:inherit;">
+      📥 Excelで保存
+    </button>` : ''}
+  `;
+}
+
+function openAddSales() {
+  openModal(`
+    <div style="padding:16px 20px 12px;border-bottom:1px solid #f3f4f6;">
+      <h3 style="font-size:18px;font-weight:800;color:#111827;">💴 売上を追加</h3>
+    </div>
+    <div style="padding:16px 20px;display:flex;flex-direction:column;gap:12px;">
+      <div>
+        <label style="display:block;font-size:11px;font-weight:700;color:#6b7280;margin-bottom:7px;text-transform:uppercase;letter-spacing:0.06em;">生徒名 / 名称</label>
+        <input id="sales-name" type="text" placeholder="例：田中 花子"
+          style="width:100%;font-size:14px;background:#f9fafb;border-radius:13px;padding:12px 14px;border:1.5px solid #e5e7eb;font-family:inherit;color:#111827;">
+      </div>
+      <div>
+        <label style="display:block;font-size:11px;font-weight:700;color:#6b7280;margin-bottom:7px;text-transform:uppercase;letter-spacing:0.06em;">金額（円）</label>
+        <input id="sales-amount" type="number" placeholder="例：5000"
+          style="width:100%;font-size:14px;background:#f9fafb;border-radius:13px;padding:12px 14px;border:1.5px solid #e5e7eb;font-family:inherit;color:#111827;">
+      </div>
+      <div>
+        <label style="display:block;font-size:11px;font-weight:700;color:#6b7280;margin-bottom:7px;text-transform:uppercase;letter-spacing:0.06em;">メモ（任意）</label>
+        <input id="sales-memo" type="text" placeholder="例：月謝、チケット購入 など"
+          style="width:100%;font-size:14px;background:#f9fafb;border-radius:13px;padding:12px 14px;border:1.5px solid #e5e7eb;font-family:inherit;color:#111827;">
+      </div>
+    </div>
+    <div style="padding:0 20px 32px;display:flex;gap:10px;">
+      <button onclick="closeModal()" style="flex:1;background:#f3f4f6;color:#6b7280;font-weight:700;padding:15px;border-radius:16px;border:none;font-size:14px;cursor:pointer;font-family:inherit;">キャンセル</button>
+      <button onclick="addSalesEntry()" style="flex:2;background:#059669;color:white;font-weight:700;padding:15px;border-radius:16px;border:none;font-size:14px;cursor:pointer;font-family:inherit;box-shadow:0 4px 12px rgba(5,150,105,0.3);">追加する</button>
+    </div>`);
+}
+
+function addSalesEntry() {
+  const name   = document.getElementById('sales-name')?.value?.trim();
+  const amount = parseInt(document.getElementById('sales-amount')?.value || '0', 10);
+  const memo   = document.getElementById('sales-memo')?.value?.trim() || '';
+  if (!name || !amount) return;
+  const day = ['月','火','水','木','金','土','日'][currentDay];
+  salesData.unshift({ id: Date.now(), name, amount, date: `4月${DAY_DATES[currentDay]}日`, memo });
+  closeModal();
+  setTimeout(buildSales, 350);
+}
+
+function deleteSales(id) {
+  salesData = salesData.filter(x => x.id !== id);
+  buildSales();
+}
+
+function exportSalesCSV() {
+  const day = ['月','火','水','木','金','土','日'][currentDay];
+  const dateStr = `4月${DAY_DATES[currentDay]}日`;
+  const header = '名称,金額,日付,メモ\n';
+  const body = salesData.map(x => `${x.name},${x.amount},${x.date},${x.memo}`).join('\n');
+  const total = salesData.reduce((s,x) => s + x.amount, 0);
+  const footer = `\n合計,${total},,`;
+  const csv = '\uFEFF' + header + body + footer;
+  const blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' });
+  const url  = URL.createObjectURL(blob);
+  const a    = document.createElement('a');
+  a.href = url; a.download = `売上_${dateStr}.csv`; a.click();
+  URL.revokeObjectURL(url);
+}
+
 // ─── TASKS ────────────────────────────────────────────────────────────────────
 function buildTasks() {
   const cont = document.getElementById('tasks-container');
@@ -706,20 +856,22 @@ function toggleTask(id) {
 // ─── TAB SWITCHING ────────────────────────────────────────────────────────────
 function switchTab(tab) {
   currentTab = tab;
-  ['calendar','students','tasks'].forEach(t => {
-    document.getElementById(`tab-${t}`).style.display = t === tab ? (t === 'calendar' ? 'block' : 'block') : 'none';
+  ['calendar','students','tasks','sales'].forEach(t => {
+    document.getElementById(`tab-${t}`).style.display = t === tab ? 'block' : 'none';
   });
+  if (tab === 'sales') buildSales();
   setTabActive(tab);
 }
 
 function setTabActive(tab) {
-  ['calendar','students','tasks'].forEach(t => {
+  ['calendar','students','tasks','sales'].forEach(t => {
     const icon  = document.querySelector(`[data-tab-icon="${t}"]`);
     const label = document.querySelector(`[data-tab-label="${t}"]`);
     if (!icon || !label) return;
     const active = t === tab;
-    icon.style.stroke   = active ? '#6366f1' : '#9ca3af';
-    label.style.color   = active ? '#6366f1' : '#9ca3af';
+    const color  = t === 'sales' ? '#059669' : '#6366f1';
+    icon.style.stroke   = active ? color : '#9ca3af';
+    label.style.color   = active ? color : '#9ca3af';
     label.style.fontWeight = active ? '700' : '500';
   });
 }
@@ -772,6 +924,25 @@ function openLessonModal(evt) {
       </div>
     </div>
     <div style="padding:14px 20px;display:flex;flex-direction:column;gap:14px;">
+      <!-- レッスン数調整 -->
+      <div style="background:#f0f4ff;border-radius:16px;padding:14px;">
+        <label style="display:block;font-size:11px;font-weight:700;color:#6b7280;letter-spacing:0.07em;text-transform:uppercase;margin-bottom:10px;">📊 本日のレッスン数</label>
+        <div style="display:flex;align-items:center;gap:10px;">
+          <button onclick="adjustLessonCount(${evt.id}, -1)"
+            style="width:38px;height:38px;border-radius:50%;background:white;border:1.5px solid #e5e7eb;font-size:20px;font-weight:700;color:#374151;cursor:pointer;display:flex;align-items:center;justify-content:center;flex-shrink:0;font-family:inherit;">−</button>
+          <div id="lesson-count-wrap" style="flex:1;text-align:center;">
+            <div id="lesson-count-disp" style="font-size:28px;font-weight:900;color:${cancelled?'#ef4444':'#6366f1'};line-height:1;">${cancelled?'Cancel':lCount}</div>
+            <div style="font-size:10px;color:#9ca3af;margin-top:2px;">${cancelled?'キャンセル済み':'枚消費'}</div>
+          </div>
+          <button onclick="adjustLessonCount(${evt.id}, +1)"
+            style="width:38px;height:38px;border-radius:50%;background:white;border:1.5px solid #e5e7eb;font-size:20px;font-weight:700;color:#374151;cursor:pointer;display:flex;align-items:center;justify-content:center;flex-shrink:0;font-family:inherit;">＋</button>
+          <button onclick="toggleCancel(${evt.id})" id="cancel-btn"
+            style="padding:8px 12px;border-radius:12px;font-size:11px;font-weight:700;border:none;cursor:pointer;font-family:inherit;flex-shrink:0;
+              background:${cancelled?'#fef2f2':'#f3f4f6'};color:${cancelled?'#ef4444':'#6b7280'};">
+            ${cancelled?'解除':'キャンセル'}
+          </button>
+        </div>
+      </div>
       <!-- チケット種別 -->
       <div>
         <label style="display:block;font-size:11px;font-weight:700;color:#6b7280;letter-spacing:0.07em;text-transform:uppercase;margin-bottom:8px;">🎫 チケット種別</label>
@@ -803,6 +974,34 @@ function openLessonModal(evt) {
       <button onclick="saveNote(${student?.id||0},'${evt.id}')" id="save-btn"
         style="flex:2;background:#6366f1;color:white;font-weight:700;padding:15px;border-radius:16px;border:none;font-size:14px;cursor:pointer;font-family:inherit;box-shadow:0 4px 12px rgba(99,102,241,0.35);">保存する</button>
     </div>`);
+}
+
+function adjustLessonCount(evtId, delta) {
+  const evt = Object.values(WEEK_EVENTS).flat().find(e => e.id === evtId);
+  const base = evt ? Math.max(1, Math.round(durMins(evt.start, evt.end) / 25)) : 1;
+  const current = lessonCountOverrides[evtId] !== undefined ? lessonCountOverrides[evtId] : base;
+  const next = Math.max(0, current + delta);
+  lessonCountOverrides[evtId] = next;
+  const disp = document.getElementById('lesson-count-disp');
+  if (disp) {
+    disp.textContent = next === 0 ? 'Cancel' : String(next);
+    disp.style.color  = next === 0 ? '#ef4444' : '#6366f1';
+    disp.nextElementSibling.textContent = next === 0 ? 'キャンセル済み' : '枚消費';
+  }
+  const btn = document.getElementById('cancel-btn');
+  if (btn) {
+    btn.textContent      = next === 0 ? '解除' : 'キャンセル';
+    btn.style.background = next === 0 ? '#fef2f2' : '#f3f4f6';
+    btn.style.color      = next === 0 ? '#ef4444' : '#6b7280';
+  }
+  renderCalendar(currentDay);
+}
+
+function toggleCancel(evtId) {
+  const evt = Object.values(WEEK_EVENTS).flat().find(e => e.id === evtId);
+  const base = evt ? Math.max(1, Math.round(durMins(evt.start, evt.end) / 25)) : 1;
+  const current = lessonCountOverrides[evtId] !== undefined ? lessonCountOverrides[evtId] : base;
+  adjustLessonCount(evtId, current === 0 ? base : -current);
 }
 
 function selectLessonTicket(btn, ticketId, studentId) {
@@ -1031,6 +1230,93 @@ function changeWeek(dir) {
   toast.textContent = dir < 0 ? '← 前の週' : '次の週 →';
   document.getElementById('app').appendChild(toast);
   setTimeout(() => toast.remove(), 1200);
+}
+
+// ─── 日報 ─────────────────────────────────────────────────────────────────────
+function showDailyReport() {
+  const day     = ['月','火','水','木','金','土','日'][currentDay];
+  const dateStr = `4月${DAY_DATES[currentDay]}日（${day}）`;
+  const lessons = (WEEK_EVENTS[currentDay] || []).filter(e => e.type === 'lesson');
+
+  const rows = lessons.map(evt => {
+    const student  = STUDENTS.find(s => s.name === evt.name);
+    const ticket   = getTicket(student?.id, student?.ticket);
+    const lCount   = lessonCountForEvt(evt);
+    const cancelled = lCount === 0;
+    return { name: evt.name, ticket: ticket.label, count: lCount, cancelled, loc: evt.loc };
+  });
+
+  const totalCount = rows.filter(r => !r.cancelled).reduce((s, r) => s + r.count, 0);
+
+  const tableRows = rows.map(r => `
+    <tr style="border-bottom:1px solid #f3f4f6;${r.cancelled?'opacity:0.45;':''}">
+      <td style="padding:9px 10px;font-size:13px;font-weight:600;color:${r.cancelled?'#9ca3af':'#111827'};${r.cancelled?'text-decoration:line-through;':''}">${r.name}</td>
+      <td style="padding:9px 10px;text-align:center;">
+        <span style="font-size:11px;font-weight:700;padding:2px 8px;border-radius:20px;background:${r.cancelled?'#f3f4f6':'#ede9fe'};color:${r.cancelled?'#9ca3af':'#6d28d9'};">${r.cancelled?'キャンセル':r.ticket}</span>
+      </td>
+      <td style="padding:9px 10px;text-align:center;font-size:14px;font-weight:800;color:${r.cancelled?'#9ca3af':'#6366f1'};">${r.cancelled?'—':r.count}</td>
+    </tr>`).join('');
+
+  openModal(`
+    <div style="padding:16px 20px 12px;border-bottom:1px solid #f3f4f6;">
+      <div style="display:flex;align-items:center;justify-content:space-between;">
+        <div>
+          <h3 style="font-size:18px;font-weight:800;color:#111827;">📋 日報</h3>
+          <p style="font-size:12px;color:#9ca3af;margin-top:2px;">${dateStr} · 計 ${totalCount}レッスン</p>
+        </div>
+        <button onclick="exportDailyCSV()" 
+          style="padding:8px 14px;background:#059669;color:white;font-size:12px;font-weight:700;border-radius:12px;border:none;cursor:pointer;font-family:inherit;">
+          📥 Excel保存
+        </button>
+      </div>
+    </div>
+    <div style="padding:14px 20px;">
+      <table style="width:100%;border-collapse:collapse;">
+        <thead>
+          <tr style="background:#f8f9fa;border-radius:10px;overflow:hidden;">
+            <th style="padding:8px 10px;text-align:left;font-size:10px;font-weight:700;color:#6b7280;letter-spacing:0.06em;text-transform:uppercase;">生徒名</th>
+            <th style="padding:8px 10px;text-align:center;font-size:10px;font-weight:700;color:#6b7280;letter-spacing:0.06em;text-transform:uppercase;">チケット</th>
+            <th style="padding:8px 10px;text-align:center;font-size:10px;font-weight:700;color:#6b7280;letter-spacing:0.06em;text-transform:uppercase;">枚数</th>
+          </tr>
+        </thead>
+        <tbody>${tableRows}</tbody>
+        <tfoot>
+          <tr style="background:#f0f4ff;border-top:2px solid #e0e7ff;">
+            <td colspan="2" style="padding:10px 10px;font-size:13px;font-weight:700;color:#4f46e5;">合計</td>
+            <td style="padding:10px 10px;text-align:center;font-size:16px;font-weight:900;color:#4f46e5;">${totalCount}</td>
+          </tr>
+        </tfoot>
+      </table>
+    </div>
+    <div style="padding:0 20px 32px;">
+      <button onclick="closeModal()"
+        style="width:100%;background:#f3f4f6;color:#6b7280;font-weight:700;padding:14px;border-radius:16px;border:none;font-size:14px;cursor:pointer;font-family:inherit;">閉じる</button>
+    </div>`);
+}
+
+function exportDailyCSV() {
+  const day     = ['月','火','水','木','金','土','日'][currentDay];
+  const dateStr = `4月${DAY_DATES[currentDay]}日`;
+  const lessons = (WEEK_EVENTS[currentDay] || []).filter(e => e.type === 'lesson');
+
+  const header = '生徒名,チケット種別,レッスン数,場所,状態\n';
+  const body = lessons.map(evt => {
+    const student  = STUDENTS.find(s => s.name === evt.name);
+    const ticket   = getTicket(student?.id, student?.ticket);
+    const lCount   = lessonCountForEvt(evt);
+    const status   = lCount === 0 ? 'キャンセル' : '実施';
+    return `${evt.name},${ticket.label},${lCount === 0 ? 0 : lCount},${evt.loc},${status}`;
+  }).join('\n');
+
+  const totalCount = lessons.filter(e => lessonCountForEvt(e) > 0).reduce((s,e) => s + lessonCountForEvt(e), 0);
+  const footer = `\n合計,,${totalCount},,`;
+
+  const csv = '\uFEFF' + header + body + footer;
+  const blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' });
+  const url  = URL.createObjectURL(blob);
+  const a    = document.createElement('a');
+  a.href = url; a.download = `日報_${dateStr}.csv`; a.click();
+  URL.revokeObjectURL(url);
 }
 </script>
 </body>
