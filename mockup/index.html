@@ -577,20 +577,13 @@ function renderCalendar(dayIdx) {
         </div>`;
       el.addEventListener('click', () => openLessonModal(evt));
     } else {
-      el.style.borderStyle = 'dashed';
-      el.style.background  = s.light;
-      const icon    = evt.repeat ? '🔄' : (evt.label === '移動' ? '🚶‍♂️' : '☕');
-      const showSub = hp >= 56 && evt.sub;
-      const showT   = hp >= 62;
-      el.innerHTML = `
-        <div style="display:flex;align-items:center;gap:5px;height:100%;">
-          <span style="font-size:${hp<44?11:13}px;line-height:1;flex-shrink:0;">${icon}</span>
-          <div style="flex:1;min-width:0;overflow:hidden;">
-            <div style="font-size:12px;font-weight:600;color:${s.text};white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">${evt.label}</div>
-            ${showSub ? `<div style="font-size:10px;color:${s.accent};margin-top:1px;">${evt.sub}</div>` : ''}
-          </div>
-          ${showT ? `<span style="font-size:9px;color:#9ca3af;flex-shrink:0;">${fmtTime(evt.start)}–${fmtTime(evt.end)}</span>` : ''}
-        </div>`;
+      el.style.background  = '#f3f4f6';
+      el.style.border      = 'none';
+      el.style.borderLeft  = '3px solid #d1d5db';
+      el.style.borderRadius = '6px';
+      el.style.cursor      = 'default';
+      el.style.opacity     = '0.7';
+      el.innerHTML = '';
     }
     eArea.appendChild(el);
   });
@@ -691,7 +684,7 @@ function buildStudents() {
         <span style="font-size:11px;color:#9ca3af;">計 ${history.length} 件のメモ · 最終: ${s.lastLesson}</span>
         <span style="font-size:11px;font-weight:700;color:#6366f1;">詳細・編集 →</span>
       </div>`;
-    card.addEventListener('click', () => openStudentModal(s));
+    card.setAttribute('onclick', `openStudentById(${s.id})`);
     cards.appendChild(card);
   });
 }
@@ -1015,6 +1008,11 @@ function selectLessonTicket(btn, ticketId, studentId) {
     b.style.color        = active ? t.color : '#9ca3af';
     b.style.borderColor  = active ? t.color : '#e5e7eb';
   });
+}
+
+function openStudentById(id) {
+  const s = STUDENTS.find(s => s.id === id);
+  if (s) openStudentModal(s);
 }
 
 function openStudentModal(s) {
