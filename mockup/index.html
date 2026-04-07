@@ -109,13 +109,22 @@
         <h1 style="font-size:22px;font-weight:900;color:#111827;letter-spacing:-0.5px;line-height:1.1;">ダンス手帳</h1>
         <p id="date-subtitle" style="font-size:12px;color:#9ca3af;margin-top:3px;">4月8日（水）· 本日 5レッスン</p>
       </div>
-      <button onclick="showAddEvent()"
-        style="width:40px;height:40px;background:#6366f1;border-radius:50%;display:flex;align-items:center;justify-content:center;border:none;cursor:pointer;box-shadow:0 4px 14px rgba(99,102,241,0.4);transition:transform 0.1s,box-shadow 0.1s;"
-        onmousedown="this.style.transform='scale(0.9)'" onmouseup="this.style.transform='scale(1)'" ontouchstart="this.style.transform='scale(0.9)'" ontouchend="this.style.transform='scale(1)'">
-        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="white" stroke-width="2.8" stroke-linecap="round">
-          <line x1="12" y1="4" x2="12" y2="20"/><line x1="4" y1="12" x2="20" y2="12"/>
-        </svg>
-      </button>
+      <div style="display:flex;align-items:center;gap:8px;">
+        <button onclick="showDailyReport()"
+          style="height:36px;padding:0 12px;background:#f0fdf4;color:#059669;border-radius:18px;display:flex;align-items:center;gap:5px;border:1.5px solid #bbf7d0;cursor:pointer;font-size:12px;font-weight:700;font-family:inherit;">
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#059669" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+            <path d="M14 2H6a2 2 0 00-2 2v16a2 2 0 002 2h12a2 2 0 002-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="16" y1="13" x2="8" y2="13"/><line x1="16" y1="17" x2="8" y2="17"/><polyline points="10 9 9 9 8 9"/>
+          </svg>
+          日報
+        </button>
+        <button onclick="showAddEvent()"
+          style="width:40px;height:40px;background:#6366f1;border-radius:50%;display:flex;align-items:center;justify-content:center;border:none;cursor:pointer;box-shadow:0 4px 14px rgba(99,102,241,0.4);transition:transform 0.1s,box-shadow 0.1s;"
+          onmousedown="this.style.transform='scale(0.9)'" onmouseup="this.style.transform='scale(1)'" ontouchstart="this.style.transform='scale(0.9)'" ontouchend="this.style.transform='scale(1)'">
+          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="white" stroke-width="2.8" stroke-linecap="round">
+            <line x1="12" y1="4" x2="12" y2="20"/><line x1="4" y1="12" x2="20" y2="12"/>
+          </svg>
+        </button>
+      </div>
     </div>
 
     <!-- Week nav -->
@@ -125,7 +134,7 @@
           <polyline points="15 18 9 12 15 6"/>
         </svg>
       </button>
-      <p style="flex:1;text-align:center;font-size:12px;font-weight:600;color:#6b7280;letter-spacing:0.05em;">2026年4月 第2週</p>
+      <p id="week-nav-label" style="flex:1;text-align:center;font-size:12px;font-weight:600;color:#6b7280;letter-spacing:0.05em;">今週</p>
       <button onclick="changeWeek(1)" class="nav-btn" style="width:28px;height:28px;display:flex;align-items:center;justify-content:center;background:transparent;border:none;cursor:pointer;">
         <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#9ca3af" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
           <polyline points="9 18 15 12 9 6"/>
@@ -143,14 +152,18 @@
     <!-- CALENDAR TAB -->
     <div id="tab-calendar" class="absolute inset-0 calendar-scroll">
       <!-- Location legend -->
-      <div style="display:flex;align-items:center;gap:8px;padding:6px 14px;background:white;border-bottom:1px solid #f9fafb;">
-        <div style="display:flex;align-items:center;gap:4px;font-size:10px;font-weight:700;color:#1d4ed8;background:#dbeafe;padding:3px 8px;border-radius:6px;">
-          <div style="width:6px;height:6px;border-radius:50%;background:#3b82f6;"></div>
-          @泉スタジオ
+      <div style="display:flex;align-items:center;gap:6px;padding:6px 14px;background:white;border-bottom:1px solid #f9fafb;flex-wrap:wrap;">
+        <div style="display:flex;align-items:center;gap:4px;font-size:10px;font-weight:700;color:#3f6212;background:#ecfccb;padding:3px 8px;border-radius:6px;">
+          <div style="width:6px;height:6px;border-radius:50%;background:#84cc16;"></div>
+          @齊藤DG
         </div>
-        <div style="display:flex;align-items:center;gap:4px;font-size:10px;font-weight:700;color:#15803d;background:#dcfce7;padding:3px 8px;border-radius:6px;">
-          <div style="width:6px;height:6px;border-radius:50%;background:#22c55e;"></div>
-          @旭ヶ丘スタジオ
+        <div style="display:flex;align-items:center;gap:4px;font-size:10px;font-weight:700;color:#9a3412;background:#ffedd5;padding:3px 8px;border-radius:6px;">
+          <div style="width:6px;height:6px;border-radius:50%;background:#f97316;"></div>
+          @仙台SS
+        </div>
+        <div style="display:flex;align-items:center;gap:4px;font-size:10px;font-weight:700;color:#1e40af;background:#dbeafe;padding:3px 8px;border-radius:6px;">
+          <div style="width:6px;height:6px;border-radius:50%;background:#3b82f6;"></div>
+          @泉中央
         </div>
       </div>
       <!-- Calendar grid -->
@@ -168,6 +181,11 @@
     <!-- TASKS TAB -->
     <div id="tab-tasks" class="absolute inset-0 overflow-y-auto" style="display:none;background:#f8f9fa;">
       <div style="padding:16px;" id="tasks-container"></div>
+    </div>
+
+    <!-- SALES TAB -->
+    <div id="tab-sales" class="absolute inset-0 overflow-y-auto" style="display:none;background:#f8f9fa;">
+      <div style="padding:16px;" id="sales-container"></div>
     </div>
   </div>
 
@@ -197,6 +215,13 @@
         </svg>
         <span data-tab-label="tasks" style="font-size:10px;font-weight:500;color:#9ca3af;">タスク</span>
       </button>
+      <button onclick="switchTab('sales')" data-tab="sales" class="tab-btn"
+        style="flex:1;display:flex;flex-direction:column;align-items:center;padding:10px 0 8px;gap:3px;background:transparent;border:none;cursor:pointer;">
+        <svg data-tab-icon="sales" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="#9ca3af" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+          <line x1="12" y1="1" x2="12" y2="23"/><path d="M17 5H9.5a3.5 3.5 0 000 7h5a3.5 3.5 0 010 7H6"/>
+        </svg>
+        <span data-tab-label="sales" style="font-size:10px;font-weight:500;color:#9ca3af;">売上</span>
+      </button>
     </div>
   </div>
 
@@ -222,121 +247,213 @@ const durMins   = ([sh,sm],[eh,em]) => (eh*60+em)-(sh*60+sm);
 const fmtTime   = ([h,m]) => `${h}:${String(m).padStart(2,'0')}`;
 
 // ─── STYLE TOKENS ────────────────────────────────────────────────────────────
+// スタジオ略称マップ（表示用）
+const STUDIO_SHORT = {
+  '齊藤DG':  '齊藤ダンスガーデン',
+  '仙台SS':  '仙台サテライトスタジオ',
+  '泉中央':  '泉中央レンタルスペース',
+};
+
 const S = {
   indigo:  { bg:'#eef2ff', border:'#a5b4fc', text:'#3730a3', accent:'#6366f1', light:'#e0e7ff' },
   emerald: { bg:'#ecfdf5', border:'#6ee7b7', text:'#065f46', accent:'#10b981', light:'#d1fae5' },
   amber:   { bg:'#fffbeb', border:'#fcd34d', text:'#92400e', accent:'#f59e0b', light:'#fef3c7' },
   gray:    { bg:'#f9fafb', border:'#e5e7eb', text:'#4b5563', accent:'#9ca3af', light:'#f3f4f6' },
   purple:  { bg:'#faf5ff', border:'#c4b5fd', text:'#4c1d95', accent:'#8b5cf6', light:'#ede9fe' },
+  lime:    { bg:'#f7fee7', border:'#a3e635', text:'#3f6212', accent:'#84cc16', light:'#ecfccb' },
+  orange:  { bg:'#fff7ed', border:'#fb923c', text:'#9a3412', accent:'#f97316', light:'#ffedd5' },
+  blue:    { bg:'#eff6ff', border:'#93c5fd', text:'#1e40af', accent:'#3b82f6', light:'#dbeafe' },
 };
-const LV = {
-  '初級': { bg:'#dbeafe', text:'#1e40af' },
-  '中級': { bg:'#fce7f3', text:'#9d174d' },
-  '上級': { bg:'#dcfce7', text:'#14532d' },
-};
-
 // ─── WEEK DATA ────────────────────────────────────────────────────────────────
 const DAY_LABELS = ['月','火','水','木','金','土','日'];
+// 今週の月曜日を基準に動的に日付を計算（2026-04-06 = 今週月曜）
+const BASE_MONDAY = new Date(2026, 3, 6);
+function getWeekDates(weekOffset) {
+  return Array.from({length:7}, (_,i) => {
+    const d = new Date(BASE_MONDAY);
+    d.setDate(BASE_MONDAY.getDate() + weekOffset * 7 + i);
+    return { month: d.getMonth()+1, day: d.getDate() };
+  });
+}
+function getDateStr(dayIdx) {
+  const d = getWeekDates(currentWeekOffset)[dayIdx];
+  return `${d.month}月${d.day}日`;
+}
 const DAY_DATES  = [6,7,8,9,10,11,12];
+
+// スタジオゾーン設定（SSoT: ここだけ変更すれば全体に反映）
+const STUDIOS = {
+  saito:    { loc:'齊藤DG',  bg:'#f7fee7', zb:'#a3e635', style:'lime'   },  // 黄緑
+  sendai:   { loc:'仙台SS',  bg:'#fff7ed', zb:'#fb923c', style:'orange' },  // オレンジ
+  izumi:    { loc:'泉中央',  bg:'#eff6ff', zb:'#93c5fd', style:'blue'   },  // 青
+};
 
 const WEEK_EVENTS = {
   0: [
-    { type:'zone', start:[10,0], end:[13,0], loc:'泉', bg:'#eff6ff', zb:'#93c5fd' },
-    { type:'lesson', id:11, start:[10,0],  end:[11,0], name:'田中 花子', loc:'@泉',   level:'初級', style:'indigo' },
-    { type:'lesson', id:12, start:[11,30], end:[12,30],name:'小林 あい',  loc:'@泉',   level:'中級', style:'indigo' },
-    { type:'block',  id:13, start:[14,0],  end:[18,0], label:'プライベート', sub:'', repeat:true, style:'gray' },
+    { type:'zone', start:[10,0], end:[13,0], ...STUDIOS.saito },
+    { type:'lesson', id:11, start:[10,0],  end:[11,0],  name:'田中 花子', loc:'@齊藤DG', level:'初級', style:'lime' },
+    { type:'lesson', id:12, start:[11,30], end:[12,30], name:'小林 あい',  loc:'@齊藤DG', level:'中級', style:'lime' },
+    { type:'block',  id:13, start:[14,0],  end:[18,0],  label:'プライベート', sub:'', repeat:true, style:'gray' },
   ],
   1: [
-    { type:'zone', start:[9,0], end:[12,30], loc:'旭ヶ丘', bg:'#f0fdf4', zb:'#86efac' },
-    { type:'lesson', id:14, start:[9,0],   end:[10,0],  name:'伊藤 健太', loc:'@旭ヶ丘', level:'中級', style:'emerald' },
-    { type:'lesson', id:15, start:[10,30], end:[11,30], name:'鈴木 美咲', loc:'@旭ヶ丘', level:'初級', style:'emerald' },
-    { type:'block',  id:16, start:[12,0],  end:[12,30], label:'移動', sub:'旭ヶ丘 → 泉', repeat:false, style:'gray' },
+    { type:'zone', start:[9,0], end:[12,30], ...STUDIOS.sendai },
+    { type:'lesson', id:14, start:[9,0],   end:[10,0],  name:'伊藤 健太', loc:'@仙台SS', level:'中級', style:'orange' },
+    { type:'lesson', id:15, start:[10,30], end:[11,30], name:'鈴木 美咲', loc:'@仙台SS', level:'初級', style:'orange' },
+    { type:'block',  id:16, start:[12,0],  end:[12,30], label:'移動', sub:'仙台SS → 齊藤DG', repeat:false, style:'gray' },
   ],
   2: [
-    { type:'zone', start:[9,0],   end:[11,30], loc:'泉',   bg:'#eff6ff', zb:'#93c5fd' },
-    { type:'zone', start:[11,30], end:[17,30], loc:'旭ヶ丘',bg:'#f0fdf4', zb:'#86efac' },
-    { type:'zone', start:[18,30], end:[20,30], loc:'泉',   bg:'#eff6ff', zb:'#93c5fd' },
-    { type:'lesson', id:1, start:[9,0],   end:[10,0],  name:'田中 花子', loc:'@泉',    level:'初級', style:'indigo' },
-    { type:'lesson', id:2, start:[10,0],  end:[11,0],  name:'松本 由美', loc:'@泉',    level:'中級', style:'indigo' },
-    { type:'block',  id:20, start:[11,0], end:[11,30], label:'移動', sub:'泉 → 旭ヶ丘', repeat:false, style:'gray' },
-    { type:'lesson', id:3, start:[11,30], end:[12,30], name:'山田 悟',   loc:'@旭ヶ丘', level:'上級', style:'emerald' },
-    { type:'block',  id:21, start:[12,30],end:[14,0],  label:'昼休憩',  sub:'',        repeat:true,  style:'amber' },
-    { type:'lesson', id:4, start:[14,0],  end:[15,0],  name:'鈴木 美咲', loc:'@旭ヶ丘', level:'初級', style:'emerald' },
-    { type:'lesson', id:5, start:[15,30], end:[16,30], name:'伊藤 健太', loc:'@旭ヶ丘', level:'中級', style:'emerald' },
-    { type:'block',  id:22, start:[17,0], end:[17,30], label:'移動', sub:'旭ヶ丘 → 泉', repeat:false, style:'gray' },
-    { type:'lesson', id:6, start:[18,30], end:[19,30], name:'渡辺 麻衣', loc:'@泉',    level:'中級', style:'indigo' },
-    { type:'lesson', id:7, start:[19,30], end:[20,30], name:'佐藤 義雄', loc:'@泉',    level:'初級', style:'indigo' },
+    { type:'zone', start:[9,0],   end:[11,30], ...STUDIOS.saito  },
+    { type:'zone', start:[11,30], end:[17,30], ...STUDIOS.sendai },
+    { type:'zone', start:[18,30], end:[20,30], ...STUDIOS.izumi  },
+    { type:'lesson', id:1, start:[9,0],   end:[10,0],  name:'田中 花子', loc:'@齊藤DG', level:'初級', style:'lime'   },
+    { type:'lesson', id:2, start:[10,0],  end:[11,0],  name:'松本 由美', loc:'@齊藤DG', level:'中級', style:'lime'   },
+    { type:'block',  id:20, start:[11,0], end:[11,30], label:'移動', sub:'齊藤DG → 仙台SS', repeat:false, style:'gray' },
+    { type:'lesson', id:3, start:[11,30], end:[12,30], name:'山田 悟',   loc:'@仙台SS', level:'上級', style:'orange' },
+    { type:'block',  id:21, start:[12,30],end:[14,0],  label:'昼休憩',  sub:'',                repeat:true,  style:'gray'   },
+    { type:'lesson', id:4, start:[14,0],  end:[15,0],  name:'鈴木 美咲', loc:'@仙台SS', level:'初級', style:'orange' },
+    { type:'lesson', id:5, start:[15,30], end:[16,30], name:'伊藤 健太', loc:'@仙台SS', level:'中級', style:'orange' },
+    { type:'block',  id:22, start:[17,0], end:[17,30], label:'移動', sub:'仙台SS → 泉中央', repeat:false, style:'gray' },
+    { type:'lesson', id:6, start:[18,30], end:[19,30], name:'渡辺 麻衣', loc:'@泉中央', level:'中級', style:'blue'   },
+    { type:'lesson', id:7, start:[19,30], end:[20,30], name:'佐藤 義雄', loc:'@泉中央', level:'初級', style:'blue'   },
   ],
   3: [
-    { type:'zone', start:[13,0], end:[20,0], loc:'泉', bg:'#eff6ff', zb:'#93c5fd' },
-    { type:'lesson', id:17, start:[13,0],  end:[14,0],  name:'渡辺 麻衣', loc:'@泉', level:'中級', style:'indigo' },
-    { type:'lesson', id:18, start:[14,30], end:[15,30], name:'松本 由美', loc:'@泉', level:'中級', style:'indigo' },
-    { type:'lesson', id:19, start:[16,0],  end:[17,0],  name:'山田 悟',   loc:'@泉', level:'上級', style:'indigo' },
-    { type:'lesson', id:23, start:[18,0],  end:[19,0],  name:'佐藤 義雄', loc:'@泉', level:'初級', style:'indigo' },
+    { type:'zone', start:[13,0], end:[20,0], ...STUDIOS.izumi },
+    { type:'lesson', id:17, start:[13,0],  end:[14,0],  name:'渡辺 麻衣', loc:'@泉中央', level:'中級', style:'blue' },
+    { type:'lesson', id:18, start:[14,30], end:[15,30], name:'松本 由美', loc:'@泉中央', level:'中級', style:'blue' },
+    { type:'lesson', id:19, start:[16,0],  end:[17,0],  name:'山田 悟',   loc:'@泉中央', level:'上級', style:'blue' },
+    { type:'lesson', id:23, start:[18,0],  end:[19,0],  name:'佐藤 義雄', loc:'@泉中央', level:'初級', style:'blue' },
   ],
   4: [
     { type:'block', id:30, start:[8,0], end:[22,0], label:'休日', sub:'', repeat:true, style:'gray' },
   ],
   5: [
-    { type:'zone', start:[10,0], end:[17,0], loc:'旭ヶ丘', bg:'#f0fdf4', zb:'#86efac' },
-    { type:'lesson', id:24, start:[10,0],  end:[11,0],  name:'田中 花子', loc:'@旭ヶ丘', level:'初級', style:'emerald' },
-    { type:'lesson', id:25, start:[11,30], end:[12,30], name:'小林 あい',  loc:'@旭ヶ丘', level:'中級', style:'emerald' },
-    { type:'lesson', id:26, start:[14,0],  end:[15,0],  name:'渡辺 麻衣', loc:'@旭ヶ丘', level:'中級', style:'emerald' },
-    { type:'lesson', id:27, start:[15,30], end:[16,30], name:'松本 由美', loc:'@旭ヶ丘', level:'中級', style:'emerald' },
+    { type:'zone', start:[10,0], end:[17,0], ...STUDIOS.sendai },
+    { type:'lesson', id:24, start:[10,0],  end:[11,0],  name:'田中 花子', loc:'@仙台SS', level:'初級', style:'orange' },
+    { type:'lesson', id:25, start:[11,30], end:[12,30], name:'小林 あい',  loc:'@仙台SS', level:'中級', style:'orange' },
+    { type:'lesson', id:26, start:[14,0],  end:[15,0],  name:'渡辺 麻衣', loc:'@仙台SS', level:'中級', style:'orange' },
+    { type:'lesson', id:27, start:[15,30], end:[16,30], name:'松本 由美', loc:'@仙台SS', level:'中級', style:'orange' },
   ],
   6: [],
 };
 
+// チケット種別定義（SSoT）
+const TICKET_TYPES = [
+  { id:'single',    label:'単発',         color:'#4b5563', bg:'#f3f4f6' },
+  { id:'bundle3',   label:'3枚',          color:'#1d4ed8', bg:'#dbeafe' },
+  { id:'bundle5',   label:'5枚',          color:'#6d28d9', bg:'#ede9fe' },
+  { id:'bundle10',  label:'10枚',         color:'#065f46', bg:'#d1fae5' },
+  { id:'bundle20',  label:'20枚',         color:'#9a3412', bg:'#ffedd5' },
+  { id:'passport',  label:'パスポート',    color:'#1e3a5f', bg:'#bfdbfe' },
+  { id:'nsp',       label:'NSP',          color:'#4c1d95', bg:'#ddd6fe' },
+  { id:'beginner',  label:'初心者',        color:'#713f12', bg:'#fef3c7' },
+];
+
 const STUDENTS = [
-  { id:1,  name:'田中 花子', furi:'タナカ ハナコ', since:'2024年3月',  level:'初級', dances:'ワルツ・タンゴ',           lastLesson:'4月8日', color:'indigo',
-    prevMemo:'ワルツのナチュラルターンで軸がブレる。体の向きを意識させた。右足の踏み込みがやや強め。',
-    nextGoal:'ナチュラルターンの軸固め。足の踏み込みを柔らかく。次回はリバースターンへ進む。' },
-  { id:2,  name:'松本 由美', furi:'マツモト ユミ', since:'2023年9月',  level:'中級', dances:'ワルツ・クイックステップ', lastLesson:'4月8日', color:'indigo',
-    prevMemo:'クイックステップのロックステップが安定してきた。フォールアウェーの方向確認が課題。',
-    nextGoal:'ティプルチェイスの練習。スピードを上げても乱れないよう体幹強化。' },
-  { id:3,  name:'山田 悟',   furi:'ヤマダ サトル', since:'2022年6月',  level:'上級', dances:'タンゴ・ヴィエニーズワルツ',lastLesson:'4月8日', color:'emerald',
-    prevMemo:'ヴィエニーズのナチュラルターンのコネクション改善。パートナーとの距離感がよくなってきた。',
-    nextGoal:'競技会（5月）に向けてフロアクラフト練習。テレビジョンの精度を上げる。' },
-  { id:4,  name:'鈴木 美咲', furi:'スズキ ミサキ', since:'2024年11月', level:'初級', dances:'ワルツ',                 lastLesson:'4月8日', color:'emerald',
-    prevMemo:'5回目のレッスン。ライズ＆フォールの感覚を掴んできた。姿勢が以前より改善。',
-    nextGoal:'フェザーステップの導入。腕の使い方（ホールド）を丁寧に指導する。' },
-  { id:5,  name:'伊藤 健太', furi:'イトウ ケンタ', since:'2024年1月',  level:'中級', dances:'タンゴ・ルンバ',         lastLesson:'4月8日', color:'emerald',
-    prevMemo:'ルンバのキューバン・モーション改善中。腰の動かし方を別の比喩で説明したら理解度アップ。',
-    nextGoal:'ファン・ポジションのリズム安定。アレマーナへの移行をスムーズに。' },
-  { id:6,  name:'渡辺 麻衣', furi:'ワタナベ マイ', since:'2023年4月',  level:'中級', dances:'ワルツ・フォックストロット',lastLesson:'4月8日', color:'indigo',
-    prevMemo:'フォックストロットのフェザー〜スリーステップが流れるようになってきた。',
-    nextGoal:'スローテンポでの安定感を養う。バウンシーフォールアウェーの導入検討。' },
-  { id:7,  name:'佐藤 義雄', furi:'サトウ ヨシオ', since:'2025年1月',  level:'初級', dances:'ワルツ',                 lastLesson:'4月8日', color:'indigo',
-    prevMemo:'男性リードの練習中。左手の使い方が硬い。呼吸と一緒に動くよう誘導。',
-    nextGoal:'ナチュラルターンのリードを完成させる。立ち方（コア）の意識継続。' },
-  { id:8,  name:'小林 あい',  furi:'コバヤシ アイ', since:'2023年12月', level:'中級', dances:'サンバ・チャチャチャ',   lastLesson:'4月6日', color:'purple',
-    prevMemo:'サンバのボタフォゴが右足でズレる。リズムカウントを変えて練習したら改善傾向。',
-    nextGoal:'ボタフォゴ連続でのキープ。ヴォルタへの移行確認。' },
+  { id:1, name:'田中 花子', furi:'タナカ ハナコ', since:'2024年3月',  ticket:'bundle5',  dances:'ワルツ・タンゴ',            lastLesson:'4月8日', lastUpdate:'2026-04-08', color:'lime',
+    memoHistory:[
+      { date:'4月8日',  memo:'ワルツのナチュラルターンで軸がブレる。体の向きを意識させた。右足の踏み込みがやや強め。', goal:'ナチュラルターンの軸固め。足の踏み込みを柔らかく。次回はリバースターンへ進む。' },
+      { date:'4月1日',  memo:'ホールドの形がだいぶ安定してきた。右肩が上がりすぎる癖あり。', goal:'肩のポジション意識。ナチュラルターンの予備練習。' },
+    ] },
+  { id:2, name:'松本 由美', furi:'マツモト ユミ', since:'2023年9月',  ticket:'bundle10', dances:'ワルツ・クイックステップ',  lastLesson:'4月8日', lastUpdate:'2026-04-08', color:'lime',
+    memoHistory:[
+      { date:'4月8日',  memo:'クイックステップのロックステップが安定してきた。フォールアウェーの方向確認が課題。', goal:'ティプルチェイスの練習。スピードを上げても乱れないよう体幹強化。' },
+      { date:'3月25日', memo:'プロムナードポジションの角度が浅い。意識させたら改善。', goal:'ロックステップのリズムを体に染み込ませる。' },
+    ] },
+  { id:3, name:'山田 悟',   furi:'ヤマダ サトル', since:'2022年6月',  ticket:'bundle10', dances:'タンゴ・ヴィエニーズワルツ', lastLesson:'4月8日', lastUpdate:'2026-04-08', color:'orange',
+    memoHistory:[
+      { date:'4月8日',  memo:'ヴィエニーズのナチュラルターンのコネクション改善。パートナーとの距離感がよくなってきた。', goal:'競技会（5月）に向けてフロアクラフト練習。テレビジョンの精度を上げる。' },
+      { date:'4月1日',  memo:'タンゴのコルテのリードが強すぎる。パートナーへの配慮を促した。', goal:'コルテの力加減を調整。ヴィエニーズの練習継続。' },
+    ] },
+  { id:4, name:'鈴木 美咲', furi:'スズキ ミサキ', since:'2024年11月', ticket:'single',   dances:'ワルツ',                   lastLesson:'4月8日', lastUpdate:'2026-04-08', color:'orange',
+    memoHistory:[
+      { date:'4月8日',  memo:'5回目のレッスン。ライズ＆フォールの感覚を掴んできた。姿勢が以前より改善。', goal:'フェザーステップの導入。腕の使い方（ホールド）を丁寧に指導する。' },
+      { date:'3月18日', memo:'ウォークの歩き方が確認できた。体重移動がまだぎこちない。', goal:'体重移動を意識した反復練習。' },
+    ] },
+  { id:5, name:'伊藤 健太', furi:'イトウ ケンタ', since:'2024年1月',  ticket:'bundle5',  dances:'タンゴ・ルンバ',            lastLesson:'4月8日', lastUpdate:'2026-04-08', color:'orange',
+    memoHistory:[
+      { date:'4月8日',  memo:'ルンバのキューバン・モーション改善中。腰の動かし方を別の比喩で説明したら理解度アップ。', goal:'ファン・ポジションのリズム安定。アレマーナへの移行をスムーズに。' },
+      { date:'4月1日',  memo:'タンゴのウォークが単調。音楽の鋭さを体で表現するよう指導。', goal:'キューバンモーションの反復。音楽感覚を養う。' },
+    ] },
+  { id:6, name:'渡辺 麻衣', furi:'ワタナベ マイ', since:'2023年4月',  ticket:'bundle10', dances:'ワルツ・フォックストロット', lastLesson:'4月8日', lastUpdate:'2026-04-08', color:'blue',
+    memoHistory:[
+      { date:'4月8日',  memo:'フォックストロットのフェザー〜スリーステップが流れるようになってきた。', goal:'スローテンポでの安定感を養う。バウンシーフォールアウェーの導入検討。' },
+      { date:'3月28日', memo:'ワルツのスウェイが大きくなりすぎる。腰ではなく肩甲骨から動かすよう修正。', goal:'スウェイの質を上げる。フォックスのリズム感強化。' },
+    ] },
+  { id:7, name:'佐藤 義雄', furi:'サトウ ヨシオ', since:'2025年1月',  ticket:'single',   dances:'ワルツ',                   lastLesson:'4月8日', lastUpdate:'2026-04-08', color:'blue',
+    memoHistory:[
+      { date:'4月8日',  memo:'男性リードの練習中。左手の使い方が硬い。呼吸と一緒に動くよう誘導。', goal:'ナチュラルターンのリードを完成させる。立ち方（コア）の意識継続。' },
+      { date:'4月1日',  memo:'基本姿勢の確認。背中が丸まりやすい。鏡を使って自己確認させた。', goal:'姿勢の習慣化。ウォークの安定。' },
+    ] },
+  { id:8, name:'小林 あい',  furi:'コバヤシ アイ', since:'2023年12月', ticket:'bundle5',  dances:'サンバ・チャチャチャ',     lastLesson:'4月6日', lastUpdate:'2026-04-06', color:'purple',
+    memoHistory:[
+      { date:'4月6日',  memo:'サンバのボタフォゴが右足でズレる。リズムカウントを変えて練習したら改善傾向。', goal:'ボタフォゴ連続でのキープ。ヴォルタへの移行確認。' },
+      { date:'3月30日', memo:'チャチャチャのシャッセが遅れる。音の取り方を練習。', goal:'シャッセのリズム安定。サンバのボタフォゴ予習。' },
+    ] },
 ];
 
 let taskData = [
   { id:1, text:'山田さんの5月大会エントリーを確認',         done:false, urgent:true  },
-  { id:2, text:'旭ヶ丘スタジオの来月予約を入れる',           done:false, urgent:true  },
+  { id:2, text:'仙台サテライトスタジオの来月予約を入れる',     done:false, urgent:true  },
   { id:3, text:'田中さん・松本さんのペア練習日程調整',       done:false, urgent:false },
   { id:4, text:'新しい音楽CD（タンゴ）を注文',               done:true,  urgent:false },
   { id:5, text:'生徒連絡先リスト更新（LINE登録）',           done:false, urgent:false },
   { id:6, text:'領収書整理（3月分）',                       done:true,  urgent:false },
 ];
 
-let noteData   = {};
+let studentTicketData  = {};  // { studentId: ticketId }
+let studentMemoHistory = {};  // { studentId: [{date, memo, goal}] }
+let lessonCountOverrides = {}; // { evtId: count }  0=キャンセル
+let nextEventId = 200;        // 追加イベントのID
+let _newEvtType = 'lesson';   // 追加フォーム: 選択中の種別
+let _newEvtLoc  = 'saito';    // 追加フォーム: 選択中の場所
+let currentWeekOffset = 0;    // 0=今週 1=来週 -1=先週
+let weeklyAdditions   = {};   // { weekOffset: { dayIdx: [events] } }
+let salesData = [
+  { id:1, name:'田中 花子', amount:5000, date:'4月8日', memo:'' },
+  { id:2, name:'山田 悟',   amount:8000, date:'4月8日', memo:'月謝' },
+  { id:3, name:'松本 由美', amount:5000, date:'4月8日', memo:'' },
+];
+let studentSortMode    = 'today';
+let studentSearchQuery = '';
 let currentDay = 2;
 let currentTab = 'calendar';
+
+// ─── ヘルパー ──────────────────────────────────────────────────────────────────
+function lessonCountForEvt(evt) {
+  if (lessonCountOverrides[evt.id] !== undefined) return lessonCountOverrides[evt.id];
+  return Math.max(1, Math.round(durMins(evt.start, evt.end) / 25));
+}
+function isCancelled(evt) { return lessonCountForEvt(evt) === 0; }
+function getTicket(studentId, fallbackTicketId) {
+  const id = studentTicketData[studentId] || fallbackTicketId || 'single';
+  return TICKET_TYPES.find(t => t.id === id) || TICKET_TYPES[0];
+}
+function getMemoHistory(student) {
+  const extra = studentMemoHistory[student.id] || [];
+  return [...extra, ...student.memoHistory]; // 新しい順
+}
+function hasLessonToday(studentName) {
+  return (WEEK_EVENTS[currentDay] || []).some(e => e.type === 'lesson' && e.name === studentName);
+}
 
 // ─── INIT ─────────────────────────────────────────────────────────────────────
 document.addEventListener('DOMContentLoaded', () => {
   buildDaySelector();
-  renderCalendar(currentDay);
+  selectDay(currentDay);
   buildStudents();
   buildTasks();
   setTabActive('calendar');
   setTimeout(() => {
     document.getElementById('tab-calendar').scrollTop = timeToTop(8, 45);
   }, 80);
+
+  // 生徒カードはイベント委譲で処理（動的再生成に対応）
+  document.getElementById('tab-students').addEventListener('click', function(e) {
+    const card = e.target.closest('.student-card');
+    if (!card) return;
+    const id = parseInt(card.dataset.studentId, 10);
+    if (!isNaN(id)) openStudentById(id);
+  });
 });
 
 // ─── DAY SELECTOR ─────────────────────────────────────────────────────────────
@@ -355,7 +472,7 @@ function buildDaySelector() {
     const lColor = isSun ? '#f87171' : isSat ? '#60a5fa' : '#9ca3af';
     btn.innerHTML = `
       <span id="dl-${i}" style="font-size:11px;font-weight:600;color:${lColor};">${lbl}</span>
-      <span id="dn-${i}" style="font-size:14px;font-weight:600;color:${isSun?'#f87171':isSat?'#60a5fa':'#374151'};width:28px;height:28px;display:flex;align-items:center;justify-content:center;border-radius:50%;margin:1px 0;">${DAY_DATES[i]}</span>
+      <span id="dn-${i}" style="font-size:14px;font-weight:600;color:${isSun?'#f87171':isSat?'#60a5fa':'#374151'};width:28px;height:28px;display:flex;align-items:center;justify-content:center;border-radius:50%;margin:1px 0;">${getWeekDates(0)[i].day}</span>
       <div id="dd-${i}" style="width:4px;height:4px;border-radius:50%;background:${lessonCount>0?'#a5b4fc':'transparent'};margin-top:1px;"></div>
     `;
     cont.appendChild(btn);
@@ -363,14 +480,35 @@ function buildDaySelector() {
   highlightDay(2);
 }
 
+// 現在表示週の指定曜日イベントを返す
+function getEventsForDay(dayIdx) {
+  const base = WEEK_EVENTS[dayIdx] || [];
+  if (currentWeekOffset === 0) return base;
+  const recurring = base.filter(e => e.repeat);
+  const extras    = ((weeklyAdditions[currentWeekOffset] || {})[dayIdx]) || [];
+  return [...recurring, ...extras];
+}
+
+// 週オフセット → ラベル（日付範囲付き）
+function weekLabel(offset) {
+  const dates = getWeekDates(offset);
+  const mon = dates[0], sun = dates[6];
+  const range = `${mon.month}/${mon.day}〜${sun.month}/${sun.day}`;
+  if (offset === 0)  return `今週 (${range})`;
+  if (offset === 1)  return `来週 (${range})`;
+  if (offset === -1) return `先週 (${range})`;
+  return `${offset > 0 ? offset+'週後' : (-offset)+'週前'} (${range})`;
+}
+
 function selectDay(idx) {
   currentDay = idx;
   highlightDay(idx);
   renderCalendar(idx);
-  const cnt = (WEEK_EVENTS[idx]||[]).filter(e=>e.type==='lesson').length;
+  const lessons    = getEventsForDay(idx).filter(e => e.type === 'lesson');
+  const totalCount = lessons.reduce((sum, e) => sum + lessonCountForEvt(e), 0);
   const day = ['月','火','水','木','金','土','日'][idx];
   document.getElementById('date-subtitle').textContent =
-    `4月${DAY_DATES[idx]}日（${day}）· ${cnt > 0 ? `${cnt}レッスン` : idx === 6 ? '🌸 完全休日' : '予定なし'}`;
+    `${getDateStr(idx)}（${day}）· ${totalCount > 0 ? `本日 ${totalCount}レッスン` : idx === 6 ? '🌸 完全休日' : '予定なし'}`;
 }
 
 function highlightDay(active) {
@@ -415,7 +553,7 @@ function renderCalendar(dayIdx) {
     return;
   }
 
-  const dayEvents = WEEK_EVENTS[dayIdx] || [];
+  const dayEvents = getEventsForDay(dayIdx);
 
   // Zone backgrounds
   dayEvents.filter(e => e.type === 'zone').forEach(z => {
@@ -456,37 +594,43 @@ function renderCalendar(dayIdx) {
     `;
 
     if (evt.type === 'lesson') {
-      const lv = LV[evt.level] || LV['初級'];
-      const showLoc  = hp >= 72;
-      const showTime = hp >= 82;
-      const showLv   = hp >= 52;
+      const student   = STUDENTS.find(st => st.name === evt.name);
+      const ticket    = getTicket(student?.id, student?.ticket);
+      const lCount    = lessonCountForEvt(evt);
+      const cancelled = lCount === 0;
+      const showLoc   = hp >= 72;
+      const showTime  = hp >= 82;
+      const showBadge = hp >= 52;
+      if (cancelled) {
+        el.style.opacity = '0.45';
+        el.style.background = '#f3f4f6';
+        el.style.borderColor = '#d1d5db';
+        el.style.borderLeft = '3px solid #9ca3af';
+      }
       el.innerHTML = `
         <div style="display:flex;align-items:flex-start;justify-content:space-between;gap:4px;height:100%;">
           <div style="flex:1;min-width:0;overflow:hidden;">
-            <div style="font-size:13px;font-weight:700;color:${s.text};white-space:nowrap;overflow:hidden;text-overflow:ellipsis;line-height:1.3;">${evt.name}</div>
-            ${showLoc ? `<div style="font-size:10px;color:${s.accent};margin-top:2px;font-weight:600;">${evt.loc}</div>` : ''}
+            <div style="font-size:13px;font-weight:700;color:${cancelled?'#9ca3af':s.text};white-space:nowrap;overflow:hidden;text-overflow:ellipsis;line-height:1.3;${cancelled?'text-decoration:line-through;':''}">${evt.name}</div>
+            ${showLoc && !cancelled ? `<div style="font-size:10px;color:${s.accent};margin-top:2px;font-weight:600;">${evt.loc}</div>` : ''}
+            ${cancelled ? `<div style="font-size:10px;color:#ef4444;font-weight:700;margin-top:2px;">キャンセル</div>` : ''}
           </div>
+          ${!cancelled ? `
           <div style="display:flex;flex-direction:column;align-items:flex-end;gap:2px;flex-shrink:0;">
-            ${showLv ? `<span style="font-size:9px;font-weight:700;padding:2px 5px;border-radius:4px;white-space:nowrap;background:${lv.bg};color:${lv.text};">${evt.level}</span>` : ''}
-            ${showTime ? `<span style="font-size:9px;color:#9ca3af;white-space:nowrap;">${fmtTime(evt.start)}–${fmtTime(evt.end)}</span>` : ''}
-          </div>
+            ${showBadge ? `<span style="font-size:9px;font-weight:700;padding:2px 5px;border-radius:4px;white-space:nowrap;background:${ticket.bg};color:${ticket.color};">${ticket.label}</span>` : ''}
+            ${showBadge ? `<span style="font-size:9px;font-weight:700;color:${s.accent};white-space:nowrap;">${lCount}レッスン</span>` : ''}
+            ${evt.repeat && showBadge ? `<span style="font-size:9px;color:#6366f1;font-weight:700;white-space:nowrap;">🔁</span>` : ''}
+            ${showTime  ? `<span style="font-size:9px;color:#9ca3af;white-space:nowrap;">${fmtTime(evt.start)}–${fmtTime(evt.end)}</span>` : ''}
+          </div>` : ''}
         </div>`;
       el.addEventListener('click', () => openLessonModal(evt));
     } else {
-      el.style.borderStyle = 'dashed';
-      el.style.background  = s.light;
-      const icon    = evt.repeat ? '🔄' : (evt.label === '移動' ? '🚶‍♂️' : '☕');
-      const showSub = hp >= 56 && evt.sub;
-      const showT   = hp >= 62;
-      el.innerHTML = `
-        <div style="display:flex;align-items:center;gap:5px;height:100%;">
-          <span style="font-size:${hp<44?11:13}px;line-height:1;flex-shrink:0;">${icon}</span>
-          <div style="flex:1;min-width:0;overflow:hidden;">
-            <div style="font-size:12px;font-weight:600;color:${s.text};white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">${evt.label}</div>
-            ${showSub ? `<div style="font-size:10px;color:${s.accent};margin-top:1px;">${evt.sub}</div>` : ''}
-          </div>
-          ${showT ? `<span style="font-size:9px;color:#9ca3af;flex-shrink:0;">${fmtTime(evt.start)}–${fmtTime(evt.end)}</span>` : ''}
-        </div>`;
+      el.style.background  = '#f3f4f6';
+      el.style.border      = 'none';
+      el.style.borderLeft  = '3px solid #d1d5db';
+      el.style.borderRadius = '6px';
+      el.style.cursor      = 'default';
+      el.style.opacity     = '0.7';
+      el.innerHTML = '';
     }
     eArea.appendChild(el);
   });
@@ -502,41 +646,203 @@ function mkAbsDiv(parent, css) {
 // ─── STUDENTS LIST ────────────────────────────────────────────────────────────
 function buildStudents() {
   const cont = document.getElementById('students-container');
+
+  const sortLabels = { today:'今日順', update:'更新順', name:'名前順' };
+  const sortKeys   = ['today','update','name'];
+
   cont.innerHTML = `
-    <div style="margin-bottom:16px;">
+    <div style="margin-bottom:12px;">
       <h2 style="font-size:17px;font-weight:800;color:#111827;">生徒メモ帳</h2>
-      <p style="font-size:12px;color:#9ca3af;margin-top:3px;">タップしてメモ・課題を確認・編集</p>
+    </div>
+    <!-- 検索 -->
+    <div style="position:relative;margin-bottom:10px;">
+      <span style="position:absolute;left:12px;top:50%;transform:translateY(-50%);font-size:14px;pointer-events:none;">🔍</span>
+      <input id="student-search" type="text" placeholder="生徒名で検索..."
+        value="${studentSearchQuery}"
+        oninput="studentSearchQuery=this.value;buildStudents();"
+        style="width:100%;font-size:13px;background:white;border-radius:12px;padding:9px 12px 9px 34px;border:1.5px solid #e5e7eb;font-family:inherit;color:#111827;box-sizing:border-box;">
+    </div>
+    <!-- ソートタブ -->
+    <div style="display:flex;gap:6px;margin-bottom:14px;">
+      ${sortKeys.map(k => `
+        <button onclick="studentSortMode='${k}';buildStudents();"
+          style="padding:6px 12px;border-radius:20px;font-size:11px;font-weight:700;border:none;cursor:pointer;font-family:inherit;transition:all 0.1s;
+            background:${studentSortMode===k?'#6366f1':'#f3f4f6'};
+            color:${studentSortMode===k?'white':'#6b7280'};">
+          ${sortLabels[k]}
+        </button>`).join('')}
     </div>
     <div id="student-cards" style="display:flex;flex-direction:column;gap:10px;"></div>`;
 
+  // フィルタ
+  let list = STUDENTS.filter(s =>
+    studentSearchQuery === '' || s.name.includes(studentSearchQuery) || s.furi.includes(studentSearchQuery)
+  );
+
+  // ソート
+  if (studentSortMode === 'today') {
+    list = [...list].sort((a,b) => {
+      const aT = hasLessonToday(a.name) ? 0 : 1;
+      const bT = hasLessonToday(b.name) ? 0 : 1;
+      return aT - bT || a.furi.localeCompare(b.furi, 'ja');
+    });
+  } else if (studentSortMode === 'update') {
+    list = [...list].sort((a,b) => b.lastUpdate.localeCompare(a.lastUpdate));
+  } else {
+    list = [...list].sort((a,b) => a.furi.localeCompare(b.furi, 'ja'));
+  }
+
   const cards = document.getElementById('student-cards');
-  STUDENTS.forEach(s => {
-    const st = S[s.color] || S.indigo;
-    const lv = LV[s.level] || LV['初級'];
+  if (list.length === 0) {
+    cards.innerHTML = `<p style="text-align:center;color:#9ca3af;font-size:13px;padding:24px 0;">該当する生徒が見つかりません</p>`;
+    return;
+  }
+
+  list.forEach(s => {
+    const st      = S[s.color] || S.indigo;
+    const ticket  = getTicket(s.id, s.ticket);
+    const history = getMemoHistory(s);
+    const latest  = history[0];
+    const todayFlag = hasLessonToday(s.name);
+
     const card = document.createElement('div');
     card.className = 'student-card';
-    card.style.cssText = 'background:white;border-radius:18px;padding:14px;border:1px solid #f3f4f6;box-shadow:0 1px 4px rgba(0,0,0,0.06);';
+    card.style.cssText = `background:white;border-radius:18px;padding:14px;border:1.5px solid ${todayFlag ? '#a5b4fc' : '#f3f4f6'};box-shadow:0 1px 4px rgba(0,0,0,0.06);`;
     card.innerHTML = `
       <div style="display:flex;gap:12px;align-items:flex-start;">
-        <div style="width:46px;height:46px;border-radius:14px;background:${st.light};color:${st.accent};display:flex;align-items:center;justify-content:center;font-size:20px;font-weight:800;flex-shrink:0;">${s.name.charAt(0)}</div>
+        <div style="position:relative;">
+          <div style="width:46px;height:46px;border-radius:14px;background:${st.light};color:${st.accent};display:flex;align-items:center;justify-content:center;font-size:20px;font-weight:800;flex-shrink:0;">${s.name.charAt(0)}</div>
+          ${todayFlag ? '<div style="position:absolute;top:-3px;right:-3px;width:10px;height:10px;border-radius:50%;background:#6366f1;border:2px solid white;"></div>' : ''}
+        </div>
         <div style="flex:1;min-width:0;">
-          <div style="display:flex;align-items:center;gap:6px;margin-bottom:2px;">
+          <div style="display:flex;align-items:center;gap:6px;margin-bottom:2px;flex-wrap:wrap;">
             <span style="font-size:14px;font-weight:700;color:#111827;">${s.name}</span>
-            <span style="font-size:9px;font-weight:700;padding:2px 6px;border-radius:4px;background:${lv.bg};color:${lv.text};">${s.level}</span>
+            <span style="font-size:9px;font-weight:700;padding:2px 6px;border-radius:4px;background:${ticket.bg};color:${ticket.color};">${ticket.label}</span>
+            ${todayFlag ? '<span style="font-size:9px;font-weight:700;padding:2px 6px;border-radius:4px;background:#ede9fe;color:#6d28d9;">本日レッスン</span>' : ''}
           </div>
           <div style="font-size:11px;color:#9ca3af;margin-bottom:7px;">${s.dances} · ${s.since}〜</div>
+          ${latest ? `
           <div style="font-size:11px;color:#4b5563;line-height:1.55;background:#f8f9fa;border-radius:10px;padding:8px 10px;display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden;">
-            <span style="font-weight:700;color:#6b7280;">前回: </span>${s.prevMemo}
-          </div>
+            <span style="font-weight:700;color:#6b7280;">${latest.date}: </span>${latest.memo}
+          </div>` : ''}
         </div>
       </div>
       <div style="margin-top:10px;padding-top:10px;border-top:1px solid #f3f4f6;display:flex;justify-content:space-between;align-items:center;">
-        <span style="font-size:11px;color:#9ca3af;">最終レッスン: ${s.lastLesson}</span>
+        <span style="font-size:11px;color:#9ca3af;">計 ${history.length} 件のメモ · 最終: ${s.lastLesson}</span>
         <span style="font-size:11px;font-weight:700;color:#6366f1;">詳細・編集 →</span>
       </div>`;
-    card.addEventListener('click', () => openStudentModal(s));
+    card.dataset.studentId = s.id;
     cards.appendChild(card);
   });
+}
+
+// ─── SALES ────────────────────────────────────────────────────────────────────
+function buildSales() {
+  const cont = document.getElementById('sales-container');
+  if (!cont) return;
+
+  const total = salesData.reduce((s, x) => s + x.amount, 0);
+  const fmt   = n => n.toLocaleString('ja-JP');
+
+  const rows = salesData.map(item => `
+    <div style="background:white;border-radius:14px;padding:12px 14px;display:flex;align-items:center;gap:10px;box-shadow:0 1px 4px rgba(0,0,0,0.06);border:1px solid #f3f4f6;">
+      <div style="width:40px;height:40px;border-radius:12px;background:#f0fdf4;color:#059669;display:flex;align-items:center;justify-content:center;font-size:18px;font-weight:800;flex-shrink:0;">${item.name.charAt(0)}</div>
+      <div style="flex:1;min-width:0;">
+        <div style="font-size:13px;font-weight:700;color:#111827;">${item.name}</div>
+        <div style="font-size:11px;color:#9ca3af;margin-top:1px;">${item.date}${item.memo ? ' · ' + item.memo : ''}</div>
+      </div>
+      <div style="font-size:16px;font-weight:800;color:#059669;flex-shrink:0;">¥${fmt(item.amount)}</div>
+      <button onclick="deleteSales(${item.id})"
+        style="width:28px;height:28px;border-radius:50%;background:#fff5f5;border:none;cursor:pointer;display:flex;align-items:center;justify-content:center;font-size:14px;flex-shrink:0;">×</button>
+    </div>`).join('');
+
+  cont.innerHTML = `
+    <div style="display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:14px;">
+      <div>
+        <h2 style="font-size:17px;font-weight:800;color:#111827;">売上記録</h2>
+        <p style="font-size:12px;color:#9ca3af;margin-top:3px;">4月8日（水）</p>
+      </div>
+      <button onclick="openAddSales()"
+        style="background:#059669;color:white;font-size:12px;font-weight:700;padding:7px 14px;border-radius:20px;border:none;cursor:pointer;box-shadow:0 3px 10px rgba(5,150,105,0.3);">
+        ＋ 追加
+      </button>
+    </div>
+    <!-- 合計バナー -->
+    <div style="background:linear-gradient(135deg,#059669,#10b981);border-radius:18px;padding:16px 20px;margin-bottom:14px;display:flex;justify-content:space-between;align-items:center;">
+      <div>
+        <div style="font-size:11px;font-weight:700;color:rgba(255,255,255,0.75);letter-spacing:0.06em;">本日の売上合計</div>
+        <div style="font-size:28px;font-weight:900;color:white;line-height:1.2;margin-top:4px;">¥${fmt(total)}</div>
+      </div>
+      <div style="font-size:36px;opacity:0.35;">💴</div>
+    </div>
+    <!-- 一覧 -->
+    <div style="display:flex;flex-direction:column;gap:8px;margin-bottom:14px;">${rows || '<p style="text-align:center;color:#9ca3af;font-size:13px;padding:24px 0;">まだ記録がありません</p>'}</div>
+    <!-- CSV保存 -->
+    ${salesData.length > 0 ? `
+    <button onclick="exportSalesCSV()"
+      style="width:100%;padding:12px;background:#f0fdf4;color:#059669;font-size:13px;font-weight:700;border-radius:14px;border:1.5px solid #bbf7d0;cursor:pointer;font-family:inherit;">
+      📥 Excelで保存
+    </button>` : ''}
+  `;
+}
+
+function openAddSales() {
+  openModal(`
+    <div style="padding:16px 20px 12px;border-bottom:1px solid #f3f4f6;">
+      <h3 style="font-size:18px;font-weight:800;color:#111827;">💴 売上を追加</h3>
+    </div>
+    <div style="padding:16px 20px;display:flex;flex-direction:column;gap:12px;">
+      <div>
+        <label style="display:block;font-size:11px;font-weight:700;color:#6b7280;margin-bottom:7px;text-transform:uppercase;letter-spacing:0.06em;">生徒名 / 名称</label>
+        <input id="sales-name" type="text" placeholder="例：田中 花子"
+          style="width:100%;font-size:14px;background:#f9fafb;border-radius:13px;padding:12px 14px;border:1.5px solid #e5e7eb;font-family:inherit;color:#111827;">
+      </div>
+      <div>
+        <label style="display:block;font-size:11px;font-weight:700;color:#6b7280;margin-bottom:7px;text-transform:uppercase;letter-spacing:0.06em;">金額（円）</label>
+        <input id="sales-amount" type="number" placeholder="例：5000"
+          style="width:100%;font-size:14px;background:#f9fafb;border-radius:13px;padding:12px 14px;border:1.5px solid #e5e7eb;font-family:inherit;color:#111827;">
+      </div>
+      <div>
+        <label style="display:block;font-size:11px;font-weight:700;color:#6b7280;margin-bottom:7px;text-transform:uppercase;letter-spacing:0.06em;">メモ（任意）</label>
+        <input id="sales-memo" type="text" placeholder="例：月謝、チケット購入 など"
+          style="width:100%;font-size:14px;background:#f9fafb;border-radius:13px;padding:12px 14px;border:1.5px solid #e5e7eb;font-family:inherit;color:#111827;">
+      </div>
+    </div>
+    <div style="padding:0 20px 32px;display:flex;gap:10px;">
+      <button onclick="closeModal()" style="flex:1;background:#f3f4f6;color:#6b7280;font-weight:700;padding:15px;border-radius:16px;border:none;font-size:14px;cursor:pointer;font-family:inherit;">キャンセル</button>
+      <button onclick="addSalesEntry()" style="flex:2;background:#059669;color:white;font-weight:700;padding:15px;border-radius:16px;border:none;font-size:14px;cursor:pointer;font-family:inherit;box-shadow:0 4px 12px rgba(5,150,105,0.3);">追加する</button>
+    </div>`);
+}
+
+function addSalesEntry() {
+  const name   = document.getElementById('sales-name')?.value?.trim();
+  const amount = parseInt(document.getElementById('sales-amount')?.value || '0', 10);
+  const memo   = document.getElementById('sales-memo')?.value?.trim() || '';
+  if (!name || !amount) return;
+  const day = ['月','火','水','木','金','土','日'][currentDay];
+  salesData.unshift({ id: Date.now(), name, amount, date: getDateStr(currentDay), memo });
+  closeModal();
+  setTimeout(buildSales, 350);
+}
+
+function deleteSales(id) {
+  salesData = salesData.filter(x => x.id !== id);
+  buildSales();
+}
+
+function exportSalesCSV() {
+  const day = ['月','火','水','木','金','土','日'][currentDay];
+  const dateStr = getDateStr(currentDay);
+  const header = '名称,金額,日付,メモ\n';
+  const body = salesData.map(x => `${x.name},${x.amount},${x.date},${x.memo}`).join('\n');
+  const total = salesData.reduce((s,x) => s + x.amount, 0);
+  const footer = `\n合計,${total},,`;
+  const csv = '\uFEFF' + header + body + footer;
+  const blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' });
+  const url  = URL.createObjectURL(blob);
+  const a    = document.createElement('a');
+  a.href = url; a.download = `売上_${dateStr}.csv`; a.click();
+  URL.revokeObjectURL(url);
 }
 
 // ─── TASKS ────────────────────────────────────────────────────────────────────
@@ -590,20 +896,22 @@ function toggleTask(id) {
 // ─── TAB SWITCHING ────────────────────────────────────────────────────────────
 function switchTab(tab) {
   currentTab = tab;
-  ['calendar','students','tasks'].forEach(t => {
-    document.getElementById(`tab-${t}`).style.display = t === tab ? (t === 'calendar' ? 'block' : 'block') : 'none';
+  ['calendar','students','tasks','sales'].forEach(t => {
+    document.getElementById(`tab-${t}`).style.display = t === tab ? 'block' : 'none';
   });
+  if (tab === 'sales') buildSales();
   setTabActive(tab);
 }
 
 function setTabActive(tab) {
-  ['calendar','students','tasks'].forEach(t => {
+  ['calendar','students','tasks','sales'].forEach(t => {
     const icon  = document.querySelector(`[data-tab-icon="${t}"]`);
     const label = document.querySelector(`[data-tab-label="${t}"]`);
     if (!icon || !label) return;
     const active = t === tab;
-    icon.style.stroke   = active ? '#6366f1' : '#9ca3af';
-    label.style.color   = active ? '#6366f1' : '#9ca3af';
+    const color  = t === 'sales' ? '#059669' : '#6366f1';
+    icon.style.stroke   = active ? color : '#9ca3af';
+    label.style.color   = active ? color : '#9ca3af';
     label.style.fontWeight = active ? '700' : '500';
   });
 }
@@ -627,154 +935,343 @@ function closeModal() {
 }
 
 function openLessonModal(evt) {
-  const student = STUDENTS.find(s => s.name === evt.name);
-  const notes   = noteData[evt.id] || { prev: student?.prevMemo || '', next: student?.nextGoal || '' };
-  const s  = S[evt.style] || S.gray;
-  const lv = LV[evt.level] || LV['初級'];
-  openModal(`
-    <div style="padding:16px 20px 12px;border-bottom:1px solid #f3f4f6;">
-      <div style="display:flex;align-items:center;gap:12px;">
-        <div style="width:50px;height:50px;border-radius:16px;background:${s.light};color:${s.accent};display:flex;align-items:center;justify-content:center;font-size:24px;font-weight:800;flex-shrink:0;">${evt.name.charAt(0)}</div>
-        <div style="flex:1;">
-          <div style="display:flex;align-items:center;gap:7px;margin-bottom:3px;">
-            <span style="font-size:19px;font-weight:800;color:#111827;">${evt.name}</span>
-            <span style="font-size:10px;font-weight:700;padding:2px 7px;border-radius:5px;background:${lv.bg};color:${lv.text};">${evt.level}</span>
-          </div>
-          <p style="font-size:12px;color:#9ca3af;">${fmtTime(evt.start)} – ${fmtTime(evt.end)} · ${evt.loc}</p>
-        </div>
-      </div>
-    </div>
-    <div style="padding:16px 20px;display:flex;flex-direction:column;gap:14px;">
-      <div>
-        <label style="display:block;font-size:11px;font-weight:700;color:#6b7280;letter-spacing:0.07em;text-transform:uppercase;margin-bottom:8px;">📝 本日のレッスンメモ</label>
-        <textarea id="note-prev" rows="4" placeholder="今日気づいたこと、改善点など..."
-          style="width:100%;font-size:13px;color:#111827;background:#f9fafb;border-radius:14px;padding:12px;border:1.5px solid #e5e7eb;resize:none;line-height:1.65;font-family:inherit;">${notes.prev}</textarea>
-      </div>
-      <div>
-        <label style="display:block;font-size:11px;font-weight:700;color:#6b7280;letter-spacing:0.07em;text-transform:uppercase;margin-bottom:8px;">🎯 次回の課題・目標</label>
-        <textarea id="note-next" rows="3" placeholder="次回レッスンまでの課題..."
-          style="width:100%;font-size:13px;color:#111827;background:#f9fafb;border-radius:14px;padding:12px;border:1.5px solid #e5e7eb;resize:none;line-height:1.65;font-family:inherit;">${notes.next}</textarea>
-      </div>
-      ${student ? `
-      <div style="background:#f0f4ff;border-radius:14px;padding:12px 14px;">
-        <p style="font-size:11px;font-weight:700;color:#6366f1;margin-bottom:6px;">📚 生徒情報</p>
-        <div style="display:grid;grid-template-columns:1fr 1fr;gap:4px;font-size:11px;color:#4f46e5;">
-          <div><span style="font-weight:600;">種目:</span> ${student.dances}</div>
-          <div><span style="font-weight:600;">受講開始:</span> ${student.since}</div>
-        </div>
-      </div>` : ''}
-    </div>
-    <div style="padding:4px 20px 32px;display:flex;gap:10px;">
-      <button onclick="closeModal()"
-        style="flex:1;background:#f3f4f6;color:#6b7280;font-weight:700;padding:15px;border-radius:16px;border:none;font-size:14px;cursor:pointer;font-family:inherit;">
-        閉じる
-      </button>
-      <button onclick="saveNote(${evt.id})" id="save-btn"
-        style="flex:2;background:#6366f1;color:white;font-weight:700;padding:15px;border-radius:16px;border:none;font-size:14px;cursor:pointer;font-family:inherit;box-shadow:0 4px 12px rgba(99,102,241,0.35);">
-        保存する
-      </button>
-    </div>`);
+  const student  = STUDENTS.find(s => s.name === evt.name);
+  const clr      = S[evt.style] || S.gray;
+  const ticket   = getTicket(student?.id, student?.ticket);
+  const lCount   = lessonCountForEvt(evt);
+  const cancelled = lCount === 0;
+  const history  = student ? getMemoHistory(student) : [];
+
+  const overlay = document.getElementById('modal-overlay');
+  const content = document.getElementById('modal-content');
+  content.innerHTML = '';
+
+  // ── ヘッダー ──
+  const header = el('div','padding:16px 20px 12px;border-bottom:1px solid #f3f4f6;');
+  const hRow   = el('div','display:flex;align-items:center;gap:12px;');
+  const ava    = el('div','width:50px;height:50px;border-radius:16px;background:'+clr.light+';color:'+clr.accent+';display:flex;align-items:center;justify-content:center;font-size:24px;font-weight:800;flex-shrink:0;');
+  ava.textContent = evt.name.charAt(0);
+  const hi = el('div','flex:1;');
+  const nr = el('div','display:flex;align-items:center;gap:7px;margin-bottom:3px;flex-wrap:wrap;');
+  const nm = el('span','font-size:19px;font-weight:800;color:#111827;'); nm.textContent = evt.name;
+  const tb = el('span','font-size:10px;font-weight:700;padding:2px 7px;border-radius:5px;background:'+ticket.bg+';color:'+ticket.color+';'); tb.textContent = ticket.label;
+  const lb = el('span','font-size:10px;font-weight:700;padding:2px 7px;border-radius:5px;background:#f0fdf4;color:#065f46;'); lb.textContent = lCount+'レッスン分';
+  nr.append(nm,tb,lb);
+  const ti = el('p','font-size:12px;color:#9ca3af;margin:0;'); ti.textContent = fmtTime(evt.start)+' – '+fmtTime(evt.end)+' · '+evt.loc;
+  hi.append(nr,ti); hRow.append(ava,hi); header.append(hRow);
+
+  // ── ボディ ──
+  const body = el('div','padding:14px 20px;display:flex;flex-direction:column;gap:14px;overflow-y:auto;max-height:calc(88dvh - 170px);');
+
+  // レッスン数調整ボックス
+  const cb = el('div','background:#f0f4ff;border-radius:16px;padding:14px;');
+  const cl = el('div','font-size:11px;font-weight:700;color:#6b7280;text-transform:uppercase;letter-spacing:0.07em;margin-bottom:10px;'); cl.textContent='📊 本日のレッスン数';
+  const cr = el('div','display:flex;align-items:center;gap:10px;');
+  const mbtn = el('button','width:38px;height:38px;border-radius:50%;background:white;border:1.5px solid #e5e7eb;font-size:20px;font-weight:700;color:#374151;cursor:pointer;display:flex;align-items:center;justify-content:center;flex-shrink:0;font-family:inherit;');
+  mbtn.textContent='−'; mbtn.onclick=()=>adjustLessonCount(evt.id,-1);
+  const cw = el('div','flex:1;text-align:center;'); cw.id='lesson-count-wrap';
+  const cd = el('div','font-size:28px;font-weight:900;line-height:1;color:'+(cancelled?'#ef4444':'#6366f1')+';'); cd.id='lesson-count-disp'; cd.textContent=cancelled?'Cancel':String(lCount);
+  const cs = el('div','font-size:10px;color:#9ca3af;margin-top:2px;'); cs.textContent=cancelled?'キャンセル済み':'枚消費';
+  cw.append(cd,cs);
+  const pbtn = el('button','width:38px;height:38px;border-radius:50%;background:white;border:1.5px solid #e5e7eb;font-size:20px;font-weight:700;color:#374151;cursor:pointer;display:flex;align-items:center;justify-content:center;flex-shrink:0;font-family:inherit;');
+  pbtn.textContent='＋'; pbtn.onclick=()=>adjustLessonCount(evt.id,+1);
+  const xbtn = el('button','padding:8px 12px;border-radius:12px;font-size:11px;font-weight:700;border:none;cursor:pointer;font-family:inherit;flex-shrink:0;background:'+(cancelled?'#fef2f2':'#f3f4f6')+';color:'+(cancelled?'#ef4444':'#6b7280')+';');
+  xbtn.id='cancel-btn'; xbtn.textContent=cancelled?'解除':'キャンセル'; xbtn.onclick=()=>toggleCancel(evt.id);
+  cr.append(mbtn,cw,pbtn,xbtn); cb.append(cl,cr);
+
+  // 毎週繰り返しトグル
+  const repeatRow = el('div','margin-top:10px;padding-top:10px;border-top:1px solid #e0e7ff;');
+  const repeatOn  = !!evt.repeat;
+  const rbtn = el('button','width:100%;padding:9px 14px;border-radius:12px;font-size:12px;font-weight:700;border:1.5px solid '+(repeatOn?'#c4b5fd':'#e5e7eb')+';cursor:pointer;font-family:inherit;background:'+(repeatOn?'#ede9fe':'#f3f4f6')+';color:'+(repeatOn?'#6d28d9':'#6b7280')+';text-align:left;');
+  rbtn.id='repeat-toggle-btn'; rbtn.textContent=(repeatOn?'🔁 毎週繰り返し：ON':'🔁 毎週繰り返し：OFF');
+  rbtn.onclick=()=>toggleRepeat(evt.id);
+  repeatRow.appendChild(rbtn); cb.appendChild(repeatRow);
+
+  // チケット種別
+  const ts = el('div','');
+  const tl = el('div','font-size:11px;font-weight:700;color:#6b7280;text-transform:uppercase;letter-spacing:0.07em;margin-bottom:8px;'); tl.textContent='🎫 チケット種別';
+  const tc = el('div','display:flex;gap:6px;flex-wrap:wrap;'); tc.id='ticket-chips';
+  TICKET_TYPES.forEach(t=>{
+    const active=(t.id===ticket.id);
+    const b=el('button','padding:5px 10px;border-radius:20px;font-size:11px;font-weight:700;cursor:pointer;font-family:inherit;border:1.5px solid '+(active?t.color:'#e5e7eb')+';background:'+(active?t.bg:'#fafafa')+';color:'+(active?t.color:'#9ca3af')+';');
+    b.dataset.ticket=t.id; b.textContent=t.label;
+    b.onclick=function(){selectLessonTicket(this,t.id,student?.id||0);};
+    tc.appendChild(b);
+  });
+  ts.append(tl,tc);
+
+  // メモ・目標テキストエリア
+  const ms=el('div',''); const ml=el('div','font-size:11px;font-weight:700;color:#6b7280;text-transform:uppercase;letter-spacing:0.07em;margin-bottom:8px;'); ml.textContent='📝 本日のレッスンメモ';
+  const mta=el('textarea','width:100%;font-size:13px;color:#111827;background:#f9fafb;border-radius:14px;padding:12px;border:1.5px solid #e5e7eb;resize:none;line-height:1.65;font-family:inherit;box-sizing:border-box;');
+  mta.id='note-prev'; mta.rows=3; mta.placeholder='今日気づいたこと、改善点など...'; ms.append(ml,mta);
+  const gs=el('div',''); const gl=el('div','font-size:11px;font-weight:700;color:#6b7280;text-transform:uppercase;letter-spacing:0.07em;margin-bottom:8px;'); gl.textContent='🎯 次回の課題・目標';
+  const gta=el('textarea','width:100%;font-size:13px;color:#111827;background:#f9fafb;border-radius:14px;padding:12px;border:1.5px solid #e5e7eb;resize:none;line-height:1.65;font-family:inherit;box-sizing:border-box;');
+  gta.id='note-next'; gta.rows=2; gta.placeholder='次回レッスンまでの課題...'; gs.append(gl,gta);
+
+  body.append(cb,ts,ms,gs);
+
+  if(history.length>0){
+    const ps=el('div',''); const pl=el('div','font-size:11px;font-weight:700;color:#6b7280;text-transform:uppercase;letter-spacing:0.07em;margin-bottom:8px;'); pl.textContent='📂 前回のメモ';
+    const pb=el('div','background:#f8f9fa;border-radius:12px;padding:10px 12px;font-size:11px;color:#4b5563;line-height:1.6;');
+    const sp=el('span','font-weight:700;color:#6b7280;'); sp.textContent=history[0].date+': ';
+    pb.append(sp,document.createTextNode(history[0].memo)); ps.append(pl,pb); body.appendChild(ps);
+  }
+
+  // ── フッター ──
+  const footer=el('div','padding:4px 20px 32px;display:flex;gap:10px;');
+  const cbtn=el('button','flex:1;background:#f3f4f6;color:#6b7280;font-weight:700;padding:15px;border-radius:16px;border:none;font-size:14px;cursor:pointer;font-family:inherit;');
+  cbtn.textContent='閉じる'; cbtn.onclick=closeModal;
+  const sbtn=el('button','flex:2;background:#6366f1;color:white;font-weight:700;padding:15px;border-radius:16px;border:none;font-size:14px;cursor:pointer;font-family:inherit;box-shadow:0 4px 12px rgba(99,102,241,0.35);');
+  sbtn.id='save-btn'; sbtn.textContent='保存する';
+  sbtn.onclick=function(){saveNote(student?.id||0,evt.id);};
+  footer.append(cbtn,sbtn);
+
+  content.append(header,body,footer);
+  overlay.style.display='flex';
+  overlay.offsetHeight;
+  overlay.style.opacity='1';
+  document.getElementById('modal-sheet').style.transform='translateY(0)';
+}
+
+function adjustLessonCount(evtId, delta) {
+  const evt = Object.values(WEEK_EVENTS).flat().find(e => e.id === evtId);
+  const base = evt ? Math.max(1, Math.round(durMins(evt.start, evt.end) / 25)) : 1;
+  const current = lessonCountOverrides[evtId] !== undefined ? lessonCountOverrides[evtId] : base;
+  const next = Math.max(0, current + delta);
+  lessonCountOverrides[evtId] = next;
+  const disp = document.getElementById('lesson-count-disp');
+  if (disp) {
+    disp.textContent = next === 0 ? 'Cancel' : String(next);
+    disp.style.color  = next === 0 ? '#ef4444' : '#6366f1';
+    disp.nextElementSibling.textContent = next === 0 ? 'キャンセル済み' : '枚消費';
+  }
+  const btn = document.getElementById('cancel-btn');
+  if (btn) {
+    btn.textContent      = next === 0 ? '解除' : 'キャンセル';
+    btn.style.background = next === 0 ? '#fef2f2' : '#f3f4f6';
+    btn.style.color      = next === 0 ? '#ef4444' : '#6b7280';
+  }
+  renderCalendar(currentDay);
+}
+
+function toggleRepeat(evtId) {
+  // WEEK_EVENTS と weeklyAdditions を両方検索
+  let found = Object.values(WEEK_EVENTS).flat().find(e => e.id === evtId);
+  if (!found) {
+    for (const wk of Object.values(weeklyAdditions)) {
+      for (const day of Object.values(wk)) {
+        found = day.find(e => e.id === evtId);
+        if (found) break;
+      }
+      if (found) break;
+    }
+  }
+  if (!found) return;
+  found.repeat = !found.repeat;
+  // ボタン表示を更新
+  const btn = document.getElementById('repeat-toggle-btn');
+  if (btn) {
+    const on = found.repeat;
+    btn.textContent = on ? '🔁 毎週繰り返し：ON' : '🔁 毎週繰り返し：OFF';
+    btn.style.background   = on ? '#ede9fe' : '#f3f4f6';
+    btn.style.color        = on ? '#6d28d9' : '#6b7280';
+    btn.style.borderColor  = on ? '#c4b5fd' : '#e5e7eb';
+  }
+  // カレンダーを即時再描画
+  renderCalendar(currentDay);
+}
+
+function toggleCancel(evtId) {
+  const evt = Object.values(WEEK_EVENTS).flat().find(e => e.id === evtId);
+  const base = evt ? Math.max(1, Math.round(durMins(evt.start, evt.end) / 25)) : 1;
+  const current = lessonCountOverrides[evtId] !== undefined ? lessonCountOverrides[evtId] : base;
+  adjustLessonCount(evtId, current === 0 ? base : -current);
+}
+
+function selectLessonTicket(btn, ticketId, studentId) {
+  if (studentId) studentTicketData[studentId] = ticketId;
+  const chips = document.getElementById('ticket-chips');
+  chips.querySelectorAll('button').forEach(b => {
+    const tid = b.dataset.ticket;
+    const t   = TICKET_TYPES.find(x => x.id === tid);
+    const active = tid === ticketId;
+    b.style.background   = active ? t.bg    : '#fafafa';
+    b.style.color        = active ? t.color : '#9ca3af';
+    b.style.borderColor  = active ? t.color : '#e5e7eb';
+  });
+}
+
+function openStudentById(id) {
+  const s = STUDENTS.find(st => st.id === id);
+  if (!s) return;
+  try {
+    openStudentModal(s);
+  } catch(err) {
+    console.error('openStudentModal error:', err);
+  }
 }
 
 function openStudentModal(s) {
-  const st = S[s.color] || S.indigo;
-  const lv = LV[s.level] || LV['初級'];
-  openModal(`
-    <div style="padding:16px 20px 12px;border-bottom:1px solid #f3f4f6;">
-      <div style="display:flex;align-items:center;gap:12px;">
-        <div style="width:56px;height:56px;border-radius:18px;background:${st.light};color:${st.accent};display:flex;align-items:center;justify-content:center;font-size:26px;font-weight:800;flex-shrink:0;">${s.name.charAt(0)}</div>
-        <div>
-          <div style="display:flex;align-items:center;gap:7px;margin-bottom:2px;">
-            <span style="font-size:20px;font-weight:800;color:#111827;">${s.name}</span>
-            <span style="font-size:10px;font-weight:700;padding:2px 7px;border-radius:5px;background:${lv.bg};color:${lv.text};">${s.level}</span>
-          </div>
-          <p style="font-size:11px;color:#9ca3af;">${s.furi}</p>
-          <p style="font-size:12px;color:#6b7280;margin-top:2px;">${s.dances} · ${s.since}〜</p>
-        </div>
-      </div>
-    </div>
-    <div style="padding:16px 20px;display:flex;flex-direction:column;gap:14px;">
-      <div>
-        <label style="display:block;font-size:11px;font-weight:700;color:#6b7280;letter-spacing:0.07em;text-transform:uppercase;margin-bottom:8px;">📝 前回レッスンのメモ</label>
-        <textarea rows="4"
-          style="width:100%;font-size:13px;color:#111827;background:#f9fafb;border-radius:14px;padding:12px;border:1.5px solid #e5e7eb;resize:none;line-height:1.65;font-family:inherit;">${s.prevMemo}</textarea>
-      </div>
-      <div>
-        <label style="display:block;font-size:11px;font-weight:700;color:#6b7280;letter-spacing:0.07em;text-transform:uppercase;margin-bottom:8px;">🎯 今後の課題・目標</label>
-        <textarea rows="3"
-          style="width:100%;font-size:13px;color:#111827;background:#f9fafb;border-radius:14px;padding:12px;border:1.5px solid #e5e7eb;resize:none;line-height:1.65;font-family:inherit;">${s.nextGoal}</textarea>
-      </div>
-      <div style="background:#f9fafb;border-radius:14px;padding:14px;">
-        <p style="font-size:11px;font-weight:700;color:#9ca3af;letter-spacing:0.07em;text-transform:uppercase;margin-bottom:10px;">受講実績</p>
-        <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;">
-          <div style="text-align:center;background:white;border-radius:12px;padding:12px;box-shadow:0 1px 3px rgba(0,0,0,0.05);">
-            <div style="font-size:28px;font-weight:900;color:#6366f1;line-height:1;">24</div>
-            <div style="font-size:10px;color:#9ca3af;margin-top:4px;">総レッスン回数</div>
-          </div>
-          <div style="text-align:center;background:white;border-radius:12px;padding:12px;box-shadow:0 1px 3px rgba(0,0,0,0.05);">
-            <div style="font-size:28px;font-weight:900;color:#10b981;line-height:1;">8</div>
-            <div style="font-size:10px;color:#9ca3af;margin-top:4px;">今月の回数</div>
-          </div>
-        </div>
-      </div>
-    </div>
-    <div style="padding:4px 20px 32px;display:flex;gap:10px;">
-      <button onclick="closeModal()"
-        style="flex:1;background:#f3f4f6;color:#6b7280;font-weight:700;padding:15px;border-radius:16px;border:none;font-size:14px;cursor:pointer;font-family:inherit;">
-        閉じる
-      </button>
-      <button onclick="closeModal()"
-        style="flex:2;background:#6366f1;color:white;font-weight:700;padding:15px;border-radius:16px;border:none;font-size:14px;cursor:pointer;font-family:inherit;box-shadow:0 4px 12px rgba(99,102,241,0.35);">
-        保存する
-      </button>
-    </div>`);
+  const st      = S[s.color] || S.indigo;
+  const ticket  = getTicket(s.id, s.ticket);
+  const history = getMemoHistory(s);
+
+  // DOM操作でモーダルを直接構築（innerHTML の複雑なネストを回避）
+  const overlay = document.getElementById('modal-overlay');
+  const content = document.getElementById('modal-content');
+  content.innerHTML = '';
+
+  // ── ヘッダー ──────────────────────────────
+  const header = el('div', 'padding:16px 20px 12px;border-bottom:1px solid #f3f4f6;');
+  const hRow   = el('div', 'display:flex;align-items:center;gap:12px;');
+  const icon   = el('div', 'width:56px;height:56px;border-radius:18px;background:' + st.light + ';color:' + st.accent + ';display:flex;align-items:center;justify-content:center;font-size:26px;font-weight:800;flex-shrink:0;');
+  icon.textContent = s.name.charAt(0);
+  const info   = el('div', '');
+  const nameRow = el('div', 'display:flex;align-items:center;gap:7px;margin-bottom:2px;flex-wrap:wrap;');
+  const nameEl = el('span', 'font-size:20px;font-weight:800;color:#111827;'); nameEl.textContent = s.name;
+  const tkBadge = el('span', 'font-size:10px;font-weight:700;padding:2px 7px;border-radius:5px;background:' + ticket.bg + ';color:' + ticket.color + ';'); tkBadge.textContent = ticket.label;
+  nameRow.append(nameEl, tkBadge);
+  const furiEl = el('p', 'font-size:11px;color:#9ca3af;margin:0;'); furiEl.textContent = s.furi;
+  const infoEl = el('p', 'font-size:12px;color:#6b7280;margin:4px 0 0;'); infoEl.textContent = s.dances + ' · ' + s.since + '〜';
+  info.append(nameRow, furiEl, infoEl);
+  hRow.append(icon, info);
+  header.append(hRow);
+
+  // ── ボディ ──────────────────────────────
+  const body = el('div', 'padding:14px 20px;display:flex;flex-direction:column;gap:14px;overflow-y:auto;max-height:calc(88dvh - 180px);');
+
+  // チケット種別
+  const ticketSection = el('div', '');
+  const tkLabel = el('div', 'font-size:11px;font-weight:700;color:#6b7280;text-transform:uppercase;letter-spacing:0.07em;margin-bottom:8px;'); tkLabel.textContent = '🎫 チケット種別';
+  const tkChips = el('div', 'display:flex;gap:6px;flex-wrap:wrap;'); tkChips.id = 'student-ticket-chips';
+  TICKET_TYPES.forEach(t => {
+    const active = (t.id === ticket.id);
+    const btn = el('button', 'padding:5px 10px;border-radius:20px;font-size:11px;font-weight:700;cursor:pointer;font-family:inherit;border:1.5px solid ' + (active ? t.color : '#e5e7eb') + ';background:' + (active ? t.bg : '#fafafa') + ';color:' + (active ? t.color : '#9ca3af') + ';');
+    btn.textContent = t.label;
+    btn.dataset.ticket = t.id;
+    btn.onclick = function() { selectStudentTicket(this, t.id, s.id); };
+    tkChips.appendChild(btn);
+  });
+  ticketSection.append(tkLabel, tkChips);
+
+  // 受講実績（3列）
+  const statsBox = el('div', 'background:#f9fafb;border-radius:14px;padding:12px;');
+  const statsGrid = el('div', 'display:grid;grid-template-columns:1fr 1fr 1fr;gap:8px;');
+  [[history.length, 'メモ件数', '#6366f1'], [hasLessonToday(s.name) ? '本日' : '—', '今日の予定', '#059669'], [s.lastLesson, '最終', '#f59e0b']].forEach(([val, lbl, col]) => {
+    const cell = el('div', 'text-align:center;background:white;border-radius:12px;padding:10px;box-shadow:0 1px 3px rgba(0,0,0,0.05);');
+    const v = el('div', 'font-size:' + (String(val).length > 3 ? '13' : '22') + 'px;font-weight:900;color:' + col + ';line-height:1.2;'); v.textContent = val;
+    const l = el('div', 'font-size:9px;color:#9ca3af;margin-top:3px;'); l.textContent = lbl;
+    cell.append(v, l); statsGrid.appendChild(cell);
+  });
+  statsBox.appendChild(statsGrid);
+
+  // レッスン履歴
+  const histSection = el('div', '');
+  const histLabel = el('div', 'font-size:11px;font-weight:700;color:#6b7280;text-transform:uppercase;letter-spacing:0.07em;margin-bottom:8px;'); histLabel.textContent = '📂 レッスン履歴 (' + history.length + '件)';
+  const histBox = el('div', 'background:#f8f9fa;border-radius:14px;padding:4px 12px;max-height:200px;overflow-y:auto;');
+  if (history.length === 0) {
+    const emp = el('p', 'font-size:12px;color:#9ca3af;text-align:center;padding:16px 0;'); emp.textContent = 'まだメモがありません'; histBox.appendChild(emp);
+  } else {
+    history.forEach((h, i) => {
+      const row = el('div', 'padding:10px 0;' + (i < history.length-1 ? 'border-bottom:1px solid #f3f4f6;' : ''));
+      const d = el('div', 'font-size:10px;font-weight:700;color:#9ca3af;margin-bottom:4px;'); d.textContent = h.date;
+      const m = el('p', 'font-size:12px;color:#374151;line-height:1.6;margin:0 0 4px;'); m.textContent = h.memo;
+      row.append(d, m);
+      if (h.goal) {
+        const g = el('p', 'font-size:11px;color:#6366f1;line-height:1.5;margin:0;');
+        const s = el('span', 'font-weight:700;'); s.textContent = '→ 次回目標: ';
+        g.append(s); g.append(document.createTextNode(h.goal));
+        row.appendChild(g);
+      }
+      histBox.appendChild(row);
+    });
+  }
+  histSection.append(histLabel, histBox);
+  body.append(ticketSection, statsBox, histSection);
+
+  // ── フッター ──────────────────────────────
+  const footer = el('div', 'padding:4px 20px 32px;');
+  const closeBtn = el('button', 'width:100%;background:#f3f4f6;color:#6b7280;font-weight:700;padding:15px;border-radius:16px;border:none;font-size:14px;cursor:pointer;font-family:inherit;');
+  closeBtn.textContent = '閉じる'; closeBtn.onclick = closeModal;
+  footer.appendChild(closeBtn);
+
+  content.append(header, body, footer);
+
+  overlay.style.display = 'flex';
+  overlay.offsetHeight;
+  overlay.style.opacity = '1';
+  document.getElementById('modal-sheet').style.transform = 'translateY(0)';
+}
+
+// DOM要素生成ヘルパー
+function el(tag, css) {
+  const d = document.createElement(tag);
+  if (css) d.style.cssText = css;
+  return d;
+}
+
+function selectStudentTicket(btn, ticketId, studentId) {
+  studentTicketData[studentId] = ticketId;
+  const chips = document.getElementById('student-ticket-chips');
+  chips.querySelectorAll('button').forEach(b => {
+    const tid = b.dataset.ticket;
+    const t   = TICKET_TYPES.find(x => x.id === tid);
+    const active = tid === ticketId;
+    b.style.background   = active ? t.bg    : '#fafafa';
+    b.style.color        = active ? t.color : '#9ca3af';
+    b.style.borderColor  = active ? t.color : '#e5e7eb';
+  });
 }
 
 function showAddEvent() {
+  _newEvtType = 'lesson'; _newEvtLoc = 'saito';
+  const dateLabel = `${getDateStr(currentDay)}（${['月','火','水','木','金','土','日'][currentDay]}）`;
   const opts = Array.from({length:28}, (_,i) => {
     const h = 8 + Math.floor(i/2), m = i % 2 * 30;
-    return `<option>${h}:${String(m).padStart(2,'0')}</option>`;
+    const v = `${h}:${String(m).padStart(2,'0')}`;
+    return `<option value="${v}">${v}</option>`;
   }).join('');
+  const opts2 = opts.replace('value="10:00"','value="10:00" selected');
   openModal(`
     <div style="padding:16px 20px 12px;border-bottom:1px solid #f3f4f6;">
       <h3 style="font-size:18px;font-weight:800;color:#111827;">新しい予定を追加</h3>
-      <p style="font-size:12px;color:#9ca3af;margin-top:3px;">4月8日（水）</p>
+      <p style="font-size:12px;color:#9ca3af;margin-top:3px;">${dateLabel}</p>
     </div>
     <div style="padding:16px 20px;display:flex;flex-direction:column;gap:14px;">
       <div>
         <label style="display:block;font-size:11px;font-weight:700;color:#6b7280;margin-bottom:8px;text-transform:uppercase;letter-spacing:0.06em;">種別</label>
         <div style="display:flex;gap:8px;">
-          <button onclick="setType(this)" style="flex:1;padding:10px;border-radius:12px;font-size:13px;font-weight:700;border:none;cursor:pointer;background:#6366f1;color:white;font-family:inherit;transition:all 0.1s;">レッスン</button>
-          <button onclick="setType(this)" style="flex:1;padding:10px;border-radius:12px;font-size:13px;font-weight:600;border:none;cursor:pointer;background:#f3f4f6;color:#4b5563;font-family:inherit;transition:all 0.1s;">ブロック</button>
+          <button onclick="setType(this)" style="flex:1;padding:10px;border-radius:12px;font-size:13px;font-weight:700;border:none;cursor:pointer;background:#6366f1;color:white;font-family:inherit;">レッスン</button>
+          <button onclick="setType(this)" style="flex:1;padding:10px;border-radius:12px;font-size:13px;font-weight:600;border:none;cursor:pointer;background:#f3f4f6;color:#4b5563;font-family:inherit;">ブロック</button>
         </div>
       </div>
       <div>
         <label style="display:block;font-size:11px;font-weight:700;color:#6b7280;margin-bottom:8px;text-transform:uppercase;letter-spacing:0.06em;">生徒名 / タイトル</label>
-        <input type="text" placeholder="例：田中 花子"
-          style="width:100%;font-size:14px;background:#f9fafb;border-radius:13px;padding:12px 14px;border:1.5px solid #e5e7eb;font-family:inherit;color:#111827;">
+        <input id="add-event-name" type="text" placeholder="例：田中 花子"
+          style="width:100%;font-size:14px;background:#f9fafb;border-radius:13px;padding:12px 14px;border:1.5px solid #e5e7eb;font-family:inherit;color:#111827;box-sizing:border-box;">
       </div>
       <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;">
         <div>
           <label style="display:block;font-size:11px;font-weight:700;color:#6b7280;margin-bottom:8px;text-transform:uppercase;letter-spacing:0.06em;">開始</label>
-          <select style="width:100%;font-size:13px;background:#f9fafb;border-radius:13px;padding:11px;border:1.5px solid #e5e7eb;font-family:inherit;color:#111827;-webkit-appearance:none;text-align:center;">${opts}</select>
+          <select id="add-event-start" style="width:100%;font-size:13px;background:#f9fafb;border-radius:13px;padding:11px;border:1.5px solid #e5e7eb;font-family:inherit;color:#111827;-webkit-appearance:none;text-align:center;">${opts}</select>
         </div>
         <div>
           <label style="display:block;font-size:11px;font-weight:700;color:#6b7280;margin-bottom:8px;text-transform:uppercase;letter-spacing:0.06em;">終了</label>
-          <select style="width:100%;font-size:13px;background:#f9fafb;border-radius:13px;padding:11px;border:1.5px solid #e5e7eb;font-family:inherit;color:#111827;-webkit-appearance:none;text-align:center;">${opts.replace('<option>10:00</option>','<option selected>10:00</option>')}</select>
+          <select id="add-event-end" style="width:100%;font-size:13px;background:#f9fafb;border-radius:13px;padding:11px;border:1.5px solid #e5e7eb;font-family:inherit;color:#111827;-webkit-appearance:none;text-align:center;">${opts2}</select>
         </div>
       </div>
-      <div>
+      <div id="add-loc-row">
         <label style="display:block;font-size:11px;font-weight:700;color:#6b7280;margin-bottom:8px;text-transform:uppercase;letter-spacing:0.06em;">場所</label>
         <div style="display:flex;gap:8px;">
-          <button onclick="setLoc(this)" style="flex:1;padding:10px;border-radius:12px;font-size:12px;font-weight:700;border:1.5px solid #93c5fd;cursor:pointer;background:#eff6ff;color:#1d4ed8;font-family:inherit;transition:all 0.1s;">@泉</button>
-          <button onclick="setLoc(this)" style="flex:1;padding:10px;border-radius:12px;font-size:12px;font-weight:600;border:1.5px solid #e5e7eb;cursor:pointer;background:#f9fafb;color:#4b5563;font-family:inherit;transition:all 0.1s;">@旭ヶ丘</button>
-          <button onclick="setLoc(this)" style="flex:1;padding:10px;border-radius:12px;font-size:12px;font-weight:600;border:1.5px solid #e5e7eb;cursor:pointer;background:#f9fafb;color:#4b5563;font-family:inherit;transition:all 0.1s;">その他</button>
+          <button onclick="setLoc(this)" style="flex:1;padding:10px;border-radius:12px;font-size:11px;font-weight:700;border:1.5px solid #a3e635;cursor:pointer;background:#ecfccb;color:#3f6212;font-family:inherit;">@齊藤DG</button>
+          <button onclick="setLoc(this)" style="flex:1;padding:10px;border-radius:12px;font-size:11px;font-weight:600;border:1.5px solid #e5e7eb;cursor:pointer;background:#f9fafb;color:#4b5563;font-family:inherit;">@仙台SS</button>
+          <button onclick="setLoc(this)" style="flex:1;padding:10px;border-radius:12px;font-size:11px;font-weight:600;border:1.5px solid #e5e7eb;cursor:pointer;background:#f9fafb;color:#4b5563;font-family:inherit;">@泉中央</button>
         </div>
       </div>
     </div>
     <div style="padding:4px 20px 32px;display:flex;gap:10px;">
       <button onclick="closeModal()" style="flex:1;background:#f3f4f6;color:#6b7280;font-weight:700;padding:15px;border-radius:16px;border:none;font-size:14px;cursor:pointer;font-family:inherit;">キャンセル</button>
-      <button onclick="closeModal()" style="flex:2;background:#6366f1;color:white;font-weight:700;padding:15px;border-radius:16px;border:none;font-size:14px;cursor:pointer;font-family:inherit;box-shadow:0 4px 12px rgba(99,102,241,0.35);">追加する</button>
+      <button onclick="addEvent()" style="flex:2;background:#6366f1;color:white;font-weight:700;padding:15px;border-radius:16px;border:none;font-size:14px;cursor:pointer;font-family:inherit;box-shadow:0 4px 12px rgba(99,102,241,0.35);">追加する</button>
     </div>`);
 }
 
@@ -806,10 +1303,25 @@ function addTask() {
   setTimeout(buildTasks, 350);
 }
 
-function saveNote(evtId) {
-  const prev = document.getElementById('note-prev')?.value || '';
-  const next = document.getElementById('note-next')?.value || '';
-  noteData[evtId] = { prev, next };
+function saveNote(studentId, evtId) {
+  const memo = document.getElementById('note-prev')?.value?.trim() || '';
+  const goal = document.getElementById('note-next')?.value?.trim() || '';
+  if (!memo && !goal) { closeModal(); return; }
+
+  const today = new Date();
+  const dateLabel = `${today.getMonth()+1}月${today.getDate()}日`;
+
+  if (studentId) {
+    if (!studentMemoHistory[studentId]) studentMemoHistory[studentId] = [];
+    studentMemoHistory[studentId].unshift({ date: dateLabel, memo, goal });
+    // lastUpdate を更新
+    const student = STUDENTS.find(s => s.id === studentId);
+    if (student) {
+      student.lastLesson  = dateLabel;
+      student.lastUpdate  = new Date().toISOString().slice(0,10);
+    }
+  }
+
   const btn = document.getElementById('save-btn');
   if (btn) {
     btn.textContent = '✓ 保存しました！';
@@ -820,30 +1332,162 @@ function saveNote(evtId) {
 }
 
 function setType(btn) {
+  _newEvtType = btn.textContent.trim() === 'レッスン' ? 'lesson' : 'block';
   btn.closest('div').querySelectorAll('button').forEach(b => {
     const active = b === btn;
-    b.style.background  = active ? '#6366f1' : '#f3f4f6';
-    b.style.color       = active ? 'white'   : '#4b5563';
-    b.style.fontWeight  = active ? '700'     : '600';
+    b.style.background = active ? '#6366f1' : '#f3f4f6';
+    b.style.color      = active ? 'white'   : '#4b5563';
+    b.style.fontWeight = active ? '700'     : '600';
+  });
+  // 場所ボタンの表示/非表示
+  const locRow = document.getElementById('add-loc-row');
+  if (locRow) locRow.style.display = _newEvtType === 'lesson' ? '' : 'none';
+}
+
+const _LOC_COLORS = {
+  saito:  { bg:'#ecfccb', color:'#3f6212', border:'#a3e635' },
+  sendai: { bg:'#ffedd5', color:'#9a3412', border:'#fb923c' },
+  izumi:  { bg:'#dbeafe', color:'#1e40af', border:'#93c5fd' },
+};
+function setLoc(btn) {
+  const t = btn.textContent.trim();
+  _newEvtLoc = t === '@齊藤DG' ? 'saito' : t === '@仙台SS' ? 'sendai' : 'izumi';
+  btn.closest('div').querySelectorAll('button').forEach(b => {
+    const key = b.textContent.trim() === '@齊藤DG' ? 'saito' : b.textContent.trim() === '@仙台SS' ? 'sendai' : 'izumi';
+    const c   = _LOC_COLORS[key];
+    const active = b === btn;
+    b.style.background  = active ? c.bg     : '#f9fafb';
+    b.style.color       = active ? c.color  : '#4b5563';
+    b.style.borderColor = active ? c.border : '#e5e7eb';
+    b.style.fontWeight  = active ? '700'    : '600';
   });
 }
 
-function setLoc(btn) {
-  btn.closest('div').querySelectorAll('button').forEach(b => {
-    const active = b === btn;
-    b.style.background   = active ? '#eff6ff' : '#f9fafb';
-    b.style.color        = active ? '#1d4ed8' : '#4b5563';
-    b.style.borderColor  = active ? '#93c5fd' : '#e5e7eb';
-    b.style.fontWeight   = active ? '700'     : '600';
+function addEvent() {
+  const name = document.getElementById('add-event-name')?.value?.trim();
+  if (!name) { document.getElementById('add-event-name')?.focus(); return; }
+  const sv = document.getElementById('add-event-start')?.value || '9:00';
+  const ev = document.getElementById('add-event-end')?.value   || '10:00';
+  const [sh,sm] = sv.split(':').map(Number);
+  const [eh,em] = ev.split(':').map(Number);
+  if (eh*60+em <= sh*60+sm) { alert('終了時刻は開始より後にしてください'); return; }
+  const studio = STUDIOS[_newEvtLoc];
+  const newEvt = _newEvtType === 'lesson'
+    ? { type:'lesson', id:nextEventId++, start:[sh,sm], end:[eh,em], name, loc:'@'+studio.loc, style:studio.style }
+    : { type:'block',  id:nextEventId++, start:[sh,sm], end:[eh,em], label:name, sub:'', repeat:false, style:'gray' };
+  if (currentWeekOffset === 0) {
+    if (!WEEK_EVENTS[currentDay]) WEEK_EVENTS[currentDay] = [];
+    WEEK_EVENTS[currentDay].push(newEvt);
+  } else {
+    if (!weeklyAdditions[currentWeekOffset]) weeklyAdditions[currentWeekOffset] = {};
+    if (!weeklyAdditions[currentWeekOffset][currentDay]) weeklyAdditions[currentWeekOffset][currentDay] = [];
+    weeklyAdditions[currentWeekOffset][currentDay].push(newEvt);
+  }
+  closeModal();
+  setTimeout(() => { selectDay(currentDay); }, 350);
+}
+
+function updateDayDateTabs() {
+  const dates = getWeekDates(currentWeekOffset);
+  dates.forEach((d, i) => {
+    const el = document.getElementById(`dn-${i}`);
+    if (el) el.textContent = d.day;
   });
 }
 
 function changeWeek(dir) {
-  const toast = document.createElement('div');
-  toast.style.cssText = 'position:absolute;top:130px;left:50%;transform:translateX(-50%);background:rgba(17,24,39,0.82);color:white;font-size:12px;font-weight:600;padding:8px 18px;border-radius:20px;z-index:99;pointer-events:none;white-space:nowrap;backdrop-filter:blur(8px);';
-  toast.textContent = dir < 0 ? '← 前の週' : '次の週 →';
-  document.getElementById('app').appendChild(toast);
-  setTimeout(() => toast.remove(), 1200);
+  currentWeekOffset += dir;
+  const lbl = document.getElementById('week-nav-label');
+  if (lbl) lbl.textContent = weekLabel(currentWeekOffset);
+  updateDayDateTabs();
+  selectDay(currentDay);
+}
+
+// ─── 日報 ─────────────────────────────────────────────────────────────────────
+function showDailyReport() {
+  const day     = ['月','火','水','木','金','土','日'][currentDay];
+  const dateStr = `${getDateStr(currentDay)}（${day}）`;
+  const lessons = getEventsForDay(currentDay).filter(e => e.type === 'lesson');
+
+  const rows = lessons.map(evt => {
+    const student  = STUDENTS.find(s => s.name === evt.name);
+    const ticket   = getTicket(student?.id, student?.ticket);
+    const lCount   = lessonCountForEvt(evt);
+    const cancelled = lCount === 0;
+    return { name: evt.name, ticket: ticket.label, count: lCount, cancelled, loc: evt.loc };
+  });
+
+  const totalCount = rows.filter(r => !r.cancelled).reduce((s, r) => s + r.count, 0);
+
+  const tableRows = rows.map(r => `
+    <tr style="border-bottom:1px solid #f3f4f6;${r.cancelled?'opacity:0.45;':''}">
+      <td style="padding:9px 10px;font-size:13px;font-weight:600;color:${r.cancelled?'#9ca3af':'#111827'};${r.cancelled?'text-decoration:line-through;':''}">${r.name}</td>
+      <td style="padding:9px 10px;text-align:center;">
+        <span style="font-size:11px;font-weight:700;padding:2px 8px;border-radius:20px;background:${r.cancelled?'#f3f4f6':'#ede9fe'};color:${r.cancelled?'#9ca3af':'#6d28d9'};">${r.cancelled?'キャンセル':r.ticket}</span>
+      </td>
+      <td style="padding:9px 10px;text-align:center;font-size:14px;font-weight:800;color:${r.cancelled?'#9ca3af':'#6366f1'};">${r.cancelled?'—':r.count}</td>
+    </tr>`).join('');
+
+  openModal(`
+    <div style="padding:16px 20px 12px;border-bottom:1px solid #f3f4f6;">
+      <div style="display:flex;align-items:center;justify-content:space-between;">
+        <div>
+          <h3 style="font-size:18px;font-weight:800;color:#111827;">📋 日報</h3>
+          <p style="font-size:12px;color:#9ca3af;margin-top:2px;">${dateStr} · 計 ${totalCount}レッスン</p>
+        </div>
+        <button onclick="exportDailyCSV()" 
+          style="padding:8px 14px;background:#059669;color:white;font-size:12px;font-weight:700;border-radius:12px;border:none;cursor:pointer;font-family:inherit;">
+          📥 Excel保存
+        </button>
+      </div>
+    </div>
+    <div style="padding:14px 20px;">
+      <table style="width:100%;border-collapse:collapse;">
+        <thead>
+          <tr style="background:#f8f9fa;border-radius:10px;overflow:hidden;">
+            <th style="padding:8px 10px;text-align:left;font-size:10px;font-weight:700;color:#6b7280;letter-spacing:0.06em;text-transform:uppercase;">生徒名</th>
+            <th style="padding:8px 10px;text-align:center;font-size:10px;font-weight:700;color:#6b7280;letter-spacing:0.06em;text-transform:uppercase;">チケット</th>
+            <th style="padding:8px 10px;text-align:center;font-size:10px;font-weight:700;color:#6b7280;letter-spacing:0.06em;text-transform:uppercase;">枚数</th>
+          </tr>
+        </thead>
+        <tbody>${tableRows}</tbody>
+        <tfoot>
+          <tr style="background:#f0f4ff;border-top:2px solid #e0e7ff;">
+            <td colspan="2" style="padding:10px 10px;font-size:13px;font-weight:700;color:#4f46e5;">合計</td>
+            <td style="padding:10px 10px;text-align:center;font-size:16px;font-weight:900;color:#4f46e5;">${totalCount}</td>
+          </tr>
+        </tfoot>
+      </table>
+    </div>
+    <div style="padding:0 20px 32px;">
+      <button onclick="closeModal()"
+        style="width:100%;background:#f3f4f6;color:#6b7280;font-weight:700;padding:14px;border-radius:16px;border:none;font-size:14px;cursor:pointer;font-family:inherit;">閉じる</button>
+    </div>`);
+}
+
+function exportDailyCSV() {
+  const day     = ['月','火','水','木','金','土','日'][currentDay];
+  const dateStr = getDateStr(currentDay);
+  const lessons = getEventsForDay(currentDay).filter(e => e.type === 'lesson');
+
+  const header = '生徒名,チケット種別,レッスン数,場所,状態\n';
+  const body = lessons.map(evt => {
+    const student  = STUDENTS.find(s => s.name === evt.name);
+    const ticket   = getTicket(student?.id, student?.ticket);
+    const lCount   = lessonCountForEvt(evt);
+    const status   = lCount === 0 ? 'キャンセル' : '実施';
+    return `${evt.name},${ticket.label},${lCount === 0 ? 0 : lCount},${evt.loc},${status}`;
+  }).join('\n');
+
+  const totalCount = lessons.filter(e => lessonCountForEvt(e) > 0).reduce((s,e) => s + lessonCountForEvt(e), 0);
+  const footer = `\n合計,,${totalCount},,`;
+
+  const csv = '\uFEFF' + header + body + footer;
+  const blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' });
+  const url  = URL.createObjectURL(blob);
+  const a    = document.createElement('a');
+  a.href = url; a.download = `日報_${dateStr}.csv`; a.click();
+  URL.revokeObjectURL(url);
 }
 </script>
 </body>
