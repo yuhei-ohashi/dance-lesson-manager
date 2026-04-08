@@ -975,7 +975,7 @@ function openAddSales() {
     </div>
     <div style="padding:0 20px 32px;display:flex;gap:10px;">
       <button onclick="closeModal()" style="flex:1;background:#f3f4f6;color:#6b7280;font-weight:700;padding:15px;border-radius:16px;border:none;font-size:14px;cursor:pointer;font-family:inherit;">キャンセル</button>
-      <button onclick="addSalesEntry()" style="flex:2;background:#059669;color:white;font-weight:700;padding:15px;border-radius:16px;border:none;font-size:14px;cursor:pointer;font-family:inherit;box-shadow:0 4px 12px rgba(5,150,105,0.3);">追加する</button>
+      <button onclick="addSalesEntry()" style="flex:2;background:#6366f1;color:white;font-weight:700;padding:15px;border-radius:16px;border:none;font-size:14px;cursor:pointer;font-family:inherit;box-shadow:0 4px 12px rgba(99,102,241,0.35);">追加する</button>
     </div>`);
 }
 
@@ -1138,7 +1138,7 @@ function openEditTask(id) {
     </div>
     <div style="padding:16px 20px;display:flex;flex-direction:column;gap:12px;">
       <textarea id="edit-task-text" rows="3"
-        style="width:100%;font-size:14px;color:#111827;background:#f9fafb;border-radius:14px;padding:12px;border:1.5px solid #e5e7eb;resize:none;line-height:1.65;font-family:inherit;">${task.text}</textarea>
+        style="width:100%;font-size:14px;color:#111827;background:#f9fafb;border-radius:14px;padding:12px;border:1.5px solid #e5e7eb;resize:none;line-height:1.65;font-family:inherit;">${esc(task.text)}</textarea>
       <label style="display:flex;align-items:center;gap:8px;cursor:pointer;">
         <input type="checkbox" id="edit-urgent-flag" ${task.urgent?'checked':''} style="width:18px;height:18px;accent-color:#ef4444;">
         <span style="font-size:13px;font-weight:600;color:#ef4444;">⚡ 急ぎ</span>
@@ -1512,7 +1512,7 @@ function openStudentModal(s) {
   memoSaveBtn.onclick = () => saveStudentMemo(s.id, memoSaveBtn);
   memoSection.append(memoSecLabel, memoTA, goalSecLabel, goalTA, memoSaveBtn);
 
-  body.append(ticketSection, statsBox, memoSection, histSection);
+  body.append(ticketSection, statsBox, histSection, memoSection); // [UX-16] 履歴→メモ入力の順
 
   // ── フッター ──────────────────────────────
   const footer = el('div', 'padding:4px 20px 32px;');
