@@ -266,8 +266,15 @@ const S = {
 };
 // ─── WEEK DATA ────────────────────────────────────────────────────────────────
 const DAY_LABELS = ['月','火','水','木','金','土','日'];
-// 今週の月曜日を基準に動的に日付を計算（2026-04-06 = 今週月曜）
-const BASE_MONDAY = new Date(2026, 3, 6);
+// 実行時の今週月曜を動的に算出
+function _calcThisMonday() {
+  const d = new Date();
+  d.setHours(0, 0, 0, 0);
+  const dow = d.getDay(); // 0=日, 1=月, ...
+  d.setDate(d.getDate() + (dow === 0 ? -6 : 1 - dow));
+  return d;
+}
+const BASE_MONDAY = _calcThisMonday();
 function getWeekDates(weekOffset) {
   return Array.from({length:7}, (_,i) => {
     const d = new Date(BASE_MONDAY);
@@ -279,8 +286,6 @@ function getDateStr(dayIdx) {
   const d = getWeekDates(currentWeekOffset)[dayIdx];
   return `${d.month}月${d.day}日`;
 }
-const DAY_DATES  = [6,7,8,9,10,11,12];
-
 // スタジオゾーン設定（SSoT: ここだけ変更すれば全体に反映）
 const STUDIOS = {
   saito:    { loc:'齊藤DG',  bg:'#f7fee7', zb:'#a3e635', style:'lime'   },  // 黄緑
@@ -415,6 +420,11 @@ let salesData = [
 ];
 let studentSortMode    = 'today';
 let studentSearchQuery = '';
+let _studentSearchTimer;
+function _buildStudentsDebounced() {
+  clearTimeout(_studentSearchTimer);
+  _studentSearchTimer = setTimeout(buildStudents, 200);
+}
 let currentDay = 2;
 let currentTab = 'calendar';
 
@@ -478,7 +488,7 @@ function buildDaySelector() {
     const lColor = isSun ? '#f87171' : isSat ? '#60a5fa' : '#9ca3af';
     btn.innerHTML = `
       <span id="dl-${i}" style="font-size:11px;font-weight:600;color:${lColor};">${lbl}</span>
-      <span id="dn-${i}" style="font-size:14px;font-weight:600;color:${isSun?'#f87171':isSat?'#60a5fa':'#374151'};width:28px;height:28px;display:flex;align-items:center;justify-content:center;border-radius:50%;margin:1px 0;">${getWeekDates(0)[i].day}</span>
+      <span id="dn-${i}" style="font-size:14px;font-weight:600;color:${isSun?'#f87171':isSat?'#60a5fa':'#374151'};width:28px;height:28px;display:flex;align-items:center;justify-content:center;border-radius:50%;margin:1px 0;">${getWeekDates(currentWeekOffset)[i].day}</span>
       <div id="dd-${i}" style="width:4px;height:4px;border-radius:50%;background:${lessonCount>0?'#a5b4fc':'transparent'};margin-top:1px;"></div>
     `;
     cont.appendChild(btn);
@@ -646,8 +656,13 @@ function renderCalendar(dayIdx) {
       el.style.borderLeft  = '3px solid #d1d5db';
       el.style.borderRadius = '6px';
       el.style.cursor      = 'default';
-      el.style.opacity     = '0.7';
-      el.innerHTML = '';
+      el.style.opacity     = '0.85';
+      const showSub = hp >= 52 && evt.sub;
+      el.innerHTML = `
+        <div style="display:flex;flex-direction:column;justify-content:center;height:100%;overflow:hidden;">
+          <div style="font-size:11px;font-weight:700;color:#6b7280;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">${evt.label || ''}</div>
+          ${showSub ? `<div style="font-size:10px;color:#9ca3af;margin-top:1px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">${evt.sub}</div>` : ''}
+        </div>`;
     }
     eArea.appendChild(el);
   });
@@ -676,7 +691,7 @@ function buildStudents() {
       <span style="position:absolute;left:12px;top:50%;transform:translateY(-50%);font-size:14px;pointer-events:none;">🔍</span>
       <input id="student-search" type="text" placeholder="生徒名で検索..."
         value="${studentSearchQuery}"
-        oninput="studentSearchQuery=this.value;buildStudents();"
+        oninput="studentSearchQuery=this.value;_buildStudentsDebounced();"
         style="width:100%;font-size:13px;background:white;border-radius:12px;padding:9px 12px 9px 34px;border:1.5px solid #e5e7eb;font-family:inherit;color:#111827;box-sizing:border-box;">
     </div>
     <!-- ソートタブ -->
@@ -777,7 +792,7 @@ function buildSales() {
     <div style="display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:14px;">
       <div>
         <h2 style="font-size:17px;font-weight:800;color:#111827;">売上記録</h2>
-        <p style="font-size:12px;color:#9ca3af;margin-top:3px;">4月8日（水）</p>
+        <p style="font-size:12px;color:#9ca3af;margin-top:3px;">${getDateStr(currentDay)}（${['月','火','水','木','金','土','日'][currentDay]}）</p>
       </div>
       <button onclick="openAddSales()"
         style="background:#059669;color:white;font-size:12px;font-weight:700;padding:7px 14px;border-radius:20px;border:none;cursor:pointer;box-shadow:0 3px 10px rgba(5,150,105,0.3);">
@@ -836,7 +851,6 @@ function addSalesEntry() {
   const amount = parseInt(document.getElementById('sales-amount')?.value || '0', 10);
   const memo   = document.getElementById('sales-memo')?.value?.trim() || '';
   if (!name || !amount) return;
-  const day = ['月','火','水','木','金','土','日'][currentDay];
   salesData.unshift({ id: Date.now(), name, amount, date: getDateStr(currentDay), memo });
   closeModal();
   setTimeout(buildSales, 350);
@@ -872,7 +886,7 @@ function buildTasks() {
     <div style="display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:16px;">
       <div>
         <h2 style="font-size:17px;font-weight:800;color:#111827;">今日のタスク</h2>
-        <p style="font-size:12px;color:#9ca3af;margin-top:3px;">4月8日（水）· ${pending.length}件残り</p>
+        <p style="font-size:12px;color:#9ca3af;margin-top:3px;">${getDateStr(currentDay)}（${['月','火','水','木','金','土','日'][currentDay]}）· ${pending.length}件残り</p>
       </div>
       <button onclick="openAddTask()"
         style="background:#6366f1;color:white;font-size:12px;font-weight:700;padding:7px 14px;border-radius:20px;border:none;cursor:pointer;box-shadow:0 3px 10px rgba(99,102,241,0.35);">
@@ -892,22 +906,71 @@ function buildTasks() {
 }
 
 function makeTaskEl(task) {
-  const el = document.createElement('div');
-  el.className = 'task-row';
-  el.style.cssText = 'background:white;border-radius:14px;padding:12px 14px;display:flex;align-items:center;gap:10px;box-shadow:0 1px 4px rgba(0,0,0,0.06);border:1px solid #f3f4f6;';
-  el.innerHTML = `
-    <input type="checkbox" ${task.done?'checked':''} onchange="toggleTask(${task.id})"
-      style="width:20px;height:20px;border-radius:6px;cursor:pointer;flex-shrink:0;">
-    <div style="flex:1;">
-      <span style="font-size:13px;font-weight:500;color:${task.done?'#9ca3af':'#111827'};${task.done?'text-decoration:line-through;':''}">${task.text}</span>
-      ${task.urgent && !task.done ? '<span style="display:block;font-size:11px;color:#ef4444;font-weight:700;margin-top:2px;">⚡ 急ぎ</span>' : ''}
-    </div>`;
-  return el;
+  const row = document.createElement('div');
+  row.className = 'task-row';
+  row.style.cssText = 'background:white;border-radius:14px;padding:12px 14px;display:flex;align-items:center;gap:10px;box-shadow:0 1px 4px rgba(0,0,0,0.06);border:1px solid #f3f4f6;';
+
+  const cb = document.createElement('input');
+  cb.type = 'checkbox'; cb.checked = task.done;
+  cb.style.cssText = 'width:20px;height:20px;border-radius:6px;cursor:pointer;flex-shrink:0;accent-color:#6366f1;';
+  cb.onchange = () => toggleTask(task.id);
+
+  const textDiv = document.createElement('div');
+  textDiv.style.cssText = 'flex:1;min-width:0;';
+  textDiv.innerHTML = `
+    <span style="font-size:13px;font-weight:500;color:${task.done?'#9ca3af':'#111827'};${task.done?'text-decoration:line-through;':''}">${task.text}</span>
+    ${task.urgent && !task.done ? '<span style="display:block;font-size:11px;color:#ef4444;font-weight:700;margin-top:2px;">⚡ 急ぎ</span>' : ''}
+  `;
+
+  const editBtn = document.createElement('button');
+  editBtn.textContent = '✏';
+  editBtn.style.cssText = 'width:28px;height:28px;border-radius:8px;background:#f0f4ff;border:none;cursor:pointer;font-size:13px;flex-shrink:0;display:flex;align-items:center;justify-content:center;';
+  editBtn.onclick = () => openEditTask(task.id);
+
+  const delBtn = document.createElement('button');
+  delBtn.textContent = '×';
+  delBtn.style.cssText = 'width:28px;height:28px;border-radius:8px;background:#fff5f5;border:none;cursor:pointer;font-size:16px;color:#f87171;flex-shrink:0;display:flex;align-items:center;justify-content:center;';
+  delBtn.onclick = () => { taskData = taskData.filter(t => t.id !== task.id); buildTasks(); };
+
+  row.append(cb, textDiv, editBtn, delBtn);
+  return row;
 }
 
 function toggleTask(id) {
   const t = taskData.find(t => t.id === id);
   if (t) { t.done = !t.done; buildTasks(); }
+}
+
+function openEditTask(id) {
+  const task = taskData.find(t => t.id === id);
+  if (!task) return;
+  openModal(`
+    <div style="padding:16px 20px 12px;border-bottom:1px solid #f3f4f6;">
+      <h3 style="font-size:18px;font-weight:800;color:#111827;">タスクを編集</h3>
+    </div>
+    <div style="padding:16px 20px;display:flex;flex-direction:column;gap:12px;">
+      <textarea id="edit-task-text" rows="3"
+        style="width:100%;font-size:14px;color:#111827;background:#f9fafb;border-radius:14px;padding:12px;border:1.5px solid #e5e7eb;resize:none;line-height:1.65;font-family:inherit;">${task.text}</textarea>
+      <label style="display:flex;align-items:center;gap:8px;cursor:pointer;">
+        <input type="checkbox" id="edit-urgent-flag" ${task.urgent?'checked':''} style="width:18px;height:18px;accent-color:#ef4444;">
+        <span style="font-size:13px;font-weight:600;color:#ef4444;">⚡ 急ぎ</span>
+      </label>
+    </div>
+    <div style="padding:4px 20px 32px;display:flex;gap:10px;">
+      <button onclick="closeModal()" style="flex:1;background:#f3f4f6;color:#6b7280;font-weight:700;padding:15px;border-radius:16px;border:none;font-size:14px;cursor:pointer;font-family:inherit;">キャンセル</button>
+      <button onclick="saveEditTask(${id})" style="flex:2;background:#6366f1;color:white;font-weight:700;padding:15px;border-radius:16px;border:none;font-size:14px;cursor:pointer;font-family:inherit;box-shadow:0 4px 12px rgba(99,102,241,0.35);">保存する</button>
+    </div>`);
+}
+
+function saveEditTask(id) {
+  const task = taskData.find(t => t.id === id);
+  if (!task) return;
+  const text = document.getElementById('edit-task-text')?.value?.trim();
+  if (!text) return;
+  task.text   = text;
+  task.urgent = document.getElementById('edit-urgent-flag')?.checked || false;
+  closeModal();
+  setTimeout(buildTasks, 350);
 }
 
 // ─── TAB SWITCHING ────────────────────────────────────────────────────────────
@@ -1217,7 +1280,23 @@ function openStudentModal(s) {
     });
   }
   histSection.append(histLabel, histBox);
-  body.append(ticketSection, statsBox, histSection);
+
+  // メモ新規追加セクション
+  const memoSection = el('div', '');
+  const memoSecLabel = el('div', 'font-size:11px;font-weight:700;color:#6b7280;text-transform:uppercase;letter-spacing:0.07em;margin-bottom:8px;');
+  memoSecLabel.textContent = '📝 新しいメモを追加';
+  const memoTA = el('textarea', 'width:100%;font-size:13px;color:#111827;background:#f9fafb;border-radius:14px;padding:12px;border:1.5px solid #e5e7eb;resize:none;line-height:1.65;font-family:inherit;box-sizing:border-box;');
+  memoTA.id = 'student-memo-input'; memoTA.rows = 3; memoTA.placeholder = '今日気づいたこと、改善点など...';
+  const goalSecLabel = el('div', 'font-size:11px;font-weight:700;color:#6b7280;text-transform:uppercase;letter-spacing:0.07em;margin-bottom:8px;margin-top:10px;');
+  goalSecLabel.textContent = '🎯 次回の課題・目標';
+  const goalTA = el('textarea', 'width:100%;font-size:13px;color:#111827;background:#f9fafb;border-radius:14px;padding:12px;border:1.5px solid #e5e7eb;resize:none;line-height:1.65;font-family:inherit;box-sizing:border-box;');
+  goalTA.id = 'student-goal-input'; goalTA.rows = 2; goalTA.placeholder = '次回レッスンまでの課題...';
+  const memoSaveBtn = el('button', 'margin-top:10px;width:100%;padding:11px;background:#6366f1;color:white;font-size:13px;font-weight:700;border-radius:14px;border:none;cursor:pointer;font-family:inherit;');
+  memoSaveBtn.textContent = 'メモを保存';
+  memoSaveBtn.onclick = () => saveStudentMemo(s.id, memoSaveBtn);
+  memoSection.append(memoSecLabel, memoTA, goalSecLabel, goalTA, memoSaveBtn);
+
+  body.append(ticketSection, statsBox, memoSection, histSection);
 
   // ── フッター ──────────────────────────────
   const footer = el('div', 'padding:4px 20px 32px;');
@@ -1238,6 +1317,27 @@ function el(tag, css) {
   const d = document.createElement(tag);
   if (css) d.style.cssText = css;
   return d;
+}
+
+function saveStudentMemo(studentId, btn) {
+  const memo = document.getElementById('student-memo-input')?.value?.trim() || '';
+  const goal = document.getElementById('student-goal-input')?.value?.trim() || '';
+  if (!memo && !goal) return;
+  const today = new Date();
+  const dateLabel = `${today.getMonth()+1}月${today.getDate()}日`;
+  if (!studentMemoHistory[studentId]) studentMemoHistory[studentId] = [];
+  studentMemoHistory[studentId].unshift({ date: dateLabel, memo, goal });
+  const student = STUDENTS.find(s => s.id === studentId);
+  if (student) {
+    student.lastLesson = dateLabel;
+    student.lastUpdate = new Date().toISOString().slice(0, 10);
+  }
+  if (btn) {
+    btn.disabled = true;
+    btn.textContent = '✓ 保存しました！';
+    btn.style.background = '#059669';
+    setTimeout(() => { if (student) openStudentModal(student); }, 800);
+  }
 }
 
 function selectStudentTicket(btn, ticketId, studentId) {
@@ -1355,6 +1455,7 @@ function saveNote(studentId, evtId) {
 
   const btn = document.getElementById('save-btn');
   if (btn) {
+    btn.disabled = true;
     btn.textContent = '✓ 保存しました！';
     btn.style.background = '#059669';
     btn.style.boxShadow  = '0 4px 12px rgba(5,150,105,0.35)';
@@ -1511,15 +1612,14 @@ function exportDailyCSV() {
   const lessons = getEventsForDay(currentDay).filter(e => e.type === 'lesson');
 
   const header = '生徒名,チケット種別,レッスン数,場所,状態\n';
-  const body = lessons.map(evt => {
-    const student  = STUDENTS.find(s => s.id === evt.studentId);
-    const ticket   = getTicket(student?.id, student?.ticket);
-    const lCount   = lessonCountForEvt(evt);
-    const status   = lCount === 0 ? 'キャンセル' : '実施';
-    return `${evt.name},${ticket.label},${lCount === 0 ? 0 : lCount},${evt.loc},${status}`;
-  }).join('\n');
-
-  const totalCount = lessons.filter(e => lessonCountForEvt(e) > 0).reduce((s,e) => s + lessonCountForEvt(e), 0);
+  const lessonRows = lessons.map(evt => {
+    const student = STUDENTS.find(s => s.id === evt.studentId);
+    const ticket  = getTicket(student?.id, student?.ticket);
+    const lCount  = lessonCountForEvt(evt);
+    return { name: evt.name, ticket: ticket.label, lCount, loc: evt.loc, status: lCount === 0 ? 'キャンセル' : '実施' };
+  });
+  const body = lessonRows.map(r => `${r.name},${r.ticket},${r.lCount},${r.loc},${r.status}`).join('\n');
+  const totalCount = lessonRows.reduce((s, r) => s + (r.lCount > 0 ? r.lCount : 0), 0);
   const footer = `\n合計,,${totalCount},,`;
 
   const csv = '\uFEFF' + header + body + footer;
