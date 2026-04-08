@@ -294,7 +294,8 @@ function _calcTodayDayIdx() {
 
 const BASE_MONDAY = _calcThisMonday();
 let currentDay        = _calcTodayDayIdx();
-let currentWeekOffset = 0;
+let currentWeekOffset   = 0;
+let _weekZoneOverrides  = {}; // 週別ゾーン特別設定 { weekOffsetStr: { dayIdx: [zoneEvents] } }
 let _pendingSlot      = null;
 
 // ─── DATE HELPERS ─────────────────────────────────────────────────────────────
@@ -328,7 +329,15 @@ function getDateStr(dayIdx) {
 function getEventsForDay(dayIdx) {
   const base = WEEK_EVENTS[dayIdx] || [];
   if (currentWeekOffset === 0) return base;
-  return base.filter(e => e.type === 'zone' || e.repeat === true);
+
+  const wKey = String(currentWeekOffset);
+  // 週別特別設定があればそれを優先、なければベーステンプレートのゾーン
+  const hasOverride = _weekZoneOverrides[wKey]?.[dayIdx] !== undefined;
+  const zones = hasOverride
+    ? _weekZoneOverrides[wKey][dayIdx]
+    : base.filter(e => e.type === 'zone');
+
+  return [...zones, ...base.filter(e => e.type !== 'zone' && e.repeat === true)];
 }
 
 // ─── SLOT STATUS（教師側と同一ロジック）──────────────────────────────────────
@@ -723,14 +732,31 @@ function loadZonesFromStorage() {
   try {
     const raw = localStorage.getItem(_ZONE_KEY);
     if (!raw) return null;
-    const { zones, savedAt } = JSON.parse(raw);
-    [0,1,2,3,4,5,6].forEach(idx => {
-      const saved = zones[String(idx)];
-      // 保存済みデータがある日はゾーンを置き換え、ない日はゾーンをクリア
-      WEEK_EVENTS[idx] = saved
-        ? [...saved.map(z => ({ type: 'zone', ...z })), ...(WEEK_EVENTS[idx] || []).filter(e => e.type !== 'zone')]
-        : (WEEK_EVENTS[idx] || []).filter(e => e.type !== 'zone');
-    });
+    const { zones, weekOverrides, savedAt } = JSON.parse(raw);
+
+    // ベーステンプレートを復元
+    if (zones) {
+      [0,1,2,3,4,5,6].forEach(idx => {
+        const saved = zones[String(idx)];
+        // 保存済みデータがある日はゾーンを置き換え、ない日はゾーンをクリア
+        WEEK_EVENTS[idx] = saved
+          ? [...saved.map(z => ({ type: 'zone', ...z })), ...(WEEK_EVENTS[idx] || []).filter(e => e.type !== 'zone')]
+          : (WEEK_EVENTS[idx] || []).filter(e => e.type !== 'zone');
+      });
+    }
+
+    // 週別特別設定を復元
+    _weekZoneOverrides = {};
+    if (weekOverrides) {
+      Object.entries(weekOverrides).forEach(([wKey, days]) => {
+        _weekZoneOverrides[wKey] = {};
+        Object.entries(days).forEach(([dKey, dayZones]) => {
+          _weekZoneOverrides[wKey][parseInt(dKey, 10)] =
+            dayZones.map(z => ({ type: 'zone', ...z }));
+        });
+      });
+    }
+
     return savedAt || null;
   } catch (e) {
     console.warn('ゾーン読み込みエラー:', e);

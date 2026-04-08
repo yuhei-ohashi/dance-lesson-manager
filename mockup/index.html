@@ -498,6 +498,7 @@ let _newEvtLoc  = 'saito';    // 追加フォーム: 選択中の場所
 let currentWeekOffset = 0;    // 0=今週 1=来週 -1=先週
 let _timeAxisBuilt    = false; // [PERF-1] 時間軸の再構築抑止フラグ
 let weeklyAdditions   = {};   // { weekOffset: { dayIdx: [events] } }
+let _weekZoneOverrides = {}; // 週別ゾーン特別設定 { weekOffsetStr: { dayIdx: [zoneEvents] } }
 let salesData = [
   { id:1, name:'田中 花子', amount:5000, date:'4月8日', memo:'' },
   { id:2, name:'山田 悟',   amount:8000, date:'4月8日', memo:'月謝' },
@@ -604,10 +605,18 @@ function buildDaySelector() {
 function getEventsForDay(dayIdx) {
   const base = WEEK_EVENTS[dayIdx] || [];
   if (currentWeekOffset === 0) return base;
-  // ゾーンはスタジオ在籍パターンとして全週に適用（repeat フラグ不問）
-  const recurring = base.filter(e => e.type === 'zone' || e.repeat);
-  const extras    = ((weeklyAdditions[currentWeekOffset] || {})[dayIdx]) || [];
-  return [...recurring, ...extras];
+
+  const wKey = String(currentWeekOffset);
+  // ゾーン：週別特別設定があればそれを優先、なければベーステンプレート
+  const hasOverride = _weekZoneOverrides[wKey]?.[dayIdx] !== undefined;
+  const zones = hasOverride
+    ? _weekZoneOverrides[wKey][dayIdx]
+    : base.filter(e => e.type === 'zone');
+
+  // レッスン・ブロック：repeat:true のみ繰り返し + 週別追加
+  const nonZoneRecurring = base.filter(e => e.type !== 'zone' && e.repeat);
+  const extras           = ((weeklyAdditions[currentWeekOffset] || {})[dayIdx]) || [];
+  return [...zones, ...nonZoneRecurring, ...extras];
 }
 
 // 現在表示中の週において dayIdx が「今日」かを判定
@@ -1633,6 +1642,7 @@ const _ZONE_KEY = 'dansechou_zones_v1';
  * 生徒側アプリが同一ドメインで共有する。
  */
 function saveZonesToStorage() {
+  // ベーステンプレート（全週共通）
   const zones = {};
   [0,1,2,3,4,5,6].forEach(idx => {
     const dayZones = (WEEK_EVENTS[idx] || [])
@@ -1640,24 +1650,52 @@ function saveZonesToStorage() {
       .map(({ start, end, loc, bg, zb, style }) => ({ start, end, loc, bg, zb, style }));
     if (dayZones.length > 0) zones[String(idx)] = dayZones;
   });
-  localStorage.setItem(_ZONE_KEY, JSON.stringify({ zones, savedAt: new Date().toISOString() }));
+
+  // 週別特別設定をシリアライズ
+  const weekOverrides = {};
+  Object.entries(_weekZoneOverrides).forEach(([wKey, days]) => {
+    weekOverrides[wKey] = {};
+    Object.entries(days).forEach(([dKey, dayZones]) => {
+      weekOverrides[wKey][dKey] = dayZones.map(
+        ({ start, end, loc, bg, zb, style }) => ({ start, end, loc, bg, zb, style })
+      );
+    });
+  });
+
+  localStorage.setItem(_ZONE_KEY, JSON.stringify({ zones, weekOverrides, savedAt: new Date().toISOString() }));
   _showZoneSaveFeedback();
 }
 
-/** localStorage のゾーンを WEEK_EVENTS に反映する（起動時・手動リセット時） */
+/** localStorage のゾーンを WEEK_EVENTS と _weekZoneOverrides に反映する */
 function loadZonesFromStorage() {
   try {
     const raw = localStorage.getItem(_ZONE_KEY);
     if (!raw) return;
-    const { zones } = JSON.parse(raw);
-    [0,1,2,3,4,5,6].forEach(idx => {
-      const saved = zones[String(idx)];
-      if (!saved) return;
-      WEEK_EVENTS[idx] = [
-        ...saved.map(z => ({ type: 'zone', ...z })),
-        ...(WEEK_EVENTS[idx] || []).filter(e => e.type !== 'zone'),
-      ];
-    });
+    const { zones, weekOverrides } = JSON.parse(raw);
+
+    // ベーステンプレートを復元
+    if (zones) {
+      [0,1,2,3,4,5,6].forEach(idx => {
+        const saved = zones[String(idx)];
+        if (!saved) return;
+        WEEK_EVENTS[idx] = [
+          ...saved.map(z => ({ type: 'zone', ...z })),
+          ...(WEEK_EVENTS[idx] || []).filter(e => e.type !== 'zone'),
+        ];
+      });
+    }
+
+    // 週別特別設定を復元
+    _weekZoneOverrides = {};
+    if (weekOverrides) {
+      Object.entries(weekOverrides).forEach(([wKey, days]) => {
+        _weekZoneOverrides[wKey] = {};
+        Object.entries(days).forEach(([dKey, dayZones]) => {
+          _weekZoneOverrides[wKey][parseInt(dKey, 10)] =
+            dayZones.map(z => ({ type: 'zone', ...z }));
+        });
+      });
+    }
   } catch (e) {
     console.warn('ゾーン読み込みエラー:', e);
   }
@@ -1665,20 +1703,40 @@ function loadZonesFromStorage() {
 
 /** ゾーンラベルタップ → 編集・削除モーダル */
 function openZoneEditModal(dayIdx, zone) {
-  const fullName = STUDIO_SHORT[zone.loc] || zone.loc;
+  const fullName   = STUDIO_SHORT[zone.loc] || zone.loc;
+  const wKey       = String(currentWeekOffset);
+  const isFuture   = currentWeekOffset !== 0;
+  const hasOverride = isFuture && _weekZoneOverrides[wKey]?.[dayIdx] !== undefined;
+
+  const badgeHtml = hasOverride
+    ? '<span style="font-size:10px;font-weight:700;padding:2px 8px;border-radius:6px;background:#fef3c7;color:#92400e;">この週のみ</span>'
+    : (isFuture ? '<span style="font-size:10px;font-weight:700;padding:2px 8px;border-radius:6px;background:#e0f2fe;color:#0369a1;">ベース設定</span>' : '');
+
+  const resetBtnHtml = hasOverride
+    ? `<button onclick="_resetWeekZone(${dayIdx})"
+        style="width:100%;padding:10px;background:#fefce8;color:#92400e;font-size:12px;font-weight:700;border-radius:12px;border:1.5px solid #fde68a;cursor:pointer;font-family:inherit;">
+        ↩ この日だけベーススケジュールに戻す
+      </button>` : '';
+
+  const noteHtml = currentWeekOffset === 0
+    ? '削除するとベーステンプレートから外れます（全週に影響）'
+    : (hasOverride ? 'この週のみの特別設定から削除します' : '削除するとこの週にゾーンなしの特別設定が作られます');
+
   openModal(`
     <div style="padding:18px 20px 12px;border-bottom:1px solid #f3f4f6;">
-      <h3 style="font-size:17px;font-weight:800;color:#111827;">🗓 スタジオゾーン</h3>
+      <div style="display:flex;align-items:center;gap:8px;">
+        <h3 style="font-size:17px;font-weight:800;color:#111827;">🗓 スタジオゾーン</h3>
+        ${badgeHtml}
+      </div>
     </div>
-    <div style="padding:18px 20px 28px;display:flex;flex-direction:column;gap:16px;">
+    <div style="padding:18px 20px;display:flex;flex-direction:column;gap:12px;">
       <div style="background:#f8f9fa;border-radius:14px;padding:16px;">
         <div style="font-size:15px;font-weight:700;color:#111827;margin-bottom:4px;">@${esc(fullName)}</div>
         <div style="font-size:14px;color:#6b7280;">${fmtTime(zone.start)} 〜 ${fmtTime(zone.end)}</div>
         <div style="font-size:11px;color:#9ca3af;margin-top:3px;">${['月','火','水','木','金','土','日'][dayIdx]}曜日</div>
       </div>
-      <p style="font-size:12px;color:#9ca3af;text-align:center;">
-        このゾーンを削除すると生徒側の空き枠から外れます
-      </p>
+      ${resetBtnHtml}
+      <p style="font-size:12px;color:#9ca3af;text-align:center;">${esc(noteHtml)}</p>
       <div style="display:flex;gap:10px;">
         <button onclick="closeModal()"
           style="flex:1;background:#f3f4f6;color:#6b7280;font-weight:700;padding:14px;border-radius:14px;border:none;font-size:14px;cursor:pointer;font-family:inherit;">
@@ -1686,7 +1744,7 @@ function openZoneEditModal(dayIdx, zone) {
         </button>
         <button onclick="_execDeleteZone(${dayIdx})"
           style="flex:1;background:#fef2f2;color:#ef4444;font-weight:700;padding:14px;border-radius:14px;border:1.5px solid #fecaca;font-size:14px;cursor:pointer;font-family:inherit;">
-          🗑 削除する
+          🗑 削除
         </button>
       </div>
     </div>
@@ -1697,8 +1755,36 @@ function openZoneEditModal(dayIdx, zone) {
 function _execDeleteZone(dayIdx) {
   const zone = window._pendingDeleteZone;
   if (!zone) return;
-  WEEK_EVENTS[dayIdx] = (WEEK_EVENTS[dayIdx] || []).filter(e => e !== zone);
+  if (currentWeekOffset === 0) {
+    // ベーステンプレートから削除（全週に影響）
+    WEEK_EVENTS[dayIdx] = (WEEK_EVENTS[dayIdx] || []).filter(e => e !== zone);
+  } else {
+    // この週のみの特別設定として削除
+    const wKey = String(currentWeekOffset);
+    if (!_weekZoneOverrides[wKey]) _weekZoneOverrides[wKey] = {};
+    if (_weekZoneOverrides[wKey][dayIdx] === undefined) {
+      // 初回特別設定：ベースゾーンから対象を除いてコピー
+      _weekZoneOverrides[wKey][dayIdx] = (WEEK_EVENTS[dayIdx] || [])
+        .filter(e => e.type === 'zone' && e !== zone);
+    } else {
+      _weekZoneOverrides[wKey][dayIdx] = _weekZoneOverrides[wKey][dayIdx].filter(e => e !== zone);
+    }
+  }
   window._pendingDeleteZone = null;
+  saveZonesToStorage();
+  closeModal();
+  setTimeout(() => { buildDaySelector(); selectDay(currentDay); }, 350);
+}
+
+/** この週の特別設定をリセットしてベーステンプレートに戻す */
+function _resetWeekZone(dayIdx) {
+  const wKey = String(currentWeekOffset);
+  if (_weekZoneOverrides[wKey]) {
+    delete _weekZoneOverrides[wKey][dayIdx];
+    if (Object.keys(_weekZoneOverrides[wKey]).length === 0) {
+      delete _weekZoneOverrides[wKey];
+    }
+  }
   saveZonesToStorage();
   closeModal();
   setTimeout(() => { buildDaySelector(); selectDay(currentDay); }, 350);
@@ -1825,13 +1911,26 @@ function addEvent() {
   const [eh,em] = ev.split(':').map(Number);
   if (eh*60+em <= sh*60+sm) { _showAddEventError('終了時刻は開始より後にしてください'); return; }
 
-  // ── ゾーン追加（ベース週に登録 → 全週に適用）──
+  // ── ゾーン追加 ──
   if (_newEvtType === 'zone') {
     const studio = STUDIOS[_newEvtLoc];
     if (!studio) { _showAddEventError('スタジオを選択してください'); return; }
     const newZone = { type:'zone', start:[sh,sm], end:[eh,em], ...studio };
-    if (!WEEK_EVENTS[currentDay]) WEEK_EVENTS[currentDay] = [];
-    WEEK_EVENTS[currentDay].push(newZone);
+    if (currentWeekOffset === 0) {
+      // ベーステンプレートに追加（全週に適用）
+      if (!WEEK_EVENTS[currentDay]) WEEK_EVENTS[currentDay] = [];
+      WEEK_EVENTS[currentDay].push(newZone);
+    } else {
+      // この週のみの特別設定に追加
+      const wKey = String(currentWeekOffset);
+      if (!_weekZoneOverrides[wKey]) _weekZoneOverrides[wKey] = {};
+      if (_weekZoneOverrides[wKey][currentDay] === undefined) {
+        // 初回特別設定：ベースゾーンをコピーして土台にする
+        _weekZoneOverrides[wKey][currentDay] =
+          [...(WEEK_EVENTS[currentDay] || []).filter(e => e.type === 'zone')];
+      }
+      _weekZoneOverrides[wKey][currentDay].push(newZone);
+    }
     saveZonesToStorage();
     closeModal();
     setTimeout(() => { buildDaySelector(); selectDay(currentDay); }, 350);
