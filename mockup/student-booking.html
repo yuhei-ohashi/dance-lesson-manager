@@ -1,0 +1,839 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+  <title>レッスン予約 | ダンス手帳</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <style>
+    * { -webkit-tap-highlight-color: transparent; box-sizing: border-box; }
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, 'Hiragino Sans', 'Noto Sans JP', 'Yu Gothic', sans-serif;
+      overscroll-behavior: none;
+      background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+      min-height: 100vh;
+    }
+    ::-webkit-scrollbar { display: none; }
+    * { scrollbar-width: none; }
+
+    #confirm-overlay {
+      position: absolute; inset: 0; z-index: 50;
+      display: none; align-items: flex-end;
+      background: rgba(0,0,0,0.5);
+      backdrop-filter: blur(3px);
+      opacity: 0;
+      transition: opacity 0.25s ease;
+    }
+    #confirm-sheet {
+      width: 100%; background: white;
+      border-radius: 28px 28px 0 0;
+      overflow: hidden;
+      transform: translateY(100%);
+      transition: transform 0.32s cubic-bezier(0.32, 0.72, 0, 1);
+    }
+
+    .slot-btn { transition: transform 0.1s, opacity 0.1s; -webkit-tap-highlight-color: transparent; }
+    .slot-btn:active { transform: scale(0.985); opacity: 0.8; }
+
+    .day-btn { transition: all 0.12s; }
+    .day-btn:active { transform: scale(0.92); opacity: 0.7; }
+
+    .nav-btn { transition: background 0.1s; border-radius: 50%; }
+    .nav-btn:active { background: rgba(0,0,0,0.07) !important; }
+
+    .yes-btn { transition: transform 0.1s, box-shadow 0.1s; }
+    .yes-btn:active { transform: scale(0.97); box-shadow: 0 2px 10px rgba(5,150,105,0.3) !important; }
+
+    #toast {
+      transition: opacity 0.3s ease, transform 0.3s ease;
+      opacity: 0;
+      transform: translateX(-50%) translateY(12px);
+    }
+    #toast.show {
+      opacity: 1;
+      transform: translateX(-50%) translateY(0);
+    }
+
+    :focus-visible { outline: 3px solid #6366f1; outline-offset: 2px; border-radius: 4px; }
+
+    @media (min-width: 430px) {
+      #app { border-radius: 48px; }
+      body { display: flex; justify-content: center; align-items: flex-start; padding: 24px 0; }
+    }
+    @media (max-width: 429px) {
+      #app { height: 100dvh !important; }
+    }
+  </style>
+</head>
+<body>
+
+<div id="app" class="relative flex flex-col bg-white overflow-hidden w-full"
+     style="max-width:390px; height:844px; max-height:100dvh; box-shadow:0 32px 80px rgba(0,0,0,0.45);">
+
+  <!-- ── FAKE iOS STATUS BAR ── -->
+  <div class="flex-shrink-0 flex items-center justify-between px-6"
+       style="height:44px; background:linear-gradient(135deg,#6366f1,#8b5cf6);">
+    <span style="font-size:15px;font-weight:700;color:white;letter-spacing:0.03em;">9:41</span>
+    <div style="position:absolute;left:50%;transform:translateX(-50%);top:6px;width:120px;height:34px;background:black;border-radius:0 0 20px 20px;z-index:20;"></div>
+    <div style="display:flex;align-items:center;gap:6px;">
+      <div style="display:flex;align-items:flex-end;gap:2px;">
+        <div style="width:3px;height:4px;background:white;border-radius:1px;opacity:0.5;"></div>
+        <div style="width:3px;height:7px;background:white;border-radius:1px;opacity:0.65;"></div>
+        <div style="width:3px;height:10px;background:white;border-radius:1px;opacity:0.85;"></div>
+        <div style="width:3px;height:13px;background:white;border-radius:1px;"></div>
+      </div>
+      <svg width="16" height="12" viewBox="0 0 16 12" fill="none">
+        <path d="M8 2.5C5.5 2.5 3.3 3.5 1.8 5.2L0.7 4C2.5 2 5.1 0.8 8 0.8s5.5 1.2 7.3 3.2l-1.1 1.2C12.7 3.5 10.5 2.5 8 2.5z" fill="white" opacity="0.45"/>
+        <path d="M8 5C6.2 5 4.6 5.7 3.4 6.9L2.3 5.7C3.8 4.2 5.8 3.3 8 3.3s4.2.9 5.7 2.4L12.6 6.9C11.4 5.7 9.8 5 8 5z" fill="white" opacity="0.7"/>
+        <path d="M8 7.5c-1.1 0-2.1.4-2.8 1.1L4.1 7.5C5.2 6.4 6.5 5.8 8 5.8s2.8.6 3.9 1.7L10.8 8.6C10.1 7.9 9.1 7.5 8 7.5z" fill="white"/>
+        <circle cx="8" cy="11" r="1.5" fill="white"/>
+      </svg>
+      <div style="display:flex;align-items:center;gap:1px;">
+        <div style="width:22px;height:12px;border:1.5px solid rgba(255,255,255,0.45);border-radius:3px;position:relative;">
+          <div style="position:absolute;left:1.5px;top:1.5px;bottom:1.5px;right:3.5px;background:white;border-radius:1.5px;"></div>
+        </div>
+        <div style="width:2px;height:5px;background:rgba(255,255,255,0.45);border-radius:0 1px 1px 0;"></div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ── TEACHER PROFILE HEADER ── -->
+  <div class="flex-shrink-0"
+       style="background:linear-gradient(160deg,#6366f1 0%,#8b5cf6 100%);padding:14px 20px 18px;">
+    <div style="display:flex;align-items:center;gap:14px;">
+      <!-- Avatar -->
+      <div style="width:56px;height:56px;border-radius:18px;
+                  background:rgba(255,255,255,0.18);color:white;
+                  display:flex;align-items:center;justify-content:center;
+                  font-size:26px;font-weight:800;flex-shrink:0;
+                  border:2px solid rgba(255,255,255,0.32);
+                  box-shadow:0 4px 12px rgba(0,0,0,0.15);">大</div>
+      <!-- Teacher info -->
+      <div style="flex:1;min-width:0;">
+        <div style="font-size:20px;font-weight:800;color:white;line-height:1.2;letter-spacing:-0.4px;">大橋 優平 先生</div>
+        <div style="font-size:11px;color:rgba(255,255,255,0.78);margin-top:4px;font-weight:500;
+                    display:flex;align-items:center;gap:5px;flex-wrap:wrap;">
+          <span>社交ダンス</span>
+          <span style="opacity:0.5;">·</span>
+          <span>齊藤DG / 仙台SS / 泉中央</span>
+        </div>
+      </div>
+      <!-- Student badge -->
+      <div style="background:rgba(255,255,255,0.16);border:1.5px solid rgba(255,255,255,0.28);
+                  border-radius:14px;padding:7px 11px;text-align:right;flex-shrink:0;">
+        <div style="font-size:9px;color:rgba(255,255,255,0.65);font-weight:700;
+                    letter-spacing:0.06em;text-transform:uppercase;margin-bottom:2px;">予約者</div>
+        <div id="student-name-badge"
+             style="font-size:13px;font-weight:800;color:white;white-space:nowrap;letter-spacing:-0.2px;">
+          田中 花子
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ── WEEK NAV + DAY SELECTOR ── -->
+  <div class="flex-shrink-0 bg-white"
+       style="padding:10px 12px 0;border-bottom:1px solid #f3f4f6;box-shadow:0 1px 0 rgba(0,0,0,0.04);">
+    <!-- Week nav row -->
+    <div style="display:flex;align-items:center;margin-bottom:8px;">
+      <button onclick="changeWeek(-1)" class="nav-btn" aria-label="前の週へ"
+        style="width:44px;height:44px;display:flex;align-items:center;justify-content:center;background:transparent;border:none;cursor:pointer;">
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#9ca3af" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
+          <polyline points="15 18 9 12 15 6"/>
+        </svg>
+      </button>
+      <button id="week-nav-label" onclick="resetToCurrentWeek()" aria-label="今週に戻る"
+        style="flex:1;text-align:center;font-size:12px;font-weight:600;color:#6b7280;
+               letter-spacing:0.04em;background:transparent;border:none;cursor:pointer;
+               font-family:inherit;padding:4px 8px;border-radius:8px;transition:background 0.1s;"
+        onmouseenter="this.style.background='#f3f4f6'"
+        onmouseleave="this.style.background='transparent'">今週</button>
+      <button onclick="changeWeek(1)" class="nav-btn" aria-label="次の週へ"
+        style="width:44px;height:44px;display:flex;align-items:center;justify-content:center;background:transparent;border:none;cursor:pointer;">
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#9ca3af" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
+          <polyline points="9 18 15 12 9 6"/>
+        </svg>
+      </button>
+    </div>
+    <!-- Day selector -->
+    <div id="day-selector" style="display:grid;grid-template-columns:repeat(7,1fr);gap:2px;"></div>
+  </div>
+
+  <!-- ── VIEWING INFO BAR ── -->
+  <div class="flex-shrink-0" style="background:#eef2ff;padding:8px 16px 6px;border-bottom:1px solid #e0e7ff;">
+    <div style="display:flex;align-items:center;justify-content:space-between;gap:8px;">
+      <span id="viewing-label"
+            style="font-size:13px;font-weight:700;color:#4f46e5;min-width:0;
+                   white-space:nowrap;overflow:hidden;text-overflow:ellipsis;"></span>
+      <div style="display:flex;align-items:center;gap:6px;flex-shrink:0;">
+        <!-- 🔄 同期ボタン -->
+        <button onclick="syncFromTeacher()" title="先生の最新スケジュールを反映"
+          style="width:48px;height:48px;border-radius:50%;background:white;
+                 border:1.5px solid #c7d2fe;cursor:pointer;display:flex;
+                 align-items:center;justify-content:center;font-size:18px;flex-shrink:0;">🔄</button>
+        <span id="slot-count-badge"
+              style="font-size:11px;font-weight:800;padding:4px 12px;border-radius:20px;
+                     background:#059669;color:white;white-space:nowrap;"></span>
+      </div>
+    </div>
+    <!-- 同期ステータス -->
+    <div id="sync-status"
+         style="font-size:10px;color:#9ca3af;margin-top:3px;min-height:14px;"></div>
+  </div>
+
+  <!-- ── SLOT LIST ── -->
+  <div id="slot-list" class="flex-1"
+       style="overflow-y:auto;-webkit-overflow-scrolling:touch;background:#fafafa;"></div>
+
+  <!-- ── CONFIRMATION MODAL ── -->
+  <div id="confirm-overlay" onclick="if(event.target===this)closeConfirm()">
+    <div id="confirm-sheet">
+      <div style="width:36px;height:4px;background:#d1d5db;border-radius:2px;margin:12px auto 0;"></div>
+      <div id="confirm-content"></div>
+    </div>
+  </div>
+
+  <!-- ── SUCCESS TOAST ── -->
+  <div id="toast"
+       style="display:none;position:absolute;bottom:28px;left:50%;
+              background:#059669;color:white;border-radius:20px;
+              padding:14px 22px;font-size:15px;font-weight:700;
+              z-index:60;text-align:center;line-height:1.55;
+              box-shadow:0 6px 24px rgba(5,150,105,0.45);
+              max-width:calc(100% - 32px);min-width:240px;">
+  </div>
+
+</div><!-- /app -->
+
+<script>
+// ─── UTILITY ─────────────────────────────────────────────────────────────────
+function esc(s) {
+  return String(s ?? '')
+    .replace(/&/g, '&amp;')
+    .replace(/</g, '&lt;')
+    .replace(/>/g, '&gt;')
+    .replace(/"/g, '&quot;')
+    .replace(/'/g, '&#x27;');
+}
+
+// ─── CONSTANTS ────────────────────────────────────────────────────────────────
+const START_H    = 8;
+const END_H      = 22;
+const DAY_LABELS = ['月','火','水','木','金','土','日'];
+const DAY_FULL   = ['月曜日','火曜日','水曜日','木曜日','金曜日','土曜日','日曜日'];
+
+/** スタジオ短縮名 → フル名マップ */
+const STUDIO_FULL = {
+  '齊藤DG': '齊藤ダンスガーデン',
+  '仙台SS': '仙台サテライトスタジオ',
+  '泉中央': '泉中央レンタルスペース',
+};
+
+/** LIFF本番では liff.getProfile().displayName を使用 */
+const STUDENT_NAME = '田中 花子';
+
+// ─── 教師側 WEEK_EVENTS（ロジック共有用。生徒情報は除外）────────────────────
+const WEEK_EVENTS = {
+  0: [ // 月曜日
+    { type:'zone',   start:[10,0],  end:[13,0],  loc:'齊藤DG' },
+    { type:'lesson', start:[10,0],  end:[11,0]  },
+    { type:'lesson', start:[11,30], end:[12,30] },
+    { type:'block',  start:[14,0],  end:[18,0],  repeat:true  },
+  ],
+  1: [ // 火曜日
+    { type:'zone',   start:[9,0],   end:[12,30], loc:'仙台SS' },
+    { type:'lesson', start:[9,0],   end:[10,0]  },
+    { type:'lesson', start:[10,30], end:[11,30] },
+    { type:'block',  start:[12,0],  end:[12,30], repeat:false },
+  ],
+  2: [ // 水曜日
+    { type:'zone',   start:[9,0],   end:[11,30], loc:'齊藤DG' },
+    { type:'zone',   start:[11,30], end:[17,30], loc:'仙台SS' },
+    { type:'zone',   start:[18,30], end:[20,30], loc:'泉中央' },
+    { type:'lesson', start:[9,0],   end:[10,0]  },
+    { type:'lesson', start:[10,0],  end:[11,0]  },
+    { type:'block',  start:[11,0],  end:[11,30], repeat:false },
+    { type:'lesson', start:[11,30], end:[12,30] },
+    { type:'block',  start:[12,30], end:[14,0],  repeat:true  },
+    { type:'lesson', start:[14,0],  end:[15,0]  },
+    { type:'lesson', start:[15,30], end:[16,30] },
+    { type:'block',  start:[17,0],  end:[17,30], repeat:false },
+    { type:'lesson', start:[18,30], end:[19,30] },
+    { type:'lesson', start:[19,30], end:[20,30] },
+  ],
+  3: [ // 木曜日
+    { type:'zone',   start:[13,0],  end:[20,0],  loc:'泉中央' },
+    { type:'lesson', start:[13,0],  end:[14,0]  },
+    { type:'lesson', start:[14,30], end:[15,30] },
+    { type:'lesson', start:[16,0],  end:[17,0]  },
+    { type:'lesson', start:[18,0],  end:[19,0]  },
+  ],
+  4: [], // 金曜日（スケジュール未設定）
+  5: [ // 土曜日
+    { type:'zone',   start:[10,0],  end:[17,0],  loc:'仙台SS' },
+    { type:'lesson', start:[10,0],  end:[11,0]  },
+    { type:'lesson', start:[11,30], end:[12,30] },
+    { type:'lesson', start:[14,0],  end:[15,0]  },
+    { type:'lesson', start:[15,30], end:[16,30] },
+  ],
+  6: [], // 日曜日（完全休日）
+};
+
+// ─── STATE ───────────────────────────────────────────────────────────────────
+function _calcThisMonday() {
+  const d = new Date();
+  d.setHours(0, 0, 0, 0);
+  const dow = d.getDay(); // 0=日
+  d.setDate(d.getDate() + (dow === 0 ? -6 : 1 - dow));
+  return d;
+}
+function _calcTodayDayIdx() {
+  const dow = new Date().getDay();
+  return dow === 0 ? 6 : dow - 1; // 月=0 … 日=6
+}
+
+const BASE_MONDAY = _calcThisMonday();
+let currentDay        = _calcTodayDayIdx();
+let currentWeekOffset   = 0;
+let _weekZoneOverrides  = {}; // 週別ゾーン特別設定 { weekOffsetStr: { dayIdx: [zoneEvents] } }
+let _pendingSlot      = null;
+
+// ─── DATE HELPERS ─────────────────────────────────────────────────────────────
+function getWeekDates(offset) {
+  return Array.from({length: 7}, (_, i) => {
+    const d = new Date(BASE_MONDAY);
+    d.setDate(BASE_MONDAY.getDate() + offset * 7 + i);
+    return { month: d.getMonth() + 1, day: d.getDate() };
+  });
+}
+function weekLabel(offset) {
+  const dates = getWeekDates(offset);
+  const mon = dates[0], sun = dates[6];
+  const range = `${mon.month}/${mon.day}〜${sun.month}/${sun.day}`;
+  if (offset === 0)  return `今週 (${range})`;
+  if (offset === 1)  return `来週 (${range})`;
+  if (offset === -1) return `先週 (${range})`;
+  return `${offset > 0 ? offset + '週後' : (-offset) + '週前'} (${range})`;
+}
+function getDateStr(dayIdx) {
+  const d = getWeekDates(currentWeekOffset)[dayIdx];
+  return `${d.month}月${d.day}日`;
+}
+
+// ─── EVENTS ───────────────────────────────────────────────────────────────────
+/**
+ * 現在の週オフセットに応じてその日のイベントを返す。
+ * ゾーンは「先生のスタジオ在籍パターン」として繰り返し扱い（future weeks にも適用）。
+ * 個別レッスンは単発扱いなので今週のみ。repeat:true のブロックは毎週繰り返し。
+ */
+function getEventsForDay(dayIdx) {
+  const base = WEEK_EVENTS[dayIdx] || [];
+  if (currentWeekOffset === 0) return base;
+
+  const wKey = String(currentWeekOffset);
+  // 週別特別設定があればそれを優先、なければベーステンプレートのゾーン
+  const hasOverride = _weekZoneOverrides[wKey]?.[dayIdx] !== undefined;
+  const zones = hasOverride
+    ? _weekZoneOverrides[wKey][dayIdx]
+    : base.filter(e => e.type === 'zone');
+
+  return [...zones, ...base.filter(e => e.type !== 'zone' && e.repeat === true)];
+}
+
+// ─── SLOT STATUS（教師側と同一ロジック）──────────────────────────────────────
+function getSlotStatus(dayIdx, hour, minute) {
+  const slotStart = hour * 60 + minute;
+  const slotEnd   = slotStart + 30;
+  const events    = getEventsForDay(dayIdx);
+
+  // スタジオゾーン内かチェック
+  const zone = events.find(e =>
+    e.type === 'zone' &&
+    e.start[0] * 60 + e.start[1] <= slotStart &&
+    e.end[0]   * 60 + e.end[1]   >= slotEnd
+  );
+  if (!zone) return { status: 'unavailable', reason: 'no-studio' };
+
+  // レッスン or ブロックと重複チェック
+  const conflict = events.find(e =>
+    e.type !== 'zone' &&
+    e.start[0] * 60 + e.start[1] < slotEnd &&
+    e.end[0]   * 60 + e.end[1]   > slotStart
+  );
+  if (conflict) return { status: 'unavailable', reason: conflict.type };
+
+  return { status: 'available', studio: zone.loc };
+}
+
+function _countAvailSlots(dayIdx) {
+  let n = 0;
+  for (let h = START_H; h < END_H; h++) {
+    for (const m of [0, 30]) {
+      if (getSlotStatus(dayIdx, h, m).status === 'available') n++;
+    }
+  }
+  return n;
+}
+
+// ─── DAY SELECTOR ─────────────────────────────────────────────────────────────
+function buildDaySelector() {
+  const cont = document.getElementById('day-selector');
+  cont.innerHTML = '';
+  const dates = getWeekDates(currentWeekOffset);
+
+  DAY_LABELS.forEach((lbl, i) => {
+    const isSat = i === 5, isSun = i === 6;
+    const avail = _countAvailSlots(i);
+    const lColor = isSun ? '#f87171' : isSat ? '#60a5fa' : '#9ca3af';
+    const nColor = isSun ? '#f87171' : isSat ? '#60a5fa' : '#374151';
+
+    const btn = document.createElement('button');
+    btn.dataset.day = i;
+    btn.className = 'day-btn';
+    btn.style.cssText = 'display:flex;flex-direction:column;align-items:center;padding:5px 2px 8px;border:none;background:transparent;cursor:pointer;border-radius:12px;';
+    btn.onclick = () => selectDay(i);
+    btn.innerHTML = `
+      <span id="dl-${i}" style="font-size:11px;font-weight:600;color:${lColor};">${lbl}</span>
+      <span id="dn-${i}" style="font-size:14px;font-weight:600;color:${nColor};
+             width:28px;height:28px;display:flex;align-items:center;justify-content:center;
+             border-radius:50%;margin:1px 0;">${dates[i].day}</span>
+      <div id="dd-${i}" style="width:5px;height:5px;border-radius:50%;
+           background:${avail > 0 ? '#059669' : 'transparent'};margin-top:1px;"></div>
+    `;
+    cont.appendChild(btn);
+  });
+  highlightDay(currentDay);
+}
+
+function highlightDay(active) {
+  DAY_LABELS.forEach((_, i) => {
+    const lEl = document.getElementById(`dl-${i}`);
+    const nEl = document.getElementById(`dn-${i}`);
+    if (!lEl || !nEl) return;
+    const isSat = i === 5, isSun = i === 6;
+    if (i === active) {
+      lEl.style.color      = '#6366f1';
+      lEl.style.fontWeight = '700';
+      nEl.style.cssText    = 'font-size:14px;font-weight:800;color:white;width:28px;height:28px;display:flex;align-items:center;justify-content:center;border-radius:50%;margin:1px 0;background:#6366f1;box-shadow:0 2px 8px rgba(99,102,241,0.4);';
+    } else {
+      lEl.style.color      = isSun ? '#f87171' : isSat ? '#60a5fa' : '#9ca3af';
+      lEl.style.fontWeight = '600';
+      nEl.style.cssText    = `font-size:14px;font-weight:600;color:${isSun?'#f87171':isSat?'#60a5fa':'#374151'};width:28px;height:28px;display:flex;align-items:center;justify-content:center;border-radius:50%;margin:1px 0;background:transparent;`;
+    }
+  });
+}
+
+function selectDay(idx) {
+  currentDay = idx;
+  highlightDay(idx);
+  updateViewingBar(idx);
+  renderSlots(idx);
+}
+
+function updateViewingBar(dayIdx) {
+  const label = document.getElementById('viewing-label');
+  const badge = document.getElementById('slot-count-badge');
+  const avail = _countAvailSlots(dayIdx);
+  const dateStr = getDateStr(dayIdx);
+  const dayLbl  = DAY_LABELS[dayIdx];
+
+  label.textContent = `${dateStr}（${dayLbl}）の空き状況`;
+  if (avail === 0) {
+    badge.textContent         = '空き枠なし';
+    badge.style.background    = '#9ca3af';
+  } else {
+    badge.textContent         = `${avail} 枠空き`;
+    badge.style.background    = '#059669';
+  }
+}
+
+// ─── SLOT RENDERING ──────────────────────────────────────────────────────────
+function renderSlots(dayIdx) {
+  const container = document.getElementById('slot-list');
+  container.innerHTML = '';
+  container.scrollTop = 0;
+
+  const slots = [];
+  for (let h = START_H; h < END_H; h++) {
+    for (const m of [0, 30]) {
+      slots.push({ h, m, ...getSlotStatus(dayIdx, h, m) });
+    }
+  }
+
+  const allUnavail = slots.every(s => s.status !== 'available');
+
+  // 日曜日のみ専用空状態を表示
+  if (dayIdx === 6) {
+    const empty = document.createElement('div');
+    empty.style.cssText = 'display:flex;flex-direction:column;align-items:center;justify-content:center;min-height:300px;padding:48px 24px;text-align:center;gap:14px;';
+    empty.innerHTML = `
+      <div style="font-size:60px;line-height:1;">🌸</div>
+      <p style="font-size:19px;font-weight:800;color:#6b7280;">日曜日は完全休日です</p>
+      <p style="font-size:14px;color:#9ca3af;line-height:1.6;">他の曜日からお選びください</p>
+    `;
+    container.appendChild(empty);
+    return;
+  }
+
+  // 時間帯セクションラベル
+  const SECTIONS = { 8:'朝（8〜11時台）', 12:'昼（12〜16時台）', 17:'夕方〜夜（17〜21時台）' };
+
+  let firstAvailEl = null;
+
+  slots.forEach(({ h, m, status, studio }) => {
+    // セクション区切り
+    if (m === 0 && SECTIONS[h] !== undefined) {
+      const sep = document.createElement('div');
+      sep.style.cssText = 'padding:10px 16px 5px;display:flex;align-items:center;gap:8px;background:#f3f4f6;';
+      sep.innerHTML = `
+        <span style="font-size:10px;font-weight:800;color:#9ca3af;letter-spacing:0.12em;text-transform:uppercase;">${SECTIONS[h]}</span>
+        <div style="flex:1;height:1px;background:#e5e7eb;"></div>
+      `;
+      container.appendChild(sep);
+    }
+
+    const timeStr    = `${h}:${String(m).padStart(2, '0')}`;
+    const endH       = m === 30 ? h + 1 : h;
+    const endM       = m === 30 ? 0 : 30;
+    const timeEndStr = `${endH}:${String(endM).padStart(2, '0')}`;
+
+    if (status === 'available') {
+      const studioFull = STUDIO_FULL[studio] || studio;
+      const btn = document.createElement('button');
+      btn.className = 'slot-btn';
+      btn.setAttribute('aria-label', `${timeStr}〜${timeEndStr} 空き、タップで予約リクエスト`);
+      btn.style.cssText = `
+        display:flex;align-items:center;width:100%;min-height:64px;
+        padding:10px 16px;background:#f0fdf4;border:none;border-bottom:1px solid #dcfce7;
+        cursor:pointer;text-align:left;
+      `;
+      btn.onclick = () => handleSlotTap(dayIdx, h, m, studio);
+      btn.innerHTML = `
+        <div style="width:58px;flex-shrink:0;">
+          <span style="font-size:19px;font-weight:800;color:#065f46;letter-spacing:-0.3px;">${timeStr}</span>
+        </div>
+        <div style="flex:1;display:flex;align-items:center;gap:12px;min-width:0;">
+          <div style="width:42px;height:42px;border-radius:50%;
+                      background:#059669;color:white;
+                      display:flex;align-items:center;justify-content:center;
+                      font-size:22px;font-weight:900;flex-shrink:0;
+                      box-shadow:0 3px 10px rgba(5,150,105,0.35);">◯</div>
+          <div style="min-width:0;">
+            <div style="font-size:18px;font-weight:800;color:#059669;line-height:1.2;">空き</div>
+            <div style="font-size:11px;color:#6b7280;margin-top:2px;
+                        white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">@${esc(studioFull)}</div>
+          </div>
+        </div>
+        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#86efac" stroke-width="2.5"
+             stroke-linecap="round" stroke-linejoin="round" style="flex-shrink:0;">
+          <polyline points="9 18 15 12 9 6"/>
+        </svg>
+      `;
+      container.appendChild(btn);
+      if (!firstAvailEl) firstAvailEl = btn;
+    } else {
+      const row = document.createElement('div');
+      row.style.cssText = `
+        display:flex;align-items:center;width:100%;min-height:56px;
+        padding:0 16px;background:white;border-bottom:1px solid #f9fafb;
+        pointer-events:none;
+      `;
+      row.innerHTML = `
+        <div style="width:58px;flex-shrink:0;">
+          <span style="font-size:17px;font-weight:600;color:#9ca3af;">${timeStr}</span>
+        </div>
+        <div style="flex:1;display:flex;align-items:center;gap:12px;">
+          <div style="width:38px;height:38px;border-radius:50%;
+                      background:#f3f4f6;color:#9ca3af;
+                      display:flex;align-items:center;justify-content:center;
+                      font-size:18px;font-weight:700;flex-shrink:0;">✕</div>
+          <span style="font-size:14px;color:#9ca3af;font-weight:600;">受付不可</span>
+        </div>
+      `;
+      container.appendChild(row);
+    }
+  });
+
+  // 下部余白
+  const pad = document.createElement('div');
+  pad.style.height = '32px';
+  container.appendChild(pad);
+
+  // 今日表示時：現在時刻に近いスロットへスクロール
+  if (currentWeekOffset === 0 && dayIdx === _calcTodayDayIdx()) {
+    const now  = new Date();
+    const nowH = now.getHours();
+    const nowM = now.getMinutes() < 30 ? 0 : 30;
+    const slotIndex = Math.max(0, (nowH - START_H) * 2 + (nowM === 30 ? 1 : 0));
+    const target = container.children[slotIndex + 1]; // +1 for section header offset
+    if (target) {
+      requestAnimationFrame(() => target.scrollIntoView({ block: 'start' }));
+    }
+  }
+}
+
+// ─── SLOT TAP → 確認モーダル ─────────────────────────────────────────────────
+function handleSlotTap(dayIdx, h, m, studio) {
+  _pendingSlot = { dayIdx, h, m, studio };
+
+  const endH       = m === 30 ? h + 1 : h;
+  const endM       = m === 30 ? 0 : 30;
+  const timeStr    = `${h}:${String(m).padStart(2, '0')}`;
+  const timeEndStr = `${endH}:${String(endM).padStart(2, '0')}`;
+  const dayFull    = DAY_FULL[dayIdx];
+  const dateStr    = getDateStr(dayIdx);
+  const studioFull = STUDIO_FULL[studio] || studio;
+
+  const content = document.getElementById('confirm-content');
+  content.innerHTML = `
+    <div style="padding:20px 24px 0;">
+
+      <!-- 予約情報カード -->
+      <div style="background:#f0fdf4;border:2px solid #bbf7d0;border-radius:22px;padding:20px;margin-bottom:22px;">
+        <div style="display:flex;align-items:flex-start;gap:14px;">
+          <div style="width:52px;height:52px;border-radius:16px;
+                      background:#059669;color:white;
+                      display:flex;align-items:center;justify-content:center;
+                      font-size:28px;font-weight:900;flex-shrink:0;
+                      box-shadow:0 4px 14px rgba(5,150,105,0.35);">◯</div>
+          <div style="flex:1;min-width:0;">
+            <div style="font-size:15px;font-weight:700;color:#065f46;margin-bottom:4px;">${esc(dayFull)}</div>
+            <div style="font-size:21px;font-weight:900;color:#065f46;letter-spacing:-0.5px;line-height:1.2;">
+              ${esc(dateStr)}<br>
+              <span style="font-size:19px;">${esc(timeStr)} 〜 ${esc(timeEndStr)}</span>
+            </div>
+            <div style="font-size:13px;color:#059669;font-weight:700;margin-top:6px;">
+              📍 @${esc(studioFull)}
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- お名前入力（LINE名プリセット・編集可） -->
+      <div style="margin-bottom:20px;">
+        <label style="display:block;font-size:12px;font-weight:700;color:#6b7280;
+                       margin-bottom:8px;letter-spacing:0.05em;">お名前（先生に通知されます）</label>
+        <div id="confirm-name-wrap"
+             style="display:flex;align-items:center;gap:10px;
+                    background:#f9fafb;border:2px solid #e5e7eb;border-radius:14px;
+                    padding:11px 14px;transition:border-color 0.15s;">
+          <input id="confirm-name-input" type="text"
+            value="${esc(STUDENT_NAME)}"
+            style="flex:1;font-size:18px;font-weight:700;color:#111827;
+                   background:transparent;border:none;outline:none;font-family:inherit;"
+            onfocus="document.getElementById('confirm-name-wrap').style.borderColor='#6366f1';"
+            onblur="document.getElementById('confirm-name-wrap').style.borderColor='#e5e7eb';">
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none"
+               stroke="#9ca3af" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+            <path d="M11 4H4a2 2 0 00-2 2v14a2 2 0 002 2h14a2 2 0 002-2v-7"/>
+            <path d="M18.5 2.5a2.121 2.121 0 013 3L12 15l-4 1 1-4 9.5-9.5z"/>
+          </svg>
+        </div>
+        <p style="font-size:11px;color:#9ca3af;margin-top:5px;margin-left:4px;">
+          LINEの名前が入力されています。変更できます。
+        </p>
+      </div>
+
+      <!-- 送信確認文 -->
+      <div style="text-align:center;margin-bottom:24px;">
+        <div style="font-size:20px;font-weight:800;color:#111827;line-height:1.6;letter-spacing:-0.3px;">
+          予約リクエストを<br>送りますか？
+        </div>
+      </div>
+
+      <!-- ボタン行 -->
+      <div style="display:flex;align-items:center;gap:14px;margin-bottom:36px;">
+        <!-- いいえ: グレーアウトラインボタン（高齢者がボタンと認識できる形状） -->
+        <button onclick="closeConfirm()"
+          style="padding:16px 20px;background:white;color:#6b7280;
+                 font-size:15px;font-weight:700;border:2px solid #d1d5db;
+                 border-radius:16px;cursor:pointer;font-family:inherit;
+                 flex-shrink:0;min-width:88px;min-height:52px;">
+          いいえ
+        </button>
+        <!-- はい: 大きく・目立つ色 -->
+        <button onclick="sendRequest()" class="yes-btn"
+          style="flex:1;padding:19px;
+                 background:#059669;color:white;
+                 font-size:19px;font-weight:800;
+                 border-radius:18px;border:none;cursor:pointer;
+                 font-family:inherit;letter-spacing:-0.4px;
+                 box-shadow:0 8px 24px rgba(5,150,105,0.45);">
+          はい、送る →
+        </button>
+      </div>
+    </div>
+  `;
+
+  // ボトムシート表示
+  const overlay = document.getElementById('confirm-overlay');
+  overlay.style.display = 'flex';
+  overlay.offsetHeight; // force reflow
+  overlay.style.opacity = '1';
+  document.getElementById('confirm-sheet').style.transform = 'translateY(0)';
+}
+
+function closeConfirm() {
+  const overlay = document.getElementById('confirm-overlay');
+  overlay.style.opacity = '0';
+  document.getElementById('confirm-sheet').style.transform = 'translateY(100%)';
+  setTimeout(() => { overlay.style.display = 'none'; }, 320);
+}
+
+function sendRequest() {
+  if (!_pendingSlot) return;
+  const { dayIdx, h, m } = _pendingSlot;
+  const endH       = m === 30 ? h + 1 : h;
+  const endM       = m === 30 ? 0 : 30;
+  const timeStr    = `${h}:${String(m).padStart(2, '0')}`;
+  const timeEndStr = `${endH}:${String(endM).padStart(2, '0')}`;
+  const dayLbl     = DAY_LABELS[dayIdx];
+
+  // 入力フィールドから名前を取得（未入力ならLINE名にフォールバック）
+  const nameInput   = document.getElementById('confirm-name-input');
+  const senderName  = nameInput?.value?.trim() || STUDENT_NAME;
+
+  closeConfirm();
+  _pendingSlot = null;
+
+  // 送信完了トースト
+  setTimeout(() => {
+    showToast(`✅ リクエストを送信しました！\n${senderName} さん · ${dayLbl}曜日 ${timeStr}〜${timeEndStr}`);
+  }, 220);
+}
+
+// ─── TOAST ────────────────────────────────────────────────────────────────────
+let _toastTimer = null;
+
+function showToast(msg) {
+  const toast = document.getElementById('toast');
+  toast.innerHTML = esc(msg).replace(/\n/g, '<br>');
+  toast.style.display = 'block';
+  // アニメーション
+  requestAnimationFrame(() => {
+    requestAnimationFrame(() => { toast.classList.add('show'); });
+  });
+  clearTimeout(_toastTimer);
+  _toastTimer = setTimeout(() => {
+    toast.classList.remove('show');
+    setTimeout(() => { toast.style.display = 'none'; }, 320);
+  }, 3200);
+}
+
+// ─── ZONE SYNC FROM TEACHER ──────────────────────────────────────────────────
+const _ZONE_KEY = 'dansechou_zones_v1';
+
+/**
+ * localStorage から教師側が保存したゾーン情報を読み込み、
+ * WEEK_EVENTS の zone イベントを上書きする。
+ * @returns {string|null} 保存日時文字列（未設定なら null）
+ */
+function loadZonesFromStorage() {
+  try {
+    const raw = localStorage.getItem(_ZONE_KEY);
+    if (!raw) return null;
+    const { zones, weekOverrides, savedAt } = JSON.parse(raw);
+
+    // ベーステンプレートを復元
+    if (zones) {
+      [0,1,2,3,4,5,6].forEach(idx => {
+        const saved = zones[String(idx)];
+        // 保存済みデータがある日はゾーンを置き換え、ない日はゾーンをクリア
+        WEEK_EVENTS[idx] = saved
+          ? [...saved.map(z => ({ type: 'zone', ...z })), ...(WEEK_EVENTS[idx] || []).filter(e => e.type !== 'zone')]
+          : (WEEK_EVENTS[idx] || []).filter(e => e.type !== 'zone');
+      });
+    }
+
+    // 週別特別設定を復元
+    _weekZoneOverrides = {};
+    if (weekOverrides) {
+      Object.entries(weekOverrides).forEach(([wKey, days]) => {
+        _weekZoneOverrides[wKey] = {};
+        Object.entries(days).forEach(([dKey, dayZones]) => {
+          _weekZoneOverrides[wKey][parseInt(dKey, 10)] =
+            dayZones.map(z => ({ type: 'zone', ...z }));
+        });
+      });
+    }
+
+    return savedAt || null;
+  } catch (e) {
+    console.warn('ゾーン読み込みエラー:', e);
+    return null;
+  }
+}
+
+/** 🔄 ボタン：教師側の最新ゾーンを再読み込みして画面を更新 */
+function syncFromTeacher() {
+  const savedAt = loadZonesFromStorage();
+  buildDaySelector();
+  selectDay(currentDay);
+  // ボタンをアニメーション
+  const btn = document.querySelector('[onclick="syncFromTeacher()"]');
+  if (btn) {
+    btn.style.transform = 'rotate(360deg)';
+    btn.style.transition = 'transform 0.5s ease';
+    setTimeout(() => { btn.style.transform = ''; btn.style.transition = ''; }, 550);
+  }
+  // ステータス表示を一時的に更新
+  const status = document.getElementById('sync-status');
+  if (status) {
+    status.textContent = savedAt ? `✓ 先生のスケジュールを反映しました` : '先生側のデータがまだありません';
+    status.style.color = savedAt ? '#059669' : '#9ca3af';
+    setTimeout(() => { _updateSyncStatus(savedAt); }, 3000);
+  }
+}
+
+/** 同期ステータス行を更新 */
+function _updateSyncStatus(savedAt) {
+  const el = document.getElementById('sync-status');
+  if (!el) return;
+  if (!savedAt) {
+    el.textContent = '先生のダンス手帳とこの端末でスケジュールを同期できます';
+    el.style.color  = '#9ca3af';
+  } else {
+    const d   = new Date(savedAt);
+    const fmt = `${d.getMonth()+1}/${d.getDate()} ${d.getHours()}:${String(d.getMinutes()).padStart(2,'0')} 更新`;
+    el.textContent = `📡 先生のスケジュール反映済み（${fmt}）`;
+    el.style.color  = '#6b7280';
+  }
+}
+
+// ─── WEEK NAVIGATION ──────────────────────────────────────────────────────────
+function changeWeek(dir) {
+  currentWeekOffset += dir;
+  const lbl = document.getElementById('week-nav-label');
+  if (lbl) lbl.textContent = weekLabel(currentWeekOffset);
+  buildDaySelector();
+  selectDay(currentDay);
+}
+
+function resetToCurrentWeek() {
+  if (currentWeekOffset === 0) return;
+  currentWeekOffset = 0;
+  const lbl = document.getElementById('week-nav-label');
+  if (lbl) lbl.textContent = weekLabel(0);
+  buildDaySelector();
+  selectDay(_calcTodayDayIdx());
+}
+
+// ─── INIT ─────────────────────────────────────────────────────────────────────
+document.addEventListener('DOMContentLoaded', () => {
+  const savedAt = loadZonesFromStorage(); // 教師側のゾーンを先に反映
+  buildDaySelector();
+  selectDay(currentDay);
+  _updateSyncStatus(savedAt);
+
+  // visualViewport API：キーボード表示時のモーダル高さ調整
+  if (window.visualViewport) {
+    window.visualViewport.addEventListener('resize', () => {
+      const vh = window.visualViewport.height;
+      const sheet = document.getElementById('confirm-sheet');
+      if (sheet) sheet.style.maxHeight = Math.floor(vh * 0.92) + 'px';
+    });
+  }
+});
+</script>
+</body>
+</html>

@@ -414,9 +414,7 @@ const WEEK_EVENTS = {
     { type:'lesson', id:19, studentId:3, start:[16,0],  end:[17,0],  name:'山田 悟',   loc:'@泉中央', level:'上級', style:'blue' },
     { type:'lesson', id:23, studentId:7, start:[18,0],  end:[19,0],  name:'佐藤 義雄', loc:'@泉中央', level:'初級', style:'blue' },
   ],
-  4: [
-    { type:'block', id:30, start:[8,0], end:[22,0], label:'休日', sub:'', repeat:true, style:'gray' },
-  ],
+  4: [], // 金曜日（スケジュール未設定）
   5: [
     { type:'zone', start:[10,0], end:[17,0], ...STUDIOS.sendai },
     { type:'lesson', id:24, studentId:1, start:[10,0],  end:[11,0],  name:'田中 花子', loc:'@仙台SS', level:'初級', style:'orange' },
@@ -426,6 +424,25 @@ const WEEK_EVENTS = {
   ],
   6: [],
 };
+
+// ─── ZONE ID MANAGEMENT ───────────────────────────────────────────────────────
+// ゾーンにユニークIDを付与し、参照比較に依存しない削除を可能にする
+let _nextZoneId = 100; // ハードコードのゾーンは z0〜z99, 動的生成は z100〜
+
+function _ensureZoneIds() {
+  let counter = 0;
+  [0,1,2,3,4,5,6].forEach(idx => {
+    (WEEK_EVENTS[idx] || []).filter(e => e.type === 'zone').forEach(z => {
+      if (!z.zid) z.zid = `z${counter++}`;
+    });
+  });
+  // weekZoneOverrides 内のゾーンにも付与
+  Object.values(_weekZoneOverrides || {}).forEach(days => {
+    Object.values(days).forEach(zones => {
+      zones.forEach(z => { if (!z.zid) z.zid = `z${_nextZoneId++}`; });
+    });
+  });
+}
 
 // チケット種別定義（SSoT）
 const TICKET_TYPES = [
@@ -500,6 +517,7 @@ let _newEvtLoc  = 'saito';    // 追加フォーム: 選択中の場所
 let currentWeekOffset = 0;    // 0=今週 1=来週 -1=先週
 let _timeAxisBuilt    = false; // [PERF-1] 時間軸の再構築抑止フラグ
 let weeklyAdditions   = {};   // { weekOffset: { dayIdx: [events] } }
+let _weekZoneOverrides = {}; // 週別ゾーン特別設定 { weekOffsetStr: { dayIdx: [zoneEvents] } }
 let salesData = [
   { id:1, name:'田中 花子', amount:5000, date:'4月8日', memo:'' },
   { id:2, name:'山田 悟',   amount:8000, date:'4月8日', memo:'月謝' },
@@ -541,6 +559,8 @@ function hasLessonToday(studentId) {
 
 // ─── INIT ─────────────────────────────────────────────────────────────────────
 document.addEventListener('DOMContentLoaded', () => {
+  _ensureZoneIds();      // WEEK_EVENTS のハードコードゾーンにIDを付与
+  loadZonesFromStorage(); // localStorage に保存済みゾーンがあれば復元（内部でも_ensureZoneIds呼び出し）
   buildDaySelector();
   selectDay(currentDay);
   buildStudents();
@@ -605,9 +625,18 @@ function buildDaySelector() {
 function getEventsForDay(dayIdx) {
   const base = WEEK_EVENTS[dayIdx] || [];
   if (currentWeekOffset === 0) return base;
-  const recurring = base.filter(e => e.repeat);
-  const extras    = ((weeklyAdditions[currentWeekOffset] || {})[dayIdx]) || [];
-  return [...recurring, ...extras];
+
+  const wKey = String(currentWeekOffset);
+  // ゾーン：週別特別設定があればそれを優先、なければベーステンプレート
+  const hasOverride = _weekZoneOverrides[wKey]?.[dayIdx] !== undefined;
+  const zones = hasOverride
+    ? _weekZoneOverrides[wKey][dayIdx]
+    : base.filter(e => e.type === 'zone');
+
+  // レッスン・ブロック：repeat:true のみ繰り返し + 週別追加
+  const nonZoneRecurring = base.filter(e => e.type !== 'zone' && e.repeat);
+  const extras           = ((weeklyAdditions[currentWeekOffset] || {})[dayIdx]) || [];
+  return [...zones, ...nonZoneRecurring, ...extras];
 }
 
 // 現在表示中の週において dayIdx が「今日」かを判定
@@ -702,8 +731,10 @@ function renderCalendar(dayIdx) {
     const top = timeToTop(z.start[0], z.start[1]);
     const h   = durToH(durMins(z.start, z.end));
     mkAbsDiv(eArea, `left:0;right:0;top:${top}px;height:${h}px;background:${z.bg};border-left:3px solid ${z.zb};pointer-events:none;`);
-    const zLbl = mkAbsDiv(eArea, `right:8px;top:${top+6}px;pointer-events:none;font-size:11px;font-weight:800;color:${z.zb};letter-spacing:0.08em;`);
-    zLbl.textContent = `@${z.loc}`;
+    const zLbl = mkAbsDiv(eArea, `right:8px;top:${top+6}px;z-index:6;font-size:11px;font-weight:800;color:${z.zb};letter-spacing:0.07em;cursor:pointer;padding:2px 8px;border-radius:7px;background:rgba(255,255,255,0.75);display:flex;align-items:center;gap:4px;`);
+    zLbl.innerHTML = `<span>@${esc(z.loc)}</span><span style="font-size:9px;opacity:0.6;">✎</span>`;
+    const _z = z, _dIdx = dayIdx;
+    zLbl.addEventListener('click', e => { e.stopPropagation(); openZoneEditModal(_dIdx, _z); });
   });
 
   // Current time indicator (show only on today's column)
@@ -766,18 +797,23 @@ function renderCalendar(dayIdx) {
         </div>`;
       el.addEventListener('click', () => openLessonModal(evt));
     } else {
-      el.style.background  = '#f3f4f6';
-      el.style.border      = 'none';
-      el.style.borderLeft  = '3px solid #d1d5db';
+      el.style.background   = '#f3f4f6';
+      el.style.border       = 'none';
+      el.style.borderLeft   = '3px solid #d1d5db';
       el.style.borderRadius = '6px';
-      el.style.cursor      = 'default';
-      el.style.opacity     = '0.85';
-      const showSub = hp >= 52 && evt.sub;
+      el.style.cursor       = 'pointer';
+      el.style.opacity      = '0.9';
+      const showTime = hp >= 34;
       el.innerHTML = `
-        <div style="display:flex;flex-direction:column;justify-content:center;height:100%;overflow:hidden;">
-          <div style="font-size:11px;font-weight:700;color:#6b7280;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">${esc(evt.label || '')}</div>
-          ${showSub ? `<div style="font-size:10px;color:#6b7280;margin-top:1px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">${esc(evt.sub)}</div>` : ''}
+        <div style="display:flex;align-items:center;justify-content:space-between;height:100%;overflow:hidden;gap:4px;">
+          <div style="display:flex;align-items:center;gap:4px;min-width:0;">
+            <span style="font-size:11px;color:#9ca3af;">🚫</span>
+            ${showTime ? `<span style="font-size:11px;font-weight:600;color:#9ca3af;white-space:nowrap;">${fmtTime(evt.start)}–${fmtTime(evt.end)}</span>` : ''}
+          </div>
+          <span style="font-size:10px;color:#d1d5db;flex-shrink:0;">✎</span>
         </div>`;
+      const _evt = evt, _dIdx = dayIdx;
+      el.addEventListener('click', () => openBlockEditModal(_evt, _dIdx));
     }
     eArea.appendChild(el);
   });
@@ -1589,9 +1625,10 @@ function showAddEvent() {
         <div style="display:flex;gap:8px;">
           <button onclick="setType(this)" data-type="lesson" style="flex:1;padding:10px;border-radius:12px;font-size:13px;font-weight:700;border:none;cursor:pointer;background:#6366f1;color:white;font-family:inherit;">レッスン</button>
           <button onclick="setType(this)" data-type="block" style="flex:1;padding:10px;border-radius:12px;font-size:13px;font-weight:600;border:none;cursor:pointer;background:#f3f4f6;color:#4b5563;font-family:inherit;">ブロック</button>
+          <button onclick="setType(this)" data-type="zone" style="flex:1;padding:10px;border-radius:12px;font-size:12px;font-weight:600;border:none;cursor:pointer;background:#f3f4f6;color:#4b5563;font-family:inherit;">ゾーン</button>
         </div>
       </div>
-      <div>
+      <div id="add-name-row">
         <label style="display:block;font-size:11px;font-weight:700;color:#6b7280;margin-bottom:8px;text-transform:uppercase;letter-spacing:0.06em;">生徒名 / タイトル</label>
         <input id="add-event-name" type="text" placeholder="例：田中 花子" list="student-names-list"
           style="width:100%;font-size:14px;background:#f9fafb;border-radius:13px;padding:12px 14px;border:1.5px solid #e5e7eb;font-family:inherit;color:#111827;box-sizing:border-box;">
@@ -1620,6 +1657,270 @@ function showAddEvent() {
       <button onclick="closeModal()" style="flex:1;background:#f3f4f6;color:#6b7280;font-weight:700;padding:15px;border-radius:16px;border:none;font-size:14px;cursor:pointer;font-family:inherit;">キャンセル</button>
       <button onclick="addEvent()" style="flex:2;background:#6366f1;color:white;font-weight:700;padding:15px;border-radius:16px;border:none;font-size:14px;cursor:pointer;font-family:inherit;box-shadow:0 4px 12px rgba(99,102,241,0.35);">追加する</button>
     </div>`);
+}
+
+// ─── ZONE MANAGEMENT ─────────────────────────────────────────────────────────
+const _ZONE_KEY = 'dansechou_zones_v1';
+
+/**
+ * 現在の WEEK_EVENTS からゾーンだけを抽出して localStorage に保存する。
+ * 生徒側アプリが同一ドメインで共有する。
+ */
+function saveZonesToStorage() {
+  // ベーステンプレート（全週共通）
+  const zones = {};
+  [0,1,2,3,4,5,6].forEach(idx => {
+    const dayZones = (WEEK_EVENTS[idx] || [])
+      .filter(e => e.type === 'zone')
+      .map(({ start, end, loc, bg, zb, style, zid }) => ({ start, end, loc, bg, zb, style, zid }));
+    if (dayZones.length > 0) zones[String(idx)] = dayZones;
+  });
+
+  // 週別特別設定をシリアライズ
+  const weekOverrides = {};
+  Object.entries(_weekZoneOverrides).forEach(([wKey, days]) => {
+    weekOverrides[wKey] = {};
+    Object.entries(days).forEach(([dKey, dayZones]) => {
+      weekOverrides[wKey][dKey] = dayZones.map(
+        ({ start, end, loc, bg, zb, style, zid }) => ({ start, end, loc, bg, zb, style, zid })
+      );
+    });
+  });
+
+  localStorage.setItem(_ZONE_KEY, JSON.stringify({ zones, weekOverrides, savedAt: new Date().toISOString() }));
+  _showZoneSaveFeedback();
+}
+
+/** localStorage のゾーンを WEEK_EVENTS と _weekZoneOverrides に反映する */
+function loadZonesFromStorage() {
+  try {
+    const raw = localStorage.getItem(_ZONE_KEY);
+    if (!raw) return;
+    const { zones, weekOverrides } = JSON.parse(raw);
+
+    // ベーステンプレートを復元
+    if (zones) {
+      [0,1,2,3,4,5,6].forEach(idx => {
+        const saved = zones[String(idx)];
+        if (!saved) return;
+        WEEK_EVENTS[idx] = [
+          ...saved.map(z => ({ type: 'zone', ...z })),
+          ...(WEEK_EVENTS[idx] || []).filter(e => e.type !== 'zone'),
+        ];
+      });
+    }
+
+    // 週別特別設定を復元
+    _weekZoneOverrides = {};
+    if (weekOverrides) {
+      Object.entries(weekOverrides).forEach(([wKey, days]) => {
+        _weekZoneOverrides[wKey] = {};
+        Object.entries(days).forEach(([dKey, dayZones]) => {
+          _weekZoneOverrides[wKey][parseInt(dKey, 10)] =
+            dayZones.map(z => ({ type: 'zone', ...z }));
+        });
+      });
+    }
+    _ensureZoneIds(); // 復元後にIDを確保
+  } catch (e) {
+    console.warn('ゾーン読み込みエラー:', e);
+  }
+}
+
+/** ゾーンラベルタップ → 編集・削除モーダル */
+function openZoneEditModal(dayIdx, zone) {
+  const fullName   = STUDIO_SHORT[zone.loc] || zone.loc;
+  const wKey       = String(currentWeekOffset);
+  const isFuture   = currentWeekOffset !== 0;
+  const hasOverride = isFuture && _weekZoneOverrides[wKey]?.[dayIdx] !== undefined;
+
+  const badgeHtml = hasOverride
+    ? '<span style="font-size:10px;font-weight:700;padding:2px 8px;border-radius:6px;background:#fef3c7;color:#92400e;">この週のみ</span>'
+    : (isFuture ? '<span style="font-size:10px;font-weight:700;padding:2px 8px;border-radius:6px;background:#e0f2fe;color:#0369a1;">ベース設定</span>' : '');
+
+  const resetBtnHtml = hasOverride
+    ? `<button onclick="_resetWeekZone(${dayIdx})"
+        style="width:100%;padding:10px;background:#fefce8;color:#92400e;font-size:12px;font-weight:700;border-radius:12px;border:1.5px solid #fde68a;cursor:pointer;font-family:inherit;">
+        ↩ この日だけベーススケジュールに戻す
+      </button>` : '';
+
+  const noteHtml = currentWeekOffset === 0
+    ? '削除するとベーステンプレートから外れます（全週に影響）'
+    : (hasOverride ? 'この週のみの特別設定から削除します' : '削除するとこの週にゾーンなしの特別設定が作られます');
+
+  openModal(`
+    <div style="padding:18px 20px 12px;border-bottom:1px solid #f3f4f6;">
+      <div style="display:flex;align-items:center;gap:8px;">
+        <h3 style="font-size:17px;font-weight:800;color:#111827;">🗓 スタジオゾーン</h3>
+        ${badgeHtml}
+      </div>
+    </div>
+    <div style="padding:18px 20px;display:flex;flex-direction:column;gap:12px;">
+      <div style="background:#f8f9fa;border-radius:14px;padding:16px;">
+        <div style="font-size:15px;font-weight:700;color:#111827;margin-bottom:4px;">@${esc(fullName)}</div>
+        <div style="font-size:14px;color:#6b7280;">${fmtTime(zone.start)} 〜 ${fmtTime(zone.end)}</div>
+        <div style="font-size:11px;color:#9ca3af;margin-top:3px;">${['月','火','水','木','金','土','日'][dayIdx]}曜日</div>
+      </div>
+      ${resetBtnHtml}
+      <p style="font-size:12px;color:#9ca3af;text-align:center;">${esc(noteHtml)}</p>
+      <div style="display:flex;gap:10px;">
+        <button onclick="closeModal()"
+          style="flex:1;background:#f3f4f6;color:#6b7280;font-weight:700;padding:14px;border-radius:14px;border:none;font-size:14px;cursor:pointer;font-family:inherit;">
+          キャンセル
+        </button>
+        <button onclick="_execDeleteZone(${dayIdx})"
+          style="flex:1;background:#fef2f2;color:#ef4444;font-weight:700;padding:14px;border-radius:14px;border:1.5px solid #fecaca;font-size:14px;cursor:pointer;font-family:inherit;">
+          🗑 削除
+        </button>
+      </div>
+    </div>
+  `);
+  window._pendingDeleteZone = zone;
+}
+
+function _execDeleteZone(dayIdx) {
+  const zone = window._pendingDeleteZone;
+  if (!zone) return;
+  const notTarget = e => e.zid !== zone.zid; // zid によるID比較（参照比較ではない）
+  if (currentWeekOffset === 0) {
+    // ベーステンプレートから削除（全週に影響）
+    WEEK_EVENTS[dayIdx] = (WEEK_EVENTS[dayIdx] || []).filter(notTarget);
+  } else {
+    // この週のみの特別設定として削除
+    const wKey = String(currentWeekOffset);
+    if (!_weekZoneOverrides[wKey]) _weekZoneOverrides[wKey] = {};
+    if (_weekZoneOverrides[wKey][dayIdx] === undefined) {
+      // 初回特別設定：ベースゾーンから対象を除いてコピー
+      _weekZoneOverrides[wKey][dayIdx] = (WEEK_EVENTS[dayIdx] || [])
+        .filter(e => e.type === 'zone').filter(notTarget);
+    } else {
+      _weekZoneOverrides[wKey][dayIdx] = _weekZoneOverrides[wKey][dayIdx].filter(notTarget);
+    }
+  }
+  window._pendingDeleteZone = null;
+  saveZonesToStorage();
+  closeModal();
+  setTimeout(() => { buildDaySelector(); selectDay(currentDay); }, 350);
+}
+
+/** この週の特別設定をリセットしてベーステンプレートに戻す */
+function _resetWeekZone(dayIdx) {
+  const wKey = String(currentWeekOffset);
+  if (_weekZoneOverrides[wKey]) {
+    delete _weekZoneOverrides[wKey][dayIdx];
+    if (Object.keys(_weekZoneOverrides[wKey]).length === 0) {
+      delete _weekZoneOverrides[wKey];
+    }
+  }
+  saveZonesToStorage();
+  closeModal();
+  setTimeout(() => { buildDaySelector(); selectDay(currentDay); }, 350);
+}
+
+// ─── BLOCK EDIT ─────────────────────────────────────────────────────────────
+
+/** [h,m] → "HH:MM" (input[type=time] 用ゼロ埋め) */
+const fmtTimeInput = ([h, m]) =>
+  `${String(h).padStart(2,'0')}:${String(m).padStart(2,'0')}`;
+
+/** ブロックタップ → 時間編集・削除モーダル */
+function openBlockEditModal(evt, dayIdx) {
+  const isBaseRepeat = currentWeekOffset !== 0 && evt.repeat &&
+    !((weeklyAdditions[currentWeekOffset] || {})[dayIdx] || []).includes(evt);
+  const noteText = isBaseRepeat
+    ? '削除すると全週のスケジュールから外れます'
+    : currentWeekOffset === 0 && evt.repeat
+      ? '削除すると全週のスケジュールから外れます'
+      : '削除するとこの週のブロックが解除されます';
+
+  openModal(`
+    <div style="padding:18px 20px 12px;border-bottom:1px solid #f3f4f6;">
+      <h3 style="font-size:17px;font-weight:800;color:#111827;">🚫 ブロック時間</h3>
+    </div>
+    <div style="padding:18px 20px;display:flex;flex-direction:column;gap:14px;">
+      <div style="display:flex;gap:10px;align-items:flex-end;">
+        <div style="flex:1;">
+          <label style="display:block;font-size:11px;font-weight:700;color:#6b7280;margin-bottom:6px;text-transform:uppercase;letter-spacing:0.06em;">開始</label>
+          <input id="block-edit-start" type="time" value="${fmtTimeInput(evt.start)}"
+            style="width:100%;padding:10px 12px;font-size:16px;border:1.5px solid #e5e7eb;border-radius:12px;background:white;font-family:inherit;color:#111827;box-sizing:border-box;">
+        </div>
+        <div style="font-size:20px;color:#d1d5db;padding-bottom:10px;flex-shrink:0;">→</div>
+        <div style="flex:1;">
+          <label style="display:block;font-size:11px;font-weight:700;color:#6b7280;margin-bottom:6px;text-transform:uppercase;letter-spacing:0.06em;">終了</label>
+          <input id="block-edit-end" type="time" value="${fmtTimeInput(evt.end)}"
+            style="width:100%;padding:10px 12px;font-size:16px;border:1.5px solid #e5e7eb;border-radius:12px;background:white;font-family:inherit;color:#111827;box-sizing:border-box;">
+        </div>
+      </div>
+      <div id="block-edit-error" style="display:none;color:#ef4444;font-size:12px;font-weight:700;"></div>
+      <button onclick="_execEditBlockTime(${dayIdx})"
+        style="width:100%;padding:13px;background:#6366f1;color:white;font-size:15px;font-weight:700;border-radius:14px;border:none;cursor:pointer;font-family:inherit;">
+        時間を保存
+      </button>
+      <p style="font-size:11px;color:#9ca3af;text-align:center;">${esc(noteText)}</p>
+      <div style="display:flex;gap:10px;">
+        <button onclick="closeModal()"
+          style="flex:1;background:#f3f4f6;color:#6b7280;font-weight:700;padding:14px;border-radius:14px;border:none;font-size:14px;cursor:pointer;font-family:inherit;">
+          キャンセル
+        </button>
+        <button onclick="_execDeleteBlock(${dayIdx})"
+          style="flex:1;background:#fef2f2;color:#ef4444;font-weight:700;padding:14px;border-radius:14px;border:1.5px solid #fecaca;font-size:14px;cursor:pointer;font-family:inherit;">
+          🗑 削除
+        </button>
+      </div>
+    </div>
+  `);
+  window._pendingBlockEvt = evt;
+}
+
+function _execEditBlockTime(dayIdx) {
+  const evt = window._pendingBlockEvt;
+  if (!evt) return;
+  const sv = document.getElementById('block-edit-start')?.value;
+  const ev = document.getElementById('block-edit-end')?.value;
+  if (!sv || !ev) return;
+  const [sh, sm] = sv.split(':').map(Number);
+  const [eh, em] = ev.split(':').map(Number);
+  if (eh*60+em <= sh*60+sm) {
+    const errEl = document.getElementById('block-edit-error');
+    if (errEl) { errEl.textContent = '⚠ 終了時刻は開始より後にしてください'; errEl.style.display = 'block'; }
+    return;
+  }
+  evt.start = [sh, sm];
+  evt.end   = [eh, em];
+  closeModal();
+  setTimeout(() => { buildDaySelector(); selectDay(currentDay); }, 350);
+}
+
+function _execDeleteBlock(dayIdx) {
+  const evt = window._pendingBlockEvt;
+  if (!evt) return;
+  if (currentWeekOffset === 0) {
+    WEEK_EVENTS[dayIdx] = (WEEK_EVENTS[dayIdx] || []).filter(e => e !== evt);
+  } else {
+    const additions = (weeklyAdditions[currentWeekOffset] || {})[dayIdx] || [];
+    if (additions.includes(evt)) {
+      weeklyAdditions[currentWeekOffset][dayIdx] = additions.filter(e => e !== evt);
+    } else {
+      // repeat ブロックはベーステンプレートから削除（全週に影響）
+      WEEK_EVENTS[dayIdx] = (WEEK_EVENTS[dayIdx] || []).filter(e => e !== evt);
+    }
+  }
+  window._pendingBlockEvt = null;
+  closeModal();
+  setTimeout(() => { buildDaySelector(); selectDay(currentDay); }, 350);
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
+
+/** ゾーン保存後のフィードバック（date-subtitle を一時的に書き換え） */
+function _showZoneSaveFeedback() {
+  const el = document.getElementById('date-subtitle');
+  if (!el) return;
+  const prev = el.textContent;
+  const prevColor = el.style.color;
+  el.textContent = '📡 生徒側の空き状況に反映しました';
+  el.style.color  = '#059669';
+  setTimeout(() => { el.textContent = prev; el.style.color = prevColor; }, 2500);
 }
 
 function openAddTask() {
@@ -1680,16 +1981,26 @@ function saveNote(studentId, evtId) {
 }
 
 function setType(btn) {
-  _newEvtType = btn.dataset.type || 'lesson'; // [BUG-5] テキスト依存を data-type 属性に変更
+  _newEvtType = btn.dataset.type || 'lesson';
   btn.closest('div').querySelectorAll('button').forEach(b => {
     const active = b === btn;
     b.style.background = active ? '#6366f1' : '#f3f4f6';
     b.style.color      = active ? 'white'   : '#4b5563';
     b.style.fontWeight = active ? '700'     : '600';
   });
-  // 場所ボタンの表示/非表示
-  const locRow = document.getElementById('add-loc-row');
-  if (locRow) locRow.style.display = _newEvtType === 'lesson' ? '' : 'none';
+  const nameRow = document.getElementById('add-name-row');
+  const locRow  = document.getElementById('add-loc-row');
+  if (_newEvtType === 'zone') {
+    // ゾーン：スタジオ選択のみ（生徒名不要）
+    if (nameRow) nameRow.style.display = 'none';
+    if (locRow)  locRow.style.display  = '';
+  } else if (_newEvtType === 'lesson') {
+    if (nameRow) nameRow.style.display = '';
+    if (locRow)  locRow.style.display  = '';
+  } else { // block：タイトル不要・場所も不要
+    if (nameRow) nameRow.style.display = 'none';
+    if (locRow)  locRow.style.display  = 'none';
+  }
 }
 
 const _LOC_COLORS = Object.fromEntries(
@@ -1716,22 +2027,63 @@ function _showAddEventError(msg) {
 }
 
 function addEvent() {
+  const sv = document.getElementById('add-event-start')?.value || '9:00';
+  const ev = document.getElementById('add-event-end')?.value   || '10:00';
+  const [sh,sm] = sv.split(':').map(Number);
+  const [eh,em] = ev.split(':').map(Number);
+  if (eh*60+em <= sh*60+sm) { _showAddEventError('終了時刻は開始より後にしてください'); return; }
+
+  // ── ゾーン追加 ──
+  if (_newEvtType === 'zone') {
+    const studio = STUDIOS[_newEvtLoc];
+    if (!studio) { _showAddEventError('スタジオを選択してください'); return; }
+    const newZone = { type:'zone', zid:`z${_nextZoneId++}`, start:[sh,sm], end:[eh,em], ...studio };
+    if (currentWeekOffset === 0) {
+      // ベーステンプレートに追加（全週に適用）
+      if (!WEEK_EVENTS[currentDay]) WEEK_EVENTS[currentDay] = [];
+      WEEK_EVENTS[currentDay].push(newZone);
+    } else {
+      // この週のみの特別設定に追加
+      const wKey = String(currentWeekOffset);
+      if (!_weekZoneOverrides[wKey]) _weekZoneOverrides[wKey] = {};
+      if (_weekZoneOverrides[wKey][currentDay] === undefined) {
+        // 初回特別設定：ベースゾーンをコピーして土台にする
+        _weekZoneOverrides[wKey][currentDay] =
+          [...(WEEK_EVENTS[currentDay] || []).filter(e => e.type === 'zone')];
+      }
+      _weekZoneOverrides[wKey][currentDay].push(newZone);
+    }
+    saveZonesToStorage();
+    closeModal();
+    setTimeout(() => { buildDaySelector(); selectDay(currentDay); }, 350);
+    return;
+  }
+
+  // ブロックはタイトル不要のまま追加
+  if (_newEvtType === 'block') {
+    const newEvt = { type:'block', id:nextEventId++, start:[sh,sm], end:[eh,em], label:'', sub:'', repeat:false, style:'gray' };
+    if (currentWeekOffset === 0) {
+      if (!WEEK_EVENTS[currentDay]) WEEK_EVENTS[currentDay] = [];
+      WEEK_EVENTS[currentDay].push(newEvt);
+    } else {
+      if (!weeklyAdditions[currentWeekOffset]) weeklyAdditions[currentWeekOffset] = {};
+      if (!weeklyAdditions[currentWeekOffset][currentDay]) weeklyAdditions[currentWeekOffset][currentDay] = [];
+      weeklyAdditions[currentWeekOffset][currentDay].push(newEvt);
+    }
+    closeModal();
+    setTimeout(() => { selectDay(currentDay); }, 350);
+    return;
+  }
+
   const name = document.getElementById('add-event-name')?.value?.trim();
   if (!name) {
     _showAddEventError('生徒名 / タイトルを入力してください');
     document.getElementById('add-event-name')?.focus();
     return;
   }
-  const sv = document.getElementById('add-event-start')?.value || '9:00';
-  const ev = document.getElementById('add-event-end')?.value   || '10:00';
-  const [sh,sm] = sv.split(':').map(Number);
-  const [eh,em] = ev.split(':').map(Number);
-  if (eh*60+em <= sh*60+sm) { _showAddEventError('終了時刻は開始より後にしてください'); return; }
   const studio = STUDIOS[_newEvtLoc];
   const matchedStudent = STUDENTS.find(s => s.name === name);
-  const newEvt = _newEvtType === 'lesson'
-    ? { type:'lesson', id:nextEventId++, studentId: matchedStudent?.id || null, start:[sh,sm], end:[eh,em], name, loc:'@'+studio.loc, style:studio.style }
-    : { type:'block',  id:nextEventId++, start:[sh,sm], end:[eh,em], label:name, sub:'', repeat:false, style:'gray' };
+  const newEvt = { type:'lesson', id:nextEventId++, studentId: matchedStudent?.id || null, start:[sh,sm], end:[eh,em], name, loc:'@'+studio.loc, style:studio.style };
   if (currentWeekOffset === 0) {
     if (!WEEK_EVENTS[currentDay]) WEEK_EVENTS[currentDay] = [];
     WEEK_EVENTS[currentDay].push(newEvt);
