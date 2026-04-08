@@ -1568,9 +1568,9 @@ function selectStudentTicket(btn, ticketId, studentId) {
 function showAddEvent() {
   _newEvtType = 'lesson'; _newEvtLoc = 'saito';
   const dateLabel = `${getDateStr(currentDay)}（${['月','火','水','木','金','土','日'][currentDay]}）`;
-  // [UX-12] 15分刻み（8:00〜21:45、56スロット）
-  const opts = Array.from({length:56}, (_,i) => {
-    const h = 8 + Math.floor(i/4), m = (i % 4) * 15;
+  // 30分刻み（8:00〜21:30、28スロット）※生徒側の予約画面との整合を取るため
+  const opts = Array.from({length:28}, (_,i) => {
+    const h = 8 + Math.floor(i/2), m = (i % 2) * 30;
     const v = `${h}:${String(m).padStart(2,'0')}`;
     return `<option value="${v}">${v}</option>`;
   }).join('');
