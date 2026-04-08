@@ -440,7 +440,11 @@ function _buildStudentsDebounced() {
   clearTimeout(_studentSearchTimer);
   _studentSearchTimer = setTimeout(buildStudents, 200);
 }
-let currentDay = 2;
+function _calcTodayDayIdx() {
+  const dow = new Date().getDay(); // 0=日, 1=月, ..., 6=土
+  return dow === 0 ? 6 : dow - 1; // 月=0, 火=1, ..., 日=6
+}
+let currentDay = _calcTodayDayIdx();
 let currentTab = 'calendar';
 
 // ─── ヘルパー ──────────────────────────────────────────────────────────────────
@@ -508,7 +512,7 @@ function buildDaySelector() {
     `;
     cont.appendChild(btn);
   });
-  highlightDay(2);
+  highlightDay(currentDay);
 }
 
 // 現在表示週の指定曜日イベントを返す
