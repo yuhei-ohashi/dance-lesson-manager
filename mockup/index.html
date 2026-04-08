@@ -539,6 +539,7 @@ function hasLessonToday(studentId) {
 
 // ─── INIT ─────────────────────────────────────────────────────────────────────
 document.addEventListener('DOMContentLoaded', () => {
+  loadZonesFromStorage(); // localStorage に保存済みゾーンがあれば復元
   buildDaySelector();
   selectDay(currentDay);
   buildStudents();
@@ -603,7 +604,8 @@ function buildDaySelector() {
 function getEventsForDay(dayIdx) {
   const base = WEEK_EVENTS[dayIdx] || [];
   if (currentWeekOffset === 0) return base;
-  const recurring = base.filter(e => e.repeat);
+  // ゾーンはスタジオ在籍パターンとして全週に適用（repeat フラグ不問）
+  const recurring = base.filter(e => e.type === 'zone' || e.repeat);
   const extras    = ((weeklyAdditions[currentWeekOffset] || {})[dayIdx]) || [];
   return [...recurring, ...extras];
 }
@@ -700,8 +702,10 @@ function renderCalendar(dayIdx) {
     const top = timeToTop(z.start[0], z.start[1]);
     const h   = durToH(durMins(z.start, z.end));
     mkAbsDiv(eArea, `left:0;right:0;top:${top}px;height:${h}px;background:${z.bg};border-left:3px solid ${z.zb};pointer-events:none;`);
-    const zLbl = mkAbsDiv(eArea, `right:8px;top:${top+6}px;pointer-events:none;font-size:11px;font-weight:800;color:${z.zb};letter-spacing:0.08em;`);
-    zLbl.textContent = `@${z.loc}`;
+    const zLbl = mkAbsDiv(eArea, `right:8px;top:${top+6}px;z-index:6;font-size:11px;font-weight:800;color:${z.zb};letter-spacing:0.07em;cursor:pointer;padding:2px 8px;border-radius:7px;background:rgba(255,255,255,0.75);display:flex;align-items:center;gap:4px;`);
+    zLbl.innerHTML = `<span>@${esc(z.loc)}</span><span style="font-size:9px;opacity:0.6;">✎</span>`;
+    const _z = z, _dIdx = dayIdx;
+    zLbl.addEventListener('click', e => { e.stopPropagation(); openZoneEditModal(_dIdx, _z); });
   });
 
   // Current time indicator (show only on today's column)
@@ -1587,9 +1591,10 @@ function showAddEvent() {
         <div style="display:flex;gap:8px;">
           <button onclick="setType(this)" data-type="lesson" style="flex:1;padding:10px;border-radius:12px;font-size:13px;font-weight:700;border:none;cursor:pointer;background:#6366f1;color:white;font-family:inherit;">レッスン</button>
           <button onclick="setType(this)" data-type="block" style="flex:1;padding:10px;border-radius:12px;font-size:13px;font-weight:600;border:none;cursor:pointer;background:#f3f4f6;color:#4b5563;font-family:inherit;">ブロック</button>
+          <button onclick="setType(this)" data-type="zone" style="flex:1;padding:10px;border-radius:12px;font-size:12px;font-weight:600;border:none;cursor:pointer;background:#f3f4f6;color:#4b5563;font-family:inherit;">ゾーン</button>
         </div>
       </div>
-      <div>
+      <div id="add-name-row">
         <label style="display:block;font-size:11px;font-weight:700;color:#6b7280;margin-bottom:8px;text-transform:uppercase;letter-spacing:0.06em;">生徒名 / タイトル</label>
         <input id="add-event-name" type="text" placeholder="例：田中 花子" list="student-names-list"
           style="width:100%;font-size:14px;background:#f9fafb;border-radius:13px;padding:12px 14px;border:1.5px solid #e5e7eb;font-family:inherit;color:#111827;box-sizing:border-box;">
@@ -1618,6 +1623,96 @@ function showAddEvent() {
       <button onclick="closeModal()" style="flex:1;background:#f3f4f6;color:#6b7280;font-weight:700;padding:15px;border-radius:16px;border:none;font-size:14px;cursor:pointer;font-family:inherit;">キャンセル</button>
       <button onclick="addEvent()" style="flex:2;background:#6366f1;color:white;font-weight:700;padding:15px;border-radius:16px;border:none;font-size:14px;cursor:pointer;font-family:inherit;box-shadow:0 4px 12px rgba(99,102,241,0.35);">追加する</button>
     </div>`);
+}
+
+// ─── ZONE MANAGEMENT ─────────────────────────────────────────────────────────
+const _ZONE_KEY = 'dansechou_zones_v1';
+
+/**
+ * 現在の WEEK_EVENTS からゾーンだけを抽出して localStorage に保存する。
+ * 生徒側アプリが同一ドメインで共有する。
+ */
+function saveZonesToStorage() {
+  const zones = {};
+  [0,1,2,3,4,5,6].forEach(idx => {
+    const dayZones = (WEEK_EVENTS[idx] || [])
+      .filter(e => e.type === 'zone')
+      .map(({ start, end, loc, bg, zb, style }) => ({ start, end, loc, bg, zb, style }));
+    if (dayZones.length > 0) zones[String(idx)] = dayZones;
+  });
+  localStorage.setItem(_ZONE_KEY, JSON.stringify({ zones, savedAt: new Date().toISOString() }));
+  _showZoneSaveFeedback();
+}
+
+/** localStorage のゾーンを WEEK_EVENTS に反映する（起動時・手動リセット時） */
+function loadZonesFromStorage() {
+  try {
+    const raw = localStorage.getItem(_ZONE_KEY);
+    if (!raw) return;
+    const { zones } = JSON.parse(raw);
+    [0,1,2,3,4,5,6].forEach(idx => {
+      const saved = zones[String(idx)];
+      if (!saved) return;
+      WEEK_EVENTS[idx] = [
+        ...saved.map(z => ({ type: 'zone', ...z })),
+        ...(WEEK_EVENTS[idx] || []).filter(e => e.type !== 'zone'),
+      ];
+    });
+  } catch (e) {
+    console.warn('ゾーン読み込みエラー:', e);
+  }
+}
+
+/** ゾーンラベルタップ → 編集・削除モーダル */
+function openZoneEditModal(dayIdx, zone) {
+  const fullName = STUDIO_SHORT[zone.loc] || zone.loc;
+  openModal(`
+    <div style="padding:18px 20px 12px;border-bottom:1px solid #f3f4f6;">
+      <h3 style="font-size:17px;font-weight:800;color:#111827;">🗓 スタジオゾーン</h3>
+    </div>
+    <div style="padding:18px 20px 28px;display:flex;flex-direction:column;gap:16px;">
+      <div style="background:#f8f9fa;border-radius:14px;padding:16px;">
+        <div style="font-size:15px;font-weight:700;color:#111827;margin-bottom:4px;">@${esc(fullName)}</div>
+        <div style="font-size:14px;color:#6b7280;">${fmtTime(zone.start)} 〜 ${fmtTime(zone.end)}</div>
+        <div style="font-size:11px;color:#9ca3af;margin-top:3px;">${['月','火','水','木','金','土','日'][dayIdx]}曜日</div>
+      </div>
+      <p style="font-size:12px;color:#9ca3af;text-align:center;">
+        このゾーンを削除すると生徒側の空き枠から外れます
+      </p>
+      <div style="display:flex;gap:10px;">
+        <button onclick="closeModal()"
+          style="flex:1;background:#f3f4f6;color:#6b7280;font-weight:700;padding:14px;border-radius:14px;border:none;font-size:14px;cursor:pointer;font-family:inherit;">
+          キャンセル
+        </button>
+        <button onclick="_execDeleteZone(${dayIdx})"
+          style="flex:1;background:#fef2f2;color:#ef4444;font-weight:700;padding:14px;border-radius:14px;border:1.5px solid #fecaca;font-size:14px;cursor:pointer;font-family:inherit;">
+          🗑 削除する
+        </button>
+      </div>
+    </div>
+  `);
+  window._pendingDeleteZone = zone;
+}
+
+function _execDeleteZone(dayIdx) {
+  const zone = window._pendingDeleteZone;
+  if (!zone) return;
+  WEEK_EVENTS[dayIdx] = (WEEK_EVENTS[dayIdx] || []).filter(e => e !== zone);
+  window._pendingDeleteZone = null;
+  saveZonesToStorage();
+  closeModal();
+  setTimeout(() => { buildDaySelector(); selectDay(currentDay); }, 350);
+}
+
+/** ゾーン保存後のフィードバック（date-subtitle を一時的に書き換え） */
+function _showZoneSaveFeedback() {
+  const el = document.getElementById('date-subtitle');
+  if (!el) return;
+  const prev = el.textContent;
+  const prevColor = el.style.color;
+  el.textContent = '📡 生徒側の空き状況に反映しました';
+  el.style.color  = '#059669';
+  setTimeout(() => { el.textContent = prev; el.style.color = prevColor; }, 2500);
 }
 
 function openAddTask() {
@@ -1678,16 +1773,26 @@ function saveNote(studentId, evtId) {
 }
 
 function setType(btn) {
-  _newEvtType = btn.dataset.type || 'lesson'; // [BUG-5] テキスト依存を data-type 属性に変更
+  _newEvtType = btn.dataset.type || 'lesson';
   btn.closest('div').querySelectorAll('button').forEach(b => {
     const active = b === btn;
     b.style.background = active ? '#6366f1' : '#f3f4f6';
     b.style.color      = active ? 'white'   : '#4b5563';
     b.style.fontWeight = active ? '700'     : '600';
   });
-  // 場所ボタンの表示/非表示
-  const locRow = document.getElementById('add-loc-row');
-  if (locRow) locRow.style.display = _newEvtType === 'lesson' ? '' : 'none';
+  const nameRow = document.getElementById('add-name-row');
+  const locRow  = document.getElementById('add-loc-row');
+  if (_newEvtType === 'zone') {
+    // ゾーン：スタジオ選択のみ（生徒名不要）
+    if (nameRow) nameRow.style.display = 'none';
+    if (locRow)  locRow.style.display  = '';
+  } else if (_newEvtType === 'lesson') {
+    if (nameRow) nameRow.style.display = '';
+    if (locRow)  locRow.style.display  = '';
+  } else { // block
+    if (nameRow) nameRow.style.display = '';
+    if (locRow)  locRow.style.display  = 'none';
+  }
 }
 
 const _LOC_COLORS = Object.fromEntries(
@@ -1714,17 +1819,31 @@ function _showAddEventError(msg) {
 }
 
 function addEvent() {
+  const sv = document.getElementById('add-event-start')?.value || '9:00';
+  const ev = document.getElementById('add-event-end')?.value   || '10:00';
+  const [sh,sm] = sv.split(':').map(Number);
+  const [eh,em] = ev.split(':').map(Number);
+  if (eh*60+em <= sh*60+sm) { _showAddEventError('終了時刻は開始より後にしてください'); return; }
+
+  // ── ゾーン追加（ベース週に登録 → 全週に適用）──
+  if (_newEvtType === 'zone') {
+    const studio = STUDIOS[_newEvtLoc];
+    if (!studio) { _showAddEventError('スタジオを選択してください'); return; }
+    const newZone = { type:'zone', start:[sh,sm], end:[eh,em], ...studio };
+    if (!WEEK_EVENTS[currentDay]) WEEK_EVENTS[currentDay] = [];
+    WEEK_EVENTS[currentDay].push(newZone);
+    saveZonesToStorage();
+    closeModal();
+    setTimeout(() => { buildDaySelector(); selectDay(currentDay); }, 350);
+    return;
+  }
+
   const name = document.getElementById('add-event-name')?.value?.trim();
   if (!name) {
     _showAddEventError('生徒名 / タイトルを入力してください');
     document.getElementById('add-event-name')?.focus();
     return;
   }
-  const sv = document.getElementById('add-event-start')?.value || '9:00';
-  const ev = document.getElementById('add-event-end')?.value   || '10:00';
-  const [sh,sm] = sv.split(':').map(Number);
-  const [eh,em] = ev.split(':').map(Number);
-  if (eh*60+em <= sh*60+sm) { _showAddEventError('終了時刻は開始より後にしてください'); return; }
   const studio = STUDIOS[_newEvtLoc];
   const matchedStudent = STUDENTS.find(s => s.name === name);
   const newEvt = _newEvtType === 'lesson'

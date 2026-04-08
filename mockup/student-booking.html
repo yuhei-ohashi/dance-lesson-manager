@@ -160,15 +160,25 @@
   </div>
 
   <!-- ── VIEWING INFO BAR ── -->
-  <div class="flex-shrink-0" style="background:#eef2ff;padding:8px 16px;border-bottom:1px solid #e0e7ff;">
+  <div class="flex-shrink-0" style="background:#eef2ff;padding:8px 16px 6px;border-bottom:1px solid #e0e7ff;">
     <div style="display:flex;align-items:center;justify-content:space-between;gap:8px;">
       <span id="viewing-label"
             style="font-size:13px;font-weight:700;color:#4f46e5;min-width:0;
                    white-space:nowrap;overflow:hidden;text-overflow:ellipsis;"></span>
-      <span id="slot-count-badge"
-            style="font-size:11px;font-weight:800;padding:4px 12px;border-radius:20px;
-                   background:#059669;color:white;white-space:nowrap;flex-shrink:0;"></span>
+      <div style="display:flex;align-items:center;gap:6px;flex-shrink:0;">
+        <!-- 🔄 同期ボタン -->
+        <button onclick="syncFromTeacher()" title="先生の最新スケジュールを反映"
+          style="width:30px;height:30px;border-radius:50%;background:white;
+                 border:1.5px solid #c7d2fe;cursor:pointer;display:flex;
+                 align-items:center;justify-content:center;font-size:14px;">🔄</button>
+        <span id="slot-count-badge"
+              style="font-size:11px;font-weight:800;padding:4px 12px;border-radius:20px;
+                     background:#059669;color:white;white-space:nowrap;"></span>
+      </div>
     </div>
+    <!-- 同期ステータス -->
+    <div id="sync-status"
+         style="font-size:10px;color:#9ca3af;margin-top:3px;min-height:14px;"></div>
   </div>
 
   <!-- ── SLOT LIST ── -->
@@ -701,6 +711,69 @@ function showToast(msg) {
   }, 3200);
 }
 
+// ─── ZONE SYNC FROM TEACHER ──────────────────────────────────────────────────
+const _ZONE_KEY = 'dansechou_zones_v1';
+
+/**
+ * localStorage から教師側が保存したゾーン情報を読み込み、
+ * WEEK_EVENTS の zone イベントを上書きする。
+ * @returns {string|null} 保存日時文字列（未設定なら null）
+ */
+function loadZonesFromStorage() {
+  try {
+    const raw = localStorage.getItem(_ZONE_KEY);
+    if (!raw) return null;
+    const { zones, savedAt } = JSON.parse(raw);
+    [0,1,2,3,4,5,6].forEach(idx => {
+      const saved = zones[String(idx)];
+      // 保存済みデータがある日はゾーンを置き換え、ない日はゾーンをクリア
+      WEEK_EVENTS[idx] = saved
+        ? [...saved.map(z => ({ type: 'zone', ...z })), ...(WEEK_EVENTS[idx] || []).filter(e => e.type !== 'zone')]
+        : (WEEK_EVENTS[idx] || []).filter(e => e.type !== 'zone');
+    });
+    return savedAt || null;
+  } catch (e) {
+    console.warn('ゾーン読み込みエラー:', e);
+    return null;
+  }
+}
+
+/** 🔄 ボタン：教師側の最新ゾーンを再読み込みして画面を更新 */
+function syncFromTeacher() {
+  const savedAt = loadZonesFromStorage();
+  buildDaySelector();
+  selectDay(currentDay);
+  // ボタンをアニメーション
+  const btn = document.querySelector('[onclick="syncFromTeacher()"]');
+  if (btn) {
+    btn.style.transform = 'rotate(360deg)';
+    btn.style.transition = 'transform 0.5s ease';
+    setTimeout(() => { btn.style.transform = ''; btn.style.transition = ''; }, 550);
+  }
+  // ステータス表示を一時的に更新
+  const status = document.getElementById('sync-status');
+  if (status) {
+    status.textContent = savedAt ? `✓ 先生のスケジュールを反映しました` : '先生側のデータがまだありません';
+    status.style.color = savedAt ? '#059669' : '#9ca3af';
+    setTimeout(() => { _updateSyncStatus(savedAt); }, 3000);
+  }
+}
+
+/** 同期ステータス行を更新 */
+function _updateSyncStatus(savedAt) {
+  const el = document.getElementById('sync-status');
+  if (!el) return;
+  if (!savedAt) {
+    el.textContent = '先生のダンス手帳とこの端末でスケジュールを同期できます';
+    el.style.color  = '#9ca3af';
+  } else {
+    const d   = new Date(savedAt);
+    const fmt = `${d.getMonth()+1}/${d.getDate()} ${d.getHours()}:${String(d.getMinutes()).padStart(2,'0')} 更新`;
+    el.textContent = `📡 先生のスケジュール反映済み（${fmt}）`;
+    el.style.color  = '#6b7280';
+  }
+}
+
 // ─── WEEK NAVIGATION ──────────────────────────────────────────────────────────
 function changeWeek(dir) {
   currentWeekOffset += dir;
@@ -721,8 +794,10 @@ function resetToCurrentWeek() {
 
 // ─── INIT ─────────────────────────────────────────────────────────────────────
 document.addEventListener('DOMContentLoaded', () => {
+  const savedAt = loadZonesFromStorage(); // 教師側のゾーンを先に反映
   buildDaySelector();
   selectDay(currentDay);
+  _updateSyncStatus(savedAt);
 
   // visualViewport API：キーボード表示時のモーダル高さ調整
   if (window.visualViewport) {
