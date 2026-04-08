@@ -777,18 +777,23 @@ function renderCalendar(dayIdx) {
         </div>`;
       el.addEventListener('click', () => openLessonModal(evt));
     } else {
-      el.style.background  = '#f3f4f6';
-      el.style.border      = 'none';
-      el.style.borderLeft  = '3px solid #d1d5db';
+      el.style.background   = '#f3f4f6';
+      el.style.border       = 'none';
+      el.style.borderLeft   = '3px solid #d1d5db';
       el.style.borderRadius = '6px';
-      el.style.cursor      = 'default';
-      el.style.opacity     = '0.85';
-      const showSub = hp >= 52 && evt.sub;
+      el.style.cursor       = 'pointer';
+      el.style.opacity      = '0.9';
+      const showTime = hp >= 34;
       el.innerHTML = `
-        <div style="display:flex;flex-direction:column;justify-content:center;height:100%;overflow:hidden;">
-          <div style="font-size:11px;font-weight:700;color:#6b7280;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">${esc(evt.label || '')}</div>
-          ${showSub ? `<div style="font-size:10px;color:#6b7280;margin-top:1px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">${esc(evt.sub)}</div>` : ''}
+        <div style="display:flex;align-items:center;justify-content:space-between;height:100%;overflow:hidden;gap:4px;">
+          <div style="display:flex;align-items:center;gap:4px;min-width:0;">
+            <span style="font-size:11px;color:#9ca3af;">🚫</span>
+            ${showTime ? `<span style="font-size:11px;font-weight:600;color:#9ca3af;white-space:nowrap;">${fmtTime(evt.start)}–${fmtTime(evt.end)}</span>` : ''}
+          </div>
+          <span style="font-size:10px;color:#d1d5db;flex-shrink:0;">✎</span>
         </div>`;
+      const _evt = evt, _dIdx = dayIdx;
+      el.addEventListener('click', () => openBlockEditModal(_evt, _dIdx));
     }
     eArea.appendChild(el);
   });
@@ -1790,6 +1795,101 @@ function _resetWeekZone(dayIdx) {
   setTimeout(() => { buildDaySelector(); selectDay(currentDay); }, 350);
 }
 
+// ─── BLOCK EDIT ─────────────────────────────────────────────────────────────
+
+/** [h,m] → "HH:MM" (input[type=time] 用ゼロ埋め) */
+const fmtTimeInput = ([h, m]) =>
+  `${String(h).padStart(2,'0')}:${String(m).padStart(2,'0')}`;
+
+/** ブロックタップ → 時間編集・削除モーダル */
+function openBlockEditModal(evt, dayIdx) {
+  const isBaseRepeat = currentWeekOffset !== 0 && evt.repeat &&
+    !((weeklyAdditions[currentWeekOffset] || {})[dayIdx] || []).includes(evt);
+  const noteText = isBaseRepeat
+    ? '削除すると全週のスケジュールから外れます'
+    : currentWeekOffset === 0 && evt.repeat
+      ? '削除すると全週のスケジュールから外れます'
+      : '削除するとこの週のブロックが解除されます';
+
+  openModal(`
+    <div style="padding:18px 20px 12px;border-bottom:1px solid #f3f4f6;">
+      <h3 style="font-size:17px;font-weight:800;color:#111827;">🚫 ブロック時間</h3>
+    </div>
+    <div style="padding:18px 20px;display:flex;flex-direction:column;gap:14px;">
+      <div style="display:flex;gap:10px;align-items:flex-end;">
+        <div style="flex:1;">
+          <label style="display:block;font-size:11px;font-weight:700;color:#6b7280;margin-bottom:6px;text-transform:uppercase;letter-spacing:0.06em;">開始</label>
+          <input id="block-edit-start" type="time" value="${fmtTimeInput(evt.start)}"
+            style="width:100%;padding:10px 12px;font-size:16px;border:1.5px solid #e5e7eb;border-radius:12px;background:white;font-family:inherit;color:#111827;box-sizing:border-box;">
+        </div>
+        <div style="font-size:20px;color:#d1d5db;padding-bottom:10px;flex-shrink:0;">→</div>
+        <div style="flex:1;">
+          <label style="display:block;font-size:11px;font-weight:700;color:#6b7280;margin-bottom:6px;text-transform:uppercase;letter-spacing:0.06em;">終了</label>
+          <input id="block-edit-end" type="time" value="${fmtTimeInput(evt.end)}"
+            style="width:100%;padding:10px 12px;font-size:16px;border:1.5px solid #e5e7eb;border-radius:12px;background:white;font-family:inherit;color:#111827;box-sizing:border-box;">
+        </div>
+      </div>
+      <div id="block-edit-error" style="display:none;color:#ef4444;font-size:12px;font-weight:700;"></div>
+      <button onclick="_execEditBlockTime(${dayIdx})"
+        style="width:100%;padding:13px;background:#6366f1;color:white;font-size:15px;font-weight:700;border-radius:14px;border:none;cursor:pointer;font-family:inherit;">
+        時間を保存
+      </button>
+      <p style="font-size:11px;color:#9ca3af;text-align:center;">${esc(noteText)}</p>
+      <div style="display:flex;gap:10px;">
+        <button onclick="closeModal()"
+          style="flex:1;background:#f3f4f6;color:#6b7280;font-weight:700;padding:14px;border-radius:14px;border:none;font-size:14px;cursor:pointer;font-family:inherit;">
+          キャンセル
+        </button>
+        <button onclick="_execDeleteBlock(${dayIdx})"
+          style="flex:1;background:#fef2f2;color:#ef4444;font-weight:700;padding:14px;border-radius:14px;border:1.5px solid #fecaca;font-size:14px;cursor:pointer;font-family:inherit;">
+          🗑 削除
+        </button>
+      </div>
+    </div>
+  `);
+  window._pendingBlockEvt = evt;
+}
+
+function _execEditBlockTime(dayIdx) {
+  const evt = window._pendingBlockEvt;
+  if (!evt) return;
+  const sv = document.getElementById('block-edit-start')?.value;
+  const ev = document.getElementById('block-edit-end')?.value;
+  if (!sv || !ev) return;
+  const [sh, sm] = sv.split(':').map(Number);
+  const [eh, em] = ev.split(':').map(Number);
+  if (eh*60+em <= sh*60+sm) {
+    const errEl = document.getElementById('block-edit-error');
+    if (errEl) { errEl.textContent = '⚠ 終了時刻は開始より後にしてください'; errEl.style.display = 'block'; }
+    return;
+  }
+  evt.start = [sh, sm];
+  evt.end   = [eh, em];
+  closeModal();
+  setTimeout(() => { buildDaySelector(); selectDay(currentDay); }, 350);
+}
+
+function _execDeleteBlock(dayIdx) {
+  const evt = window._pendingBlockEvt;
+  if (!evt) return;
+  if (currentWeekOffset === 0) {
+    WEEK_EVENTS[dayIdx] = (WEEK_EVENTS[dayIdx] || []).filter(e => e !== evt);
+  } else {
+    const additions = (weeklyAdditions[currentWeekOffset] || {})[dayIdx] || [];
+    if (additions.includes(evt)) {
+      weeklyAdditions[currentWeekOffset][dayIdx] = additions.filter(e => e !== evt);
+    } else {
+      // repeat ブロックはベーステンプレートから削除（全週に影響）
+      WEEK_EVENTS[dayIdx] = (WEEK_EVENTS[dayIdx] || []).filter(e => e !== evt);
+    }
+  }
+  window._pendingBlockEvt = null;
+  closeModal();
+  setTimeout(() => { buildDaySelector(); selectDay(currentDay); }, 350);
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
+
 /** ゾーン保存後のフィードバック（date-subtitle を一時的に書き換え） */
 function _showZoneSaveFeedback() {
   const el = document.getElementById('date-subtitle');
@@ -1875,8 +1975,8 @@ function setType(btn) {
   } else if (_newEvtType === 'lesson') {
     if (nameRow) nameRow.style.display = '';
     if (locRow)  locRow.style.display  = '';
-  } else { // block
-    if (nameRow) nameRow.style.display = '';
+  } else { // block：タイトル不要・場所も不要
+    if (nameRow) nameRow.style.display = 'none';
     if (locRow)  locRow.style.display  = 'none';
   }
 }
@@ -1937,6 +2037,22 @@ function addEvent() {
     return;
   }
 
+  // ブロックはタイトル不要のまま追加
+  if (_newEvtType === 'block') {
+    const newEvt = { type:'block', id:nextEventId++, start:[sh,sm], end:[eh,em], label:'', sub:'', repeat:false, style:'gray' };
+    if (currentWeekOffset === 0) {
+      if (!WEEK_EVENTS[currentDay]) WEEK_EVENTS[currentDay] = [];
+      WEEK_EVENTS[currentDay].push(newEvt);
+    } else {
+      if (!weeklyAdditions[currentWeekOffset]) weeklyAdditions[currentWeekOffset] = {};
+      if (!weeklyAdditions[currentWeekOffset][currentDay]) weeklyAdditions[currentWeekOffset][currentDay] = [];
+      weeklyAdditions[currentWeekOffset][currentDay].push(newEvt);
+    }
+    closeModal();
+    setTimeout(() => { selectDay(currentDay); }, 350);
+    return;
+  }
+
   const name = document.getElementById('add-event-name')?.value?.trim();
   if (!name) {
     _showAddEventError('生徒名 / タイトルを入力してください');
@@ -1945,9 +2061,7 @@ function addEvent() {
   }
   const studio = STUDIOS[_newEvtLoc];
   const matchedStudent = STUDENTS.find(s => s.name === name);
-  const newEvt = _newEvtType === 'lesson'
-    ? { type:'lesson', id:nextEventId++, studentId: matchedStudent?.id || null, start:[sh,sm], end:[eh,em], name, loc:'@'+studio.loc, style:studio.style }
-    : { type:'block',  id:nextEventId++, start:[sh,sm], end:[eh,em], label:name, sub:'', repeat:false, style:'gray' };
+  const newEvt = { type:'lesson', id:nextEventId++, studentId: matchedStudent?.id || null, start:[sh,sm], end:[eh,em], name, loc:'@'+studio.loc, style:studio.style };
   if (currentWeekOffset === 0) {
     if (!WEEK_EVENTS[currentDay]) WEEK_EVENTS[currentDay] = [];
     WEEK_EVENTS[currentDay].push(newEvt);
