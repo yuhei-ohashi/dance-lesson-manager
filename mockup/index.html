@@ -425,6 +425,25 @@ const WEEK_EVENTS = {
   6: [],
 };
 
+// ─── ZONE ID MANAGEMENT ───────────────────────────────────────────────────────
+// ゾーンにユニークIDを付与し、参照比較に依存しない削除を可能にする
+let _nextZoneId = 100; // ハードコードのゾーンは z0〜z99, 動的生成は z100〜
+
+function _ensureZoneIds() {
+  let counter = 0;
+  [0,1,2,3,4,5,6].forEach(idx => {
+    (WEEK_EVENTS[idx] || []).filter(e => e.type === 'zone').forEach(z => {
+      if (!z.zid) z.zid = `z${counter++}`;
+    });
+  });
+  // weekZoneOverrides 内のゾーンにも付与
+  Object.values(_weekZoneOverrides || {}).forEach(days => {
+    Object.values(days).forEach(zones => {
+      zones.forEach(z => { if (!z.zid) z.zid = `z${_nextZoneId++}`; });
+    });
+  });
+}
+
 // チケット種別定義（SSoT）
 const TICKET_TYPES = [
   { id:'single',    label:'単発',         color:'#4b5563', bg:'#f3f4f6' },
@@ -540,7 +559,8 @@ function hasLessonToday(studentId) {
 
 // ─── INIT ─────────────────────────────────────────────────────────────────────
 document.addEventListener('DOMContentLoaded', () => {
-  loadZonesFromStorage(); // localStorage に保存済みゾーンがあれば復元
+  _ensureZoneIds();      // WEEK_EVENTS のハードコードゾーンにIDを付与
+  loadZonesFromStorage(); // localStorage に保存済みゾーンがあれば復元（内部でも_ensureZoneIds呼び出し）
   buildDaySelector();
   selectDay(currentDay);
   buildStudents();
@@ -1652,7 +1672,7 @@ function saveZonesToStorage() {
   [0,1,2,3,4,5,6].forEach(idx => {
     const dayZones = (WEEK_EVENTS[idx] || [])
       .filter(e => e.type === 'zone')
-      .map(({ start, end, loc, bg, zb, style }) => ({ start, end, loc, bg, zb, style }));
+      .map(({ start, end, loc, bg, zb, style, zid }) => ({ start, end, loc, bg, zb, style, zid }));
     if (dayZones.length > 0) zones[String(idx)] = dayZones;
   });
 
@@ -1662,7 +1682,7 @@ function saveZonesToStorage() {
     weekOverrides[wKey] = {};
     Object.entries(days).forEach(([dKey, dayZones]) => {
       weekOverrides[wKey][dKey] = dayZones.map(
-        ({ start, end, loc, bg, zb, style }) => ({ start, end, loc, bg, zb, style })
+        ({ start, end, loc, bg, zb, style, zid }) => ({ start, end, loc, bg, zb, style, zid })
       );
     });
   });
@@ -1701,6 +1721,7 @@ function loadZonesFromStorage() {
         });
       });
     }
+    _ensureZoneIds(); // 復元後にIDを確保
   } catch (e) {
     console.warn('ゾーン読み込みエラー:', e);
   }
@@ -1760,9 +1781,10 @@ function openZoneEditModal(dayIdx, zone) {
 function _execDeleteZone(dayIdx) {
   const zone = window._pendingDeleteZone;
   if (!zone) return;
+  const notTarget = e => e.zid !== zone.zid; // zid によるID比較（参照比較ではない）
   if (currentWeekOffset === 0) {
     // ベーステンプレートから削除（全週に影響）
-    WEEK_EVENTS[dayIdx] = (WEEK_EVENTS[dayIdx] || []).filter(e => e !== zone);
+    WEEK_EVENTS[dayIdx] = (WEEK_EVENTS[dayIdx] || []).filter(notTarget);
   } else {
     // この週のみの特別設定として削除
     const wKey = String(currentWeekOffset);
@@ -1770,9 +1792,9 @@ function _execDeleteZone(dayIdx) {
     if (_weekZoneOverrides[wKey][dayIdx] === undefined) {
       // 初回特別設定：ベースゾーンから対象を除いてコピー
       _weekZoneOverrides[wKey][dayIdx] = (WEEK_EVENTS[dayIdx] || [])
-        .filter(e => e.type === 'zone' && e !== zone);
+        .filter(e => e.type === 'zone').filter(notTarget);
     } else {
-      _weekZoneOverrides[wKey][dayIdx] = _weekZoneOverrides[wKey][dayIdx].filter(e => e !== zone);
+      _weekZoneOverrides[wKey][dayIdx] = _weekZoneOverrides[wKey][dayIdx].filter(notTarget);
     }
   }
   window._pendingDeleteZone = null;
@@ -2015,7 +2037,7 @@ function addEvent() {
   if (_newEvtType === 'zone') {
     const studio = STUDIOS[_newEvtLoc];
     if (!studio) { _showAddEventError('スタジオを選択してください'); return; }
-    const newZone = { type:'zone', start:[sh,sm], end:[eh,em], ...studio };
+    const newZone = { type:'zone', zid:`z${_nextZoneId++}`, start:[sh,sm], end:[eh,em], ...studio };
     if (currentWeekOffset === 0) {
       // ベーステンプレートに追加（全週に適用）
       if (!WEEK_EVENTS[currentDay]) WEEK_EVENTS[currentDay] = [];

@@ -168,9 +168,9 @@
       <div style="display:flex;align-items:center;gap:6px;flex-shrink:0;">
         <!-- 🔄 同期ボタン -->
         <button onclick="syncFromTeacher()" title="先生の最新スケジュールを反映"
-          style="width:30px;height:30px;border-radius:50%;background:white;
+          style="width:48px;height:48px;border-radius:50%;background:white;
                  border:1.5px solid #c7d2fe;cursor:pointer;display:flex;
-                 align-items:center;justify-content:center;font-size:14px;">🔄</button>
+                 align-items:center;justify-content:center;font-size:18px;flex-shrink:0;">🔄</button>
         <span id="slot-count-badge"
               style="font-size:11px;font-weight:800;padding:4px 12px;border-radius:20px;
                      background:#059669;color:white;white-space:nowrap;"></span>
@@ -540,14 +540,14 @@ function renderSlots(dayIdx) {
       `;
       row.innerHTML = `
         <div style="width:58px;flex-shrink:0;">
-          <span style="font-size:17px;font-weight:600;color:#e5e7eb;">${timeStr}</span>
+          <span style="font-size:17px;font-weight:600;color:#9ca3af;">${timeStr}</span>
         </div>
         <div style="flex:1;display:flex;align-items:center;gap:12px;">
           <div style="width:38px;height:38px;border-radius:50%;
-                      background:#f9fafb;color:#e5e7eb;
+                      background:#f3f4f6;color:#9ca3af;
                       display:flex;align-items:center;justify-content:center;
                       font-size:18px;font-weight:700;flex-shrink:0;">✕</div>
-          <span style="font-size:14px;color:#e5e7eb;font-weight:600;">受付不可</span>
+          <span style="font-size:14px;color:#9ca3af;font-weight:600;">受付不可</span>
         </div>
       `;
       container.appendChild(row);
@@ -643,12 +643,12 @@ function handleSlotTap(dayIdx, h, m, studio) {
 
       <!-- ボタン行 -->
       <div style="display:flex;align-items:center;gap:14px;margin-bottom:36px;">
-        <!-- いいえ: テキストリンク風（誤タップを誘発しないよう控えめに） -->
+        <!-- いいえ: グレーアウトラインボタン（高齢者がボタンと認識できる形状） -->
         <button onclick="closeConfirm()"
-          style="padding:16px 10px;background:transparent;color:#9ca3af;
-                 font-size:15px;font-weight:600;border:none;cursor:pointer;
-                 font-family:inherit;flex-shrink:0;text-decoration:underline;
-                 text-decoration-color:rgba(156,163,175,0.5);text-underline-offset:3px;">
+          style="padding:16px 20px;background:white;color:#6b7280;
+                 font-size:15px;font-weight:700;border:2px solid #d1d5db;
+                 border-radius:16px;cursor:pointer;font-family:inherit;
+                 flex-shrink:0;min-width:88px;min-height:52px;">
           いいえ
         </button>
         <!-- はい: 大きく・目立つ色 -->
@@ -707,7 +707,7 @@ let _toastTimer = null;
 
 function showToast(msg) {
   const toast = document.getElementById('toast');
-  toast.innerHTML = msg.replace(/\n/g, '<br>');
+  toast.innerHTML = esc(msg).replace(/\n/g, '<br>');
   toast.style.display = 'block';
   // アニメーション
   requestAnimationFrame(() => {
