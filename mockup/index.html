@@ -129,13 +129,13 @@
 
     <!-- Week nav -->
     <div style="display:flex;align-items:center;margin-bottom:10px;">
-      <button onclick="changeWeek(-1)" class="nav-btn" style="width:28px;height:28px;display:flex;align-items:center;justify-content:center;background:transparent;border:none;cursor:pointer;">
+      <button onclick="changeWeek(-1)" class="nav-btn" style="width:44px;height:44px;display:flex;align-items:center;justify-content:center;background:transparent;border:none;cursor:pointer;">
         <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#9ca3af" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
           <polyline points="15 18 9 12 15 6"/>
         </svg>
       </button>
       <p id="week-nav-label" style="flex:1;text-align:center;font-size:12px;font-weight:600;color:#6b7280;letter-spacing:0.05em;">今週</p>
-      <button onclick="changeWeek(1)" class="nav-btn" style="width:28px;height:28px;display:flex;align-items:center;justify-content:center;background:transparent;border:none;cursor:pointer;">
+      <button onclick="changeWeek(1)" class="nav-btn" style="width:44px;height:44px;display:flex;align-items:center;justify-content:center;background:transparent;border:none;cursor:pointer;">
         <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#9ca3af" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
           <polyline points="9 18 15 12 9 6"/>
         </svg>
@@ -291,47 +291,47 @@ const STUDIOS = {
 const WEEK_EVENTS = {
   0: [
     { type:'zone', start:[10,0], end:[13,0], ...STUDIOS.saito },
-    { type:'lesson', id:11, start:[10,0],  end:[11,0],  name:'田中 花子', loc:'@齊藤DG', level:'初級', style:'lime' },
-    { type:'lesson', id:12, start:[11,30], end:[12,30], name:'小林 あい',  loc:'@齊藤DG', level:'中級', style:'lime' },
+    { type:'lesson', id:11, studentId:1, start:[10,0],  end:[11,0],  name:'田中 花子', loc:'@齊藤DG', level:'初級', style:'lime' },
+    { type:'lesson', id:12, studentId:8, start:[11,30], end:[12,30], name:'小林 あい',  loc:'@齊藤DG', level:'中級', style:'lime' },
     { type:'block',  id:13, start:[14,0],  end:[18,0],  label:'プライベート', sub:'', repeat:true, style:'gray' },
   ],
   1: [
     { type:'zone', start:[9,0], end:[12,30], ...STUDIOS.sendai },
-    { type:'lesson', id:14, start:[9,0],   end:[10,0],  name:'伊藤 健太', loc:'@仙台SS', level:'中級', style:'orange' },
-    { type:'lesson', id:15, start:[10,30], end:[11,30], name:'鈴木 美咲', loc:'@仙台SS', level:'初級', style:'orange' },
+    { type:'lesson', id:14, studentId:5, start:[9,0],   end:[10,0],  name:'伊藤 健太', loc:'@仙台SS', level:'中級', style:'orange' },
+    { type:'lesson', id:15, studentId:4, start:[10,30], end:[11,30], name:'鈴木 美咲', loc:'@仙台SS', level:'初級', style:'orange' },
     { type:'block',  id:16, start:[12,0],  end:[12,30], label:'移動', sub:'仙台SS → 齊藤DG', repeat:false, style:'gray' },
   ],
   2: [
     { type:'zone', start:[9,0],   end:[11,30], ...STUDIOS.saito  },
     { type:'zone', start:[11,30], end:[17,30], ...STUDIOS.sendai },
     { type:'zone', start:[18,30], end:[20,30], ...STUDIOS.izumi  },
-    { type:'lesson', id:1, start:[9,0],   end:[10,0],  name:'田中 花子', loc:'@齊藤DG', level:'初級', style:'lime'   },
-    { type:'lesson', id:2, start:[10,0],  end:[11,0],  name:'松本 由美', loc:'@齊藤DG', level:'中級', style:'lime'   },
+    { type:'lesson', id:1, studentId:1, start:[9,0],   end:[10,0],  name:'田中 花子', loc:'@齊藤DG', level:'初級', style:'lime'   },
+    { type:'lesson', id:2, studentId:2, start:[10,0],  end:[11,0],  name:'松本 由美', loc:'@齊藤DG', level:'中級', style:'lime'   },
     { type:'block',  id:20, start:[11,0], end:[11,30], label:'移動', sub:'齊藤DG → 仙台SS', repeat:false, style:'gray' },
-    { type:'lesson', id:3, start:[11,30], end:[12,30], name:'山田 悟',   loc:'@仙台SS', level:'上級', style:'orange' },
+    { type:'lesson', id:3, studentId:3, start:[11,30], end:[12,30], name:'山田 悟',   loc:'@仙台SS', level:'上級', style:'orange' },
     { type:'block',  id:21, start:[12,30],end:[14,0],  label:'昼休憩',  sub:'',                repeat:true,  style:'gray'   },
-    { type:'lesson', id:4, start:[14,0],  end:[15,0],  name:'鈴木 美咲', loc:'@仙台SS', level:'初級', style:'orange' },
-    { type:'lesson', id:5, start:[15,30], end:[16,30], name:'伊藤 健太', loc:'@仙台SS', level:'中級', style:'orange' },
+    { type:'lesson', id:4, studentId:4, start:[14,0],  end:[15,0],  name:'鈴木 美咲', loc:'@仙台SS', level:'初級', style:'orange' },
+    { type:'lesson', id:5, studentId:5, start:[15,30], end:[16,30], name:'伊藤 健太', loc:'@仙台SS', level:'中級', style:'orange' },
     { type:'block',  id:22, start:[17,0], end:[17,30], label:'移動', sub:'仙台SS → 泉中央', repeat:false, style:'gray' },
-    { type:'lesson', id:6, start:[18,30], end:[19,30], name:'渡辺 麻衣', loc:'@泉中央', level:'中級', style:'blue'   },
-    { type:'lesson', id:7, start:[19,30], end:[20,30], name:'佐藤 義雄', loc:'@泉中央', level:'初級', style:'blue'   },
+    { type:'lesson', id:6, studentId:6, start:[18,30], end:[19,30], name:'渡辺 麻衣', loc:'@泉中央', level:'中級', style:'blue'   },
+    { type:'lesson', id:7, studentId:7, start:[19,30], end:[20,30], name:'佐藤 義雄', loc:'@泉中央', level:'初級', style:'blue'   },
   ],
   3: [
     { type:'zone', start:[13,0], end:[20,0], ...STUDIOS.izumi },
-    { type:'lesson', id:17, start:[13,0],  end:[14,0],  name:'渡辺 麻衣', loc:'@泉中央', level:'中級', style:'blue' },
-    { type:'lesson', id:18, start:[14,30], end:[15,30], name:'松本 由美', loc:'@泉中央', level:'中級', style:'blue' },
-    { type:'lesson', id:19, start:[16,0],  end:[17,0],  name:'山田 悟',   loc:'@泉中央', level:'上級', style:'blue' },
-    { type:'lesson', id:23, start:[18,0],  end:[19,0],  name:'佐藤 義雄', loc:'@泉中央', level:'初級', style:'blue' },
+    { type:'lesson', id:17, studentId:6, start:[13,0],  end:[14,0],  name:'渡辺 麻衣', loc:'@泉中央', level:'中級', style:'blue' },
+    { type:'lesson', id:18, studentId:2, start:[14,30], end:[15,30], name:'松本 由美', loc:'@泉中央', level:'中級', style:'blue' },
+    { type:'lesson', id:19, studentId:3, start:[16,0],  end:[17,0],  name:'山田 悟',   loc:'@泉中央', level:'上級', style:'blue' },
+    { type:'lesson', id:23, studentId:7, start:[18,0],  end:[19,0],  name:'佐藤 義雄', loc:'@泉中央', level:'初級', style:'blue' },
   ],
   4: [
     { type:'block', id:30, start:[8,0], end:[22,0], label:'休日', sub:'', repeat:true, style:'gray' },
   ],
   5: [
     { type:'zone', start:[10,0], end:[17,0], ...STUDIOS.sendai },
-    { type:'lesson', id:24, start:[10,0],  end:[11,0],  name:'田中 花子', loc:'@仙台SS', level:'初級', style:'orange' },
-    { type:'lesson', id:25, start:[11,30], end:[12,30], name:'小林 あい',  loc:'@仙台SS', level:'中級', style:'orange' },
-    { type:'lesson', id:26, start:[14,0],  end:[15,0],  name:'渡辺 麻衣', loc:'@仙台SS', level:'中級', style:'orange' },
-    { type:'lesson', id:27, start:[15,30], end:[16,30], name:'松本 由美', loc:'@仙台SS', level:'中級', style:'orange' },
+    { type:'lesson', id:24, studentId:1, start:[10,0],  end:[11,0],  name:'田中 花子', loc:'@仙台SS', level:'初級', style:'orange' },
+    { type:'lesson', id:25, studentId:8, start:[11,30], end:[12,30], name:'小林 あい',  loc:'@仙台SS', level:'中級', style:'orange' },
+    { type:'lesson', id:26, studentId:6, start:[14,0],  end:[15,0],  name:'渡辺 麻衣', loc:'@仙台SS', level:'中級', style:'orange' },
+    { type:'lesson', id:27, studentId:2, start:[15,30], end:[16,30], name:'松本 由美', loc:'@仙台SS', level:'中級', style:'orange' },
   ],
   6: [],
 };
@@ -432,8 +432,8 @@ function getMemoHistory(student) {
   const extra = studentMemoHistory[student.id] || [];
   return [...extra, ...student.memoHistory]; // 新しい順
 }
-function hasLessonToday(studentName) {
-  return (WEEK_EVENTS[currentDay] || []).some(e => e.type === 'lesson' && e.name === studentName);
+function hasLessonToday(studentId) {
+  return getEventsForDay(currentDay).some(e => e.type === 'lesson' && e.studentId === studentId);
 }
 
 // ─── INIT ─────────────────────────────────────────────────────────────────────
@@ -444,7 +444,13 @@ document.addEventListener('DOMContentLoaded', () => {
   buildTasks();
   setTabActive('calendar');
   setTimeout(() => {
-    document.getElementById('tab-calendar').scrollTop = timeToTop(8, 45);
+    const now = new Date();
+    const nowMins = now.getHours() * 60 + now.getMinutes();
+    const startMins = START_H * 60;
+    const endMins   = END_H   * 60;
+    const clampedMins = Math.min(Math.max(nowMins, startMins), endMins);
+    const scrollTop = Math.max(0, (clampedMins - startMins) / 30 * SLOT_H - 100);
+    document.getElementById('tab-calendar').scrollTop = scrollTop;
   }, 80);
 
   // 生徒カードはイベント委譲で処理（動的再生成に対応）
@@ -487,6 +493,17 @@ function getEventsForDay(dayIdx) {
   const recurring = base.filter(e => e.repeat);
   const extras    = ((weeklyAdditions[currentWeekOffset] || {})[dayIdx]) || [];
   return [...recurring, ...extras];
+}
+
+// 現在表示中の週において dayIdx が「今日」かを判定
+function isTodayDayIdx(dayIdx) {
+  const today = new Date();
+  today.setHours(0, 0, 0, 0);
+  const weekStart = new Date(BASE_MONDAY);
+  weekStart.setDate(BASE_MONDAY.getDate() + currentWeekOffset * 7);
+  weekStart.setHours(0, 0, 0, 0);
+  const diff = Math.round((today - weekStart) / (1000 * 60 * 60 * 24));
+  return diff === dayIdx;
 }
 
 // 週オフセット → ラベル（日付範囲付き）
@@ -564,8 +581,8 @@ function renderCalendar(dayIdx) {
     zLbl.textContent = `@${z.loc}`;
   });
 
-  // Current time indicator (Wednesday only for demo)
-  if (dayIdx === 2) {
+  // Current time indicator (show only on today's column)
+  if (isTodayDayIdx(dayIdx)) {
     const now  = new Date();
     const mins = now.getHours()*60 + now.getMinutes();
     const sMin = START_H*60;
@@ -594,7 +611,7 @@ function renderCalendar(dayIdx) {
     `;
 
     if (evt.type === 'lesson') {
-      const student   = STUDENTS.find(st => st.name === evt.name);
+      const student   = STUDENTS.find(st => st.id === evt.studentId);
       const ticket    = getTicket(student?.id, student?.ticket);
       const lCount    = lessonCountForEvt(evt);
       const cancelled = lCount === 0;
@@ -682,8 +699,8 @@ function buildStudents() {
   // ソート
   if (studentSortMode === 'today') {
     list = [...list].sort((a,b) => {
-      const aT = hasLessonToday(a.name) ? 0 : 1;
-      const bT = hasLessonToday(b.name) ? 0 : 1;
+      const aT = hasLessonToday(a.id) ? 0 : 1;
+      const bT = hasLessonToday(b.id) ? 0 : 1;
       return aT - bT || a.furi.localeCompare(b.furi, 'ja');
     });
   } else if (studentSortMode === 'update') {
@@ -703,7 +720,7 @@ function buildStudents() {
     const ticket  = getTicket(s.id, s.ticket);
     const history = getMemoHistory(s);
     const latest  = history[0];
-    const todayFlag = hasLessonToday(s.name);
+    const todayFlag = hasLessonToday(s.id);
 
     const card = document.createElement('div');
     card.className = 'student-card';
@@ -935,7 +952,7 @@ function closeModal() {
 }
 
 function openLessonModal(evt) {
-  const student  = STUDENTS.find(s => s.name === evt.name);
+  const student  = STUDENTS.find(s => s.id === evt.studentId);
   const clr      = S[evt.style] || S.gray;
   const ticket   = getTicket(student?.id, student?.ticket);
   const lCount   = lessonCountForEvt(evt);
@@ -1033,8 +1050,21 @@ function openLessonModal(evt) {
   document.getElementById('modal-sheet').style.transform='translateY(0)';
 }
 
+function findEventById(evtId) {
+  let found = Object.values(WEEK_EVENTS).flat().find(e => e.id === evtId);
+  if (!found) {
+    outer: for (const wk of Object.values(weeklyAdditions)) {
+      for (const day of Object.values(wk)) {
+        found = day.find(e => e.id === evtId);
+        if (found) break outer;
+      }
+    }
+  }
+  return found || null;
+}
+
 function adjustLessonCount(evtId, delta) {
-  const evt = Object.values(WEEK_EVENTS).flat().find(e => e.id === evtId);
+  const evt = findEventById(evtId);
   const base = evt ? Math.max(1, Math.round(durMins(evt.start, evt.end) / 25)) : 1;
   const current = lessonCountOverrides[evtId] !== undefined ? lessonCountOverrides[evtId] : base;
   const next = Math.max(0, current + delta);
@@ -1082,7 +1112,7 @@ function toggleRepeat(evtId) {
 }
 
 function toggleCancel(evtId) {
-  const evt = Object.values(WEEK_EVENTS).flat().find(e => e.id === evtId);
+  const evt = findEventById(evtId);
   const base = evt ? Math.max(1, Math.round(durMins(evt.start, evt.end) / 25)) : 1;
   const current = lessonCountOverrides[evtId] !== undefined ? lessonCountOverrides[evtId] : base;
   adjustLessonCount(evtId, current === 0 ? base : -current);
@@ -1157,7 +1187,7 @@ function openStudentModal(s) {
   // 受講実績（3列）
   const statsBox = el('div', 'background:#f9fafb;border-radius:14px;padding:12px;');
   const statsGrid = el('div', 'display:grid;grid-template-columns:1fr 1fr 1fr;gap:8px;');
-  [[history.length, 'メモ件数', '#6366f1'], [hasLessonToday(s.name) ? '本日' : '—', '今日の予定', '#059669'], [s.lastLesson, '最終', '#f59e0b']].forEach(([val, lbl, col]) => {
+  [[history.length, 'メモ件数', '#6366f1'], [hasLessonToday(s.id) ? '本日' : '—', '今日の予定', '#059669'], [s.lastLesson, '最終', '#f59e0b']].forEach(([val, lbl, col]) => {
     const cell = el('div', 'text-align:center;background:white;border-radius:12px;padding:10px;box-shadow:0 1px 3px rgba(0,0,0,0.05);');
     const v = el('div', 'font-size:' + (String(val).length > 3 ? '13' : '22') + 'px;font-weight:900;color:' + col + ';line-height:1.2;'); v.textContent = val;
     const l = el('div', 'font-size:9px;color:#9ca3af;margin-top:3px;'); l.textContent = lbl;
@@ -1263,12 +1293,13 @@ function showAddEvent() {
       <div id="add-loc-row">
         <label style="display:block;font-size:11px;font-weight:700;color:#6b7280;margin-bottom:8px;text-transform:uppercase;letter-spacing:0.06em;">場所</label>
         <div style="display:flex;gap:8px;">
-          <button onclick="setLoc(this)" style="flex:1;padding:10px;border-radius:12px;font-size:11px;font-weight:700;border:1.5px solid #a3e635;cursor:pointer;background:#ecfccb;color:#3f6212;font-family:inherit;">@齊藤DG</button>
-          <button onclick="setLoc(this)" style="flex:1;padding:10px;border-radius:12px;font-size:11px;font-weight:600;border:1.5px solid #e5e7eb;cursor:pointer;background:#f9fafb;color:#4b5563;font-family:inherit;">@仙台SS</button>
-          <button onclick="setLoc(this)" style="flex:1;padding:10px;border-radius:12px;font-size:11px;font-weight:600;border:1.5px solid #e5e7eb;cursor:pointer;background:#f9fafb;color:#4b5563;font-family:inherit;">@泉中央</button>
+          <button onclick="setLoc(this)" data-loc="saito"  style="flex:1;padding:10px;border-radius:12px;font-size:11px;font-weight:700;border:1.5px solid #a3e635;cursor:pointer;background:#ecfccb;color:#3f6212;font-family:inherit;">@齊藤DG</button>
+          <button onclick="setLoc(this)" data-loc="sendai" style="flex:1;padding:10px;border-radius:12px;font-size:11px;font-weight:600;border:1.5px solid #e5e7eb;cursor:pointer;background:#f9fafb;color:#4b5563;font-family:inherit;">@仙台SS</button>
+          <button onclick="setLoc(this)" data-loc="izumi"  style="flex:1;padding:10px;border-radius:12px;font-size:11px;font-weight:600;border:1.5px solid #e5e7eb;cursor:pointer;background:#f9fafb;color:#4b5563;font-family:inherit;">@泉中央</button>
         </div>
       </div>
     </div>
+    <div id="add-event-error" style="display:none;margin:0 20px 8px;padding:8px 12px;background:#fef2f2;border-radius:10px;color:#dc2626;font-size:12px;font-weight:600;"></div>
     <div style="padding:4px 20px 32px;display:flex;gap:10px;">
       <button onclick="closeModal()" style="flex:1;background:#f3f4f6;color:#6b7280;font-weight:700;padding:15px;border-radius:16px;border:none;font-size:14px;cursor:pointer;font-family:inherit;">キャンセル</button>
       <button onclick="addEvent()" style="flex:2;background:#6366f1;color:white;font-weight:700;padding:15px;border-radius:16px;border:none;font-size:14px;cursor:pointer;font-family:inherit;box-shadow:0 4px 12px rgba(99,102,241,0.35);">追加する</button>
@@ -1344,16 +1375,13 @@ function setType(btn) {
   if (locRow) locRow.style.display = _newEvtType === 'lesson' ? '' : 'none';
 }
 
-const _LOC_COLORS = {
-  saito:  { bg:'#ecfccb', color:'#3f6212', border:'#a3e635' },
-  sendai: { bg:'#ffedd5', color:'#9a3412', border:'#fb923c' },
-  izumi:  { bg:'#dbeafe', color:'#1e40af', border:'#93c5fd' },
-};
+const _LOC_COLORS = Object.fromEntries(
+  Object.entries(STUDIOS).map(([k, v]) => [k, { bg: S[v.style].light, color: S[v.style].text, border: S[v.style].border }])
+);
 function setLoc(btn) {
-  const t = btn.textContent.trim();
-  _newEvtLoc = t === '@齊藤DG' ? 'saito' : t === '@仙台SS' ? 'sendai' : 'izumi';
+  _newEvtLoc = btn.dataset.loc;
   btn.closest('div').querySelectorAll('button').forEach(b => {
-    const key = b.textContent.trim() === '@齊藤DG' ? 'saito' : b.textContent.trim() === '@仙台SS' ? 'sendai' : 'izumi';
+    const key = b.dataset.loc;
     const c   = _LOC_COLORS[key];
     const active = b === btn;
     b.style.background  = active ? c.bg     : '#f9fafb';
@@ -1363,17 +1391,29 @@ function setLoc(btn) {
   });
 }
 
+function _showAddEventError(msg) {
+  const errEl = document.getElementById('add-event-error');
+  if (!errEl) return;
+  errEl.textContent = '⚠ ' + msg;
+  errEl.style.display = 'block';
+}
+
 function addEvent() {
   const name = document.getElementById('add-event-name')?.value?.trim();
-  if (!name) { document.getElementById('add-event-name')?.focus(); return; }
+  if (!name) {
+    _showAddEventError('生徒名 / タイトルを入力してください');
+    document.getElementById('add-event-name')?.focus();
+    return;
+  }
   const sv = document.getElementById('add-event-start')?.value || '9:00';
   const ev = document.getElementById('add-event-end')?.value   || '10:00';
   const [sh,sm] = sv.split(':').map(Number);
   const [eh,em] = ev.split(':').map(Number);
-  if (eh*60+em <= sh*60+sm) { alert('終了時刻は開始より後にしてください'); return; }
+  if (eh*60+em <= sh*60+sm) { _showAddEventError('終了時刻は開始より後にしてください'); return; }
   const studio = STUDIOS[_newEvtLoc];
+  const matchedStudent = STUDENTS.find(s => s.name === name);
   const newEvt = _newEvtType === 'lesson'
-    ? { type:'lesson', id:nextEventId++, start:[sh,sm], end:[eh,em], name, loc:'@'+studio.loc, style:studio.style }
+    ? { type:'lesson', id:nextEventId++, studentId: matchedStudent?.id || null, start:[sh,sm], end:[eh,em], name, loc:'@'+studio.loc, style:studio.style }
     : { type:'block',  id:nextEventId++, start:[sh,sm], end:[eh,em], label:name, sub:'', repeat:false, style:'gray' };
   if (currentWeekOffset === 0) {
     if (!WEEK_EVENTS[currentDay]) WEEK_EVENTS[currentDay] = [];
@@ -1410,7 +1450,7 @@ function showDailyReport() {
   const lessons = getEventsForDay(currentDay).filter(e => e.type === 'lesson');
 
   const rows = lessons.map(evt => {
-    const student  = STUDENTS.find(s => s.name === evt.name);
+    const student  = STUDENTS.find(s => s.id === evt.studentId);
     const ticket   = getTicket(student?.id, student?.ticket);
     const lCount   = lessonCountForEvt(evt);
     const cancelled = lCount === 0;
@@ -1472,7 +1512,7 @@ function exportDailyCSV() {
 
   const header = '生徒名,チケット種別,レッスン数,場所,状態\n';
   const body = lessons.map(evt => {
-    const student  = STUDENTS.find(s => s.name === evt.name);
+    const student  = STUDENTS.find(s => s.id === evt.studentId);
     const ticket   = getTicket(student?.id, student?.ticket);
     const lCount   = lessonCountForEvt(evt);
     const status   = lCount === 0 ? 'キャンセル' : '実施';
