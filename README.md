@@ -7,7 +7,7 @@
 | フェーズ | 内容 | 状態 |
 |---------|------|------|
 | Phase 1 | 管理者用画面モックアップ（HTML） | ✅ 完了 |
-| Phase 2 | スプレッドシート設計（SSoT） | 🔜 次のステップ |
+| Phase 2 | スプレッドシート設計（SSoT） | 🚧 進行中 |
 | Phase 3 | GAS バックエンド実装 | 🔜 予定 |
 | Phase 4 | LINE LIFF 連携 | 🔜 予定 |
 
@@ -34,7 +34,8 @@
 dance-lesson-manager/
 ├── mockup/
 │   └── index.html       # 管理者用画面モックアップ
-├── gas/                 # GAS実装（Phase 3〜）
+├── gas/
+│   └── spreadsheet-design.md  # スプレッドシート設計書（Phase 2）
 ├── .claude/             # AI開発スキル・設計メモ（Phase 3〜）
 └── README.md
 ```
