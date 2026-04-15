@@ -1,0 +1,6 @@
+# clasp push 時にアップロードしないファイル
+**/.git/**
+**/node_modules/**
+*.md
+.clasp.json
+.claspignore
