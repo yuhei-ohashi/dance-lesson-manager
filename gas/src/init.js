@@ -5,8 +5,9 @@
  *   GAS エディタで initializeSpreadsheet() を選択し「実行」をクリックする。
  *
  * ⚠️ 注意：
- *   このスクリプトは最初の1回だけ実行すること。
- *   2回目以降の実行は既存データを上書きする。
+ *   基本的に最初の1回だけ実行すること。
+ *   2回目以降の実行はヘッダー行・書式設定を再適用するが、
+ *   studios / ticket_types の初期データはスキップ（既存行がある場合）。
  */
 
 /**
@@ -133,22 +134,28 @@ function _setHeaders(sheet, headers) {
  * @param {number[]} colIndices - 0始まりの列インデックス
  */
 function _setTextFormat(sheet, colIndices) {
+  var maxRows = sheet.getMaxRows();
   colIndices.forEach(function(idx) {
-    // A=0, B=1, ... → 列全体を "@"（書式なしテキスト）に設定
-    var colLetter = String.fromCharCode(65 + idx);
-    sheet.getRange(colLetter + ':' + colLetter).setNumberFormat('@');
+    // 列アルファベット（A〜Z）に依存しない列番号指定（1始まり）で列全体を選択
+    sheet.getRange(1, idx + 1, maxRows, 1).setNumberFormat('@');
   });
 }
 
 /**
- * デフォルトで存在する「シート1」を削除する（他にシートがある場合のみ）
+ * デフォルトで存在する「シート1」を削除する。
+ * 他にシートが存在し、かつ「シート1」が空（ヘッダー行もデータ行もない）場合のみ削除。
  */
 function _removeDefaultSheet(ss) {
   var defaultSheet = ss.getSheetByName('シート1');
-  if (defaultSheet && ss.getSheets().length > 1) {
-    ss.deleteSheet(defaultSheet);
-    Logger.log('[DEL]  デフォルトシート「シート1」を削除しました');
+  if (!defaultSheet) return;
+  if (ss.getSheets().length <= 1) return;
+  // データが存在する場合は削除しない（誤削除防止）
+  if (defaultSheet.getLastRow() > 0) {
+    Logger.log('[SKIP] シート「シート1」にデータが存在するため削除をスキップしました');
+    return;
   }
+  ss.deleteSheet(defaultSheet);
+  Logger.log('[DEL]  デフォルトシート「シート1」を削除しました');
 }
 
 /**

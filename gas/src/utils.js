@@ -124,13 +124,19 @@ function getNextId(sheet) {
 /**
  * シートの末尾に 1 行追加する。
  * ⚠️ withLock() のコールバック内で呼び出すこと。
+ * ⚠️ ヘッダー行が設定済みであること（getLastRow() >= 1 前提）。
  *
  * @param {GoogleAppsScript.Spreadsheet.Sheet} sheet
  * @param {Array} rowArray - 追加するデータの配列（列順に並べること）
  * @returns {number} 追加した行番号（1始まり）
  */
 function appendRow(sheet, rowArray) {
-  var newRow = sheet.getLastRow() + 1;
+  var lastRow = sheet.getLastRow();
+  if (lastRow < 1) {
+    throw new Error('ヘッダー行が設定されていません: ' + sheet.getName());
+  }
+  // getRange(行, 列, numRows, numCols) — 1行×rowArray.length列
+  var newRow = lastRow + 1;
   sheet.getRange(newRow, 1, 1, rowArray.length).setValues([rowArray]);
   return newRow;
 }
@@ -164,6 +170,7 @@ function findRowById(sheet, id) {
  */
 function getRowAsObject(sheet, rowNumber) {
   var lastCol = sheet.getLastColumn();
+  if (lastCol < 1) return {};
   var headers = sheet.getRange(1, 1, 1, lastCol).getValues()[0];
   var values  = sheet.getRange(rowNumber, 1, 1, lastCol).getValues()[0];
   var obj = {};
@@ -182,9 +189,10 @@ function getRowAsObject(sheet, rowNumber) {
 function getAllRows(sheet) {
   var lastRow = sheet.getLastRow();
   if (lastRow <= 1) return [];
-  var lastCol  = sheet.getLastColumn();
-  var headers  = sheet.getRange(1, 1, 1, lastCol).getValues()[0];
-  var data     = sheet.getRange(2, 1, lastRow - 1, lastCol).getValues();
+  var lastCol = sheet.getLastColumn();
+  if (lastCol < 1) return [];
+  var headers = sheet.getRange(1, 1, 1, lastCol).getValues()[0];
+  var data    = sheet.getRange(2, 1, lastRow - 1, lastCol).getValues();
   return data.map(function(row) {
     var obj = {};
     headers.forEach(function(header, i) {
