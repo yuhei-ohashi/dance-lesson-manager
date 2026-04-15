@@ -97,10 +97,10 @@ function getZoneOverrideByWeekAndDay(weekStartDate, dayOfWeek) {
  */
 function getWeekStartDate(dateStr) {
   var d = new Date(dateStr + 'T00:00:00+09:00');
-  // getDay(): 0=日, 1=月, ..., 6=土
-  var day = d.getDay();
-  // 月曜日を基準にするオフセット（日曜=6, 月曜=0, ...）
-  var diff = day === 0 ? -6 : 1 - day;
+  // Utilities.formatDate で Asia/Tokyo の曜日を取得（u: 1=月〜7=日）
+  var dowStr = Utilities.formatDate(d, 'Asia/Tokyo', 'u');
+  var dow = parseInt(dowStr, 10); // 1=月, 2=火, ..., 7=日
+  var diff = dow === 7 ? -6 : 1 - dow; // 月曜日が週の開始
   var monday = new Date(d.getTime() + diff * 24 * 60 * 60 * 1000);
   return formatDate(monday);
 }

@@ -52,7 +52,7 @@ function _hasZoneTimeOverlap(dayOfWeek, startTime, endTime, excludeZoneId) {
   return getAllZones().some(function(row) {
     if (excludeZoneId && String(row.zone_id) === String(excludeZoneId)) return false;
     if (String(row.day_of_week) !== String(dayOfWeek)) return false;
-    if (row.is_active === false || row.is_active === 'FALSE') return false;
+    if (row.is_active !== true && row.is_active !== 'TRUE') return false;
     // 重複判定: 既存の [s, e) と新規の [startTime, endTime) が重なる
     return startTime < row.end_time && endTime > row.start_time;
   });
@@ -115,6 +115,15 @@ function getActiveZonesByDay(dayOfWeek) {
  * @returns {string} 追加した zone_id
  */
 function addZone(data) {
+  if (data.day_of_week == null || data.day_of_week === '') {
+    throw new Error('day_of_week は必須です。');
+  }
+  if (!data.studio_id) {
+    throw new Error('studio_id は必須です。');
+  }
+  if (!data.start_time || !data.end_time) {
+    throw new Error('start_time と end_time は必須です。');
+  }
   if (data.start_time >= data.end_time) {
     throw new Error('start_time は end_time より前である必要があります。');
   }

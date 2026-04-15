@@ -182,42 +182,47 @@ function approveBookingRequest(requestId, lessonOptions) {
     // processing にセット（二重操作防止）
     updateCell(sheet, rowNumber, 'status', 'processing');
 
-    // 重複チェック
-    if (hasDuplicateConfirmedLesson(req.requested_date, req.requested_start, req.studio_id)) {
-      updateCell(sheet, rowNumber, 'status', 'rejected');
-      return { success: false, reason: '同日時・同スタジオに confirmed なレッスンが既に存在します。' };
+    try {
+      // 重複チェック
+      if (hasDuplicateConfirmedLesson(req.requested_date, req.requested_start, req.studio_id)) {
+        updateCell(sheet, rowNumber, 'status', 'rejected');
+        return { success: false, reason: '同日時・同スタジオに confirmed なレッスンが既に存在します。' };
+      }
+
+      // lessons に追加（withLock の入れ子を避けるため内部から直接シート操作）
+      var lessonsSheet = getSheet(LESSONS_SHEET);
+      var lessonId = getNextId(lessonsSheet);
+      var now = nowDateTime();
+      var opts = lessonOptions || {};
+      appendRow(lessonsSheet, [
+        lessonId,
+        req.requested_date,
+        req.requested_start,
+        req.requested_end,
+        req.student_id,
+        req.studio_id,
+        opts.level         || '',
+        opts.lesson_count  != null ? opts.lesson_count : 1,
+        requestId,
+        'confirmed',
+        opts.note          || '',
+        now,
+        now,
+      ]);
+
+      // booking_requests を更新
+      updateCell(sheet, rowNumber, 'approved_lesson_id', lessonId);
+      updateCell(sheet, rowNumber, 'approved_at', now);
+      updateCell(sheet, rowNumber, 'status', 'approved');
+
+      // students.last_lesson_date を再計算
+      refreshStudentLastLessonDate(req.student_id);
+
+      return { success: true, lessonId: lessonId };
+    } catch (e) {
+      updateCell(sheet, rowNumber, 'status', 'error');
+      return { success: false, reason: 'GASエラー: ' + e.message };
     }
-
-    // lessons に追加（withLock の入れ子を避けるため内部から直接シート操作）
-    var lessonsSheet = getSheet(LESSONS_SHEET);
-    var lessonId = getNextId(lessonsSheet);
-    var now = nowDateTime();
-    var opts = lessonOptions || {};
-    appendRow(lessonsSheet, [
-      lessonId,
-      req.requested_date,
-      req.requested_start,
-      req.requested_end,
-      req.student_id,
-      req.studio_id,
-      opts.level         || '',
-      opts.lesson_count  != null ? opts.lesson_count : 1,
-      requestId,
-      'confirmed',
-      opts.note          || '',
-      now,
-      now,
-    ]);
-
-    // booking_requests を更新
-    updateCell(sheet, rowNumber, 'approved_lesson_id', lessonId);
-    updateCell(sheet, rowNumber, 'approved_at', now);
-    updateCell(sheet, rowNumber, 'status', 'approved');
-
-    // students.last_lesson_date を再計算
-    refreshStudentLastLessonDate(req.student_id);
-
-    return { success: true, lessonId: lessonId };
   });
 }
 
@@ -232,6 +237,10 @@ function rejectBookingRequest(requestId, note) {
     var sheet = getSheet(BOOKING_REQUESTS_SHEET);
     var rowNumber = findRowById(sheet, requestId);
     if (rowNumber === -1) return false;
+    var req = getRowAsObject(sheet, rowNumber);
+    if (req.status !== 'pending') {
+      return false;
+    }
     updateCell(sheet, rowNumber, 'status', 'rejected');
     if (note) {
       updateCell(sheet, rowNumber, 'note', note);
@@ -251,7 +260,7 @@ function resetBookingRequestError(requestId) {
     var rowNumber = findRowById(sheet, requestId);
     if (rowNumber === -1) return false;
     var req = getRowAsObject(sheet, rowNumber);
-    if (req.status !== 'error') return false;
+    if (req.status !== 'error' && req.status !== 'processing') return false;
     updateCell(sheet, rowNumber, 'status', 'pending');
     return true;
   });
