@@ -20,7 +20,7 @@
  * 状態遷移:
  *   pending → processing → approved
  *                       └→ rejected
- *                       └→ error
+ *                       └→ error（GASエラー時。resetBookingRequestError で pending に戻す）
  *   pending → expired（タイマーによる自動遷移）
  */
 
@@ -28,6 +28,9 @@ var BOOKING_REQUESTS_SHEET = 'booking_requests';
 
 /** expires_at 計算用: 48時間（ミリ秒） */
 var BOOKING_EXPIRES_MS = 48 * 60 * 60 * 1000;
+
+/** 承認・却下を受け付ける遷移元ステータス */
+var BOOKING_ACTIONABLE_STATUSES = ['pending', 'processing'];
 
 // ─── 参照 ─────────────────────────────────────────────────────────────────────
 
@@ -126,7 +129,11 @@ function addBookingRequest(data) {
 }
 
 /**
- * ステータスを更新する。
+ * ステータスを更新する（内部用低レベルAPI）。
+ * ⚠️ 外部から直接呼ぶことは推奨しない。状態遷移の意図が明確な
+ *    approveBookingRequest / rejectBookingRequest / resetBookingRequestError /
+ *    expireBookingRequests を優先して使うこと。
+ *
  * @param {number} requestId
  * @param {string} status
  * @returns {boolean}
@@ -148,14 +155,17 @@ function updateBookingRequestStatus(requestId, status) {
 /**
  * 承認処理（予約フローのコア）。
  * 以下をアトミックに実行する:
- *   1. status を 'processing' に更新
+ *   1. status を 'processing' に更新（二重操作防止）
  *   2. 同日時・同スタジオの confirmed レッスン重複チェック
  *   3. lessons に新規レコード追加
  *   4. approved_lesson_id / approved_at / status='approved' を更新
  *   5. students.last_lesson_date を再計算
+ *   エラー時: status を 'error' に更新（resetBookingRequestError で pending に戻せる）
+ *
+ * TODO(Phase 3 STEP 7): ステップ5の後に生徒へ承認通知を送信（notifications に記録）
  *
  * @param {number} requestId
- * @param {Object} [lessonOptions]  addLesson に渡す追加オプション（level, lesson_count, note）
+ * @param {Object} [lessonOptions]  lessons レコードに設定する追加オプション（level, lesson_count, note）
  * @returns {{ success: boolean, lessonId?: number, reason?: string }}
  */
 function approveBookingRequest(requestId, lessonOptions) {
@@ -175,7 +185,7 @@ function approveBookingRequest(requestId, lessonOptions) {
       };
     }
 
-    if (!req.student_id) {
+    if (req.student_id === '' || req.student_id == null) {
       return { success: false, reason: 'student_id が未設定です。先に生徒マスタに登録してください。' };
     }
 
@@ -189,7 +199,7 @@ function approveBookingRequest(requestId, lessonOptions) {
         return { success: false, reason: '同日時・同スタジオに confirmed なレッスンが既に存在します。' };
       }
 
-      // lessons に追加（withLock の入れ子を避けるため内部から直接シート操作）
+      // lessons に追加（withLock の入れ子を避けるため直接シート操作）
       var lessonsSheet = getSheet(LESSONS_SHEET);
       var lessonId = getNextId(lessonsSheet);
       var now = nowDateTime();
@@ -215,42 +225,53 @@ function approveBookingRequest(requestId, lessonOptions) {
       updateCell(sheet, rowNumber, 'approved_at', now);
       updateCell(sheet, rowNumber, 'status', 'approved');
 
-      // students.last_lesson_date を再計算
+      // students.last_lesson_date を再計算（withLock 内から呼ぶこと）
       refreshStudentLastLessonDate(req.student_id);
 
       return { success: true, lessonId: lessonId };
     } catch (e) {
+      // GAS 例外発生時: status を 'error' に更新して管理者が再操作できる状態にする
       updateCell(sheet, rowNumber, 'status', 'error');
-      return { success: false, reason: 'GASエラー: ' + e.message };
+      throw e;
     }
   });
 }
 
 /**
  * リクエストを却下する。
+ * pending または processing のリクエストのみ却下できる。
+ *
  * @param {number} requestId
  * @param {string} [note]  却下理由
- * @returns {boolean}
+ * @returns {{ success: boolean, reason?: string }}
  */
 function rejectBookingRequest(requestId, note) {
   return withLock(function() {
     var sheet = getSheet(BOOKING_REQUESTS_SHEET);
     var rowNumber = findRowById(sheet, requestId);
-    if (rowNumber === -1) return false;
+    if (rowNumber === -1) return { success: false, reason: 'リクエストが見つかりません: ' + requestId };
+
     var req = getRowAsObject(sheet, rowNumber);
-    if (req.status !== 'pending') {
-      return false;
+    if (BOOKING_ACTIONABLE_STATUSES.indexOf(req.status) === -1) {
+      return {
+        success: false,
+        reason: '却下できない状態です（現在のステータス: ' + req.status + '）',
+      };
     }
+
     updateCell(sheet, rowNumber, 'status', 'rejected');
     if (note) {
       updateCell(sheet, rowNumber, 'note', note);
     }
-    return true;
+    return { success: true };
   });
 }
 
 /**
- * error ステータスのリクエストを pending に戻す（再承認操作）。
+ * error または processing ステータスのリクエストを pending に戻す（再承認操作）。
+ * - error: GAS 例外後のリカバリ
+ * - processing: GAS がタイムアウト等で途中終了した場合のリカバリ
+ *
  * @param {number} requestId
  * @returns {boolean}
  */
@@ -277,13 +298,12 @@ function expireBookingRequests() {
     var now = nowDateTime();
     var rows = getAllRows(sheet);
     var count = 0;
-    rows.forEach(function(row) {
+    rows.forEach(function(row, i) {
       if (row.status === 'pending' && row.expires_at && row.expires_at <= now) {
-        var rowNumber = findRowById(sheet, row.request_id);
-        if (rowNumber !== -1) {
-          updateCell(sheet, rowNumber, 'status', 'expired');
-          count++;
-        }
+        // getAllRows はヘッダー行を除くインデックスのため +2 で行番号に変換
+        var rowNumber = i + 2;
+        updateCell(sheet, rowNumber, 'status', 'expired');
+        count++;
       }
     });
     return count;
@@ -292,6 +312,8 @@ function expireBookingRequests() {
 
 /**
  * リクエストの student_id を更新する（未登録生徒フロー用）。
+ * pending 状態のリクエストのみ更新できる。
+ *
  * @param {number} requestId
  * @param {number} studentId
  * @returns {boolean}
@@ -301,6 +323,8 @@ function setBookingRequestStudentId(requestId, studentId) {
     var sheet = getSheet(BOOKING_REQUESTS_SHEET);
     var rowNumber = findRowById(sheet, requestId);
     if (rowNumber === -1) return false;
+    var req = getRowAsObject(sheet, rowNumber);
+    if (req.status !== 'pending') return false;
     updateCell(sheet, rowNumber, 'student_id', studentId);
     return true;
   });

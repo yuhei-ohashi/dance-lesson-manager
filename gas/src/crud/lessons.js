@@ -187,6 +187,13 @@ function cancelLesson(lessonId) {
  * @returns {boolean}
  */
 function updateLesson(lessonId, data) {
+  // status を含む場合は updateLessonStatus と同じバリデーションを適用
+  if (data.status !== undefined) {
+    var allowedStatuses = ['pending', 'confirmed', 'cancelled'];
+    if (allowedStatuses.indexOf(data.status) === -1) {
+      throw new Error('不正なステータス値: ' + data.status);
+    }
+  }
   var updatable = [
     'lesson_date', 'start_time', 'end_time', 'student_id', 'studio_id',
     'level', 'lesson_count', 'note', 'status',

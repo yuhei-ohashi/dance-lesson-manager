@@ -64,7 +64,7 @@ function getAllStudents() {
  */
 function getActiveStudents() {
   return getAllStudents().filter(function(row) {
-    return row.is_active === true || row.is_active === 'TRUE';
+    return row.is_active === true || String(row.is_active).toUpperCase() === 'TRUE';
   });
 }
 
@@ -178,7 +178,8 @@ function setStudentLineUserId(studentId, lineUserId) {
  * @param {number} studentId
  */
 function refreshStudentLastLessonDate(studentId) {
-  var confirmedLessons = getAllRows(getSheet(LESSONS_SHEET)).filter(function(row) {
+  // LESSONS_SHEET 定数（lessons.js 定義）への依存を避けリテラルで参照する
+  var confirmedLessons = getAllRows(getSheet('lessons')).filter(function(row) {
     return (
       String(row.student_id) === String(studentId) &&
       row.status === 'confirmed'
