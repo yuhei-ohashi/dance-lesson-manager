@@ -160,9 +160,8 @@ function updateBookingRequestStatus(requestId, status) {
  *   3. lessons に新規レコード追加
  *   4. approved_lesson_id / approved_at / status='approved' を更新
  *   5. students.last_lesson_date を再計算
+ *   6. 生徒へ承認通知を送信（line_user_id が設定されている場合）→ notifications に記録
  *   エラー時: status を 'error' に更新（resetBookingRequestError で pending に戻せる）
- *
- * TODO(Phase 3 STEP 7): ステップ5の後に生徒へ承認通知を送信（notifications に記録）
  *
  * @param {number} requestId
  * @param {Object} [lessonOptions]  lessons レコードに設定する追加オプション（level, lesson_count, note）
@@ -228,6 +227,23 @@ function approveBookingRequest(requestId, lessonOptions) {
       // students.last_lesson_date を再計算（withLock 内から呼ぶこと）
       refreshStudentLastLessonDate(req.student_id);
 
+      // LINE 通知送信（line_user_id が設定されている場合のみ）
+      if (req.line_user_id) {
+        var notifyResult = sendBookingApprovedMessage(req.line_user_id, {
+          requested_date:  req.requested_date,
+          requested_start: req.requested_start,
+          requested_end:   req.requested_end,
+          studio_id:       req.studio_id,
+        });
+        addNotification({
+          student_id:   req.student_id,
+          line_user_id: req.line_user_id,
+          type:         'booking_approved',
+          related_id:   requestId,
+          status:       notifyResult.success ? 'sent' : 'failed',
+        });
+      }
+
       return { success: true, lessonId: lessonId };
     } catch (e) {
       // GAS 例外発生時: status を 'error' に更新して管理者が再操作できる状態にする
@@ -263,6 +279,19 @@ function rejectBookingRequest(requestId, note) {
     if (note) {
       updateCell(sheet, rowNumber, 'note', note);
     }
+
+    // LINE 通知送信（line_user_id が設定されている場合のみ）
+    if (req.line_user_id) {
+      var notifyResult = sendBookingRejectedMessage(req.line_user_id, note || '');
+      addNotification({
+        student_id:   req.student_id,
+        line_user_id: req.line_user_id,
+        type:         'booking_rejected',
+        related_id:   requestId,
+        status:       notifyResult.success ? 'sent' : 'failed',
+      });
+    }
+
     return { success: true };
   });
 }
