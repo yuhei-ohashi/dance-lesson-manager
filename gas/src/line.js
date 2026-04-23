@@ -51,6 +51,13 @@ function sendLinePushMessage(lineUserId, messages) {
     return { success: false, error: 'lineUserId が空です。' };
   }
 
+  var token;
+  try {
+    token = _getLineToken();
+  } catch (e) {
+    return { success: false, error: e.message };
+  }
+
   var payload = JSON.stringify({
     to:       lineUserId,
     messages: messages,
@@ -60,25 +67,27 @@ function sendLinePushMessage(lineUserId, messages) {
     method:      'post',
     contentType: 'application/json',
     headers: {
-      Authorization: 'Bearer ' + _getLineToken(),
+      Authorization: 'Bearer ' + token,
     },
-    payload:          payload,
+    payload:            payload,
     muteHttpExceptions: true,
   };
 
-  var response = UrlFetchApp.fetch(LINE_API_PUSH_URL, options);
-  var statusCode = response.getResponseCode();
+  try {
+    var response = UrlFetchApp.fetch(LINE_API_PUSH_URL, options);
+    var statusCode = response.getResponseCode();
 
-  if (statusCode === 200) {
-    return { success: true };
+    if (statusCode === 200) {
+      return { success: true };
+    }
+
+    return {
+      success: false,
+      error:   'LINE API エラー (HTTP ' + statusCode + ')',
+    };
+  } catch (e) {
+    return { success: false, error: 'LINE API 呼び出し失敗: ' + e.message };
   }
-
-  var body = '';
-  try { body = response.getContentText(); } catch (_) {}
-  return {
-    success: false,
-    error:   'LINE API エラー (HTTP ' + statusCode + '): ' + body,
-  };
 }
 
 // ─── 通知メッセージ定義 ────────────────────────────────────────────────────────
@@ -97,28 +106,31 @@ function sendLinePushMessage(lineUserId, messages) {
 function sendBookingApprovedMessage(lineUserId, info) {
   var studioLabel = _studioLabel(info.studio_id);
   var text =
-    '✅ 予約が確定しました！\n\n' +
+    '予約が確定しました！\n\n' +
     '📅 日付：' + info.requested_date + '\n' +
     '⏰ 時間：' + info.requested_start + '〜' + info.requested_end + '\n' +
     '🏢 スタジオ：' + studioLabel + '\n\n' +
-    'ご予約ありがとうございます。当日お待ちしております！';
+    'ご予約いただきありがとうございます。\n' +
+    '当日お会いできるのを楽しみにしております！';
 
   return sendLinePushMessage(lineUserId, [{ type: 'text', text: text }]);
 }
 
 /**
- * 予約却下通知を送信する。
+ * 予約不可通知を送信する。
  *
  * @param {string} lineUserId
- * @param {string} [note]  却下理由（任意）
+ * @param {string} [note]  使用しない（将来の拡張のため引数として保持）
  * @returns {{ success: boolean, error?: string }}
  */
 function sendBookingRejectedMessage(lineUserId, note) {
   var text =
-    '❌ 予約リクエストをお断りしました。\n\n' +
-    (note ? '理由：' + note + '\n\n' : '') +
-    'ご不便をおかけして申し訳ありません。\n' +
-    '別の日程でご希望があればお気軽にご連絡ください。';
+    '🙇 ご予約リクエストについてご連絡いたします。\n\n' +
+    '誠に恐れ入りますが、ご希望の日時でのご対応が\n' +
+    '難しい状況となっております。\n\n' +
+    'ご不便をおかけして大変申し訳ございません。\n' +
+    '別の日程でのご希望がございましたら、\n' +
+    'お気軽にお知らせください。';
 
   return sendLinePushMessage(lineUserId, [{ type: 'text', text: text }]);
 }

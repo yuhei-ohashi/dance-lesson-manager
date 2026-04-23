@@ -168,7 +168,10 @@ function updateBookingRequestStatus(requestId, status) {
  * @returns {{ success: boolean, lessonId?: number, reason?: string }}
  */
 function approveBookingRequest(requestId, lessonOptions) {
-  return withLock(function() {
+  // ─ フェーズ1: シート操作のみ（ロック内）────────────────────────────────────
+  var notifyInfo = null;
+
+  var result = withLock(function() {
     var sheet = getSheet(BOOKING_REQUESTS_SHEET);
     var rowNumber = findRowById(sheet, requestId);
     if (rowNumber === -1) {
@@ -227,21 +230,16 @@ function approveBookingRequest(requestId, lessonOptions) {
       // students.last_lesson_date を再計算（withLock 内から呼ぶこと）
       refreshStudentLastLessonDate(req.student_id);
 
-      // LINE 通知送信（line_user_id が設定されている場合のみ）
+      // ロック解放後の通知に必要な情報を保存しておく
       if (req.line_user_id) {
-        var notifyResult = sendBookingApprovedMessage(req.line_user_id, {
+        notifyInfo = {
+          line_user_id:    req.line_user_id,
+          student_id:      req.student_id,
           requested_date:  req.requested_date,
           requested_start: req.requested_start,
           requested_end:   req.requested_end,
           studio_id:       req.studio_id,
-        });
-        addNotification({
-          student_id:   req.student_id,
-          line_user_id: req.line_user_id,
-          type:         'booking_approved',
-          related_id:   requestId,
-          status:       notifyResult.success ? 'sent' : 'failed',
-        });
+        };
       }
 
       return { success: true, lessonId: lessonId };
@@ -251,6 +249,26 @@ function approveBookingRequest(requestId, lessonOptions) {
       throw e;
     }
   });
+
+  // ─ フェーズ2: LINE 通知（ロック解放後）─────────────────────────────────────
+  // シート操作と切り離すことで、通信遅延がロックに影響しないようにする
+  if (result.success && notifyInfo) {
+    var notifyResult = sendBookingApprovedMessage(notifyInfo.line_user_id, {
+      requested_date:  notifyInfo.requested_date,
+      requested_start: notifyInfo.requested_start,
+      requested_end:   notifyInfo.requested_end,
+      studio_id:       notifyInfo.studio_id,
+    });
+    addNotification({
+      student_id:   notifyInfo.student_id,
+      line_user_id: notifyInfo.line_user_id,
+      type:         'booking_approved',
+      related_id:   requestId,
+      status:       notifyResult.success ? 'sent' : 'failed',
+    });
+  }
+
+  return result;
 }
 
 /**
@@ -262,7 +280,10 @@ function approveBookingRequest(requestId, lessonOptions) {
  * @returns {{ success: boolean, reason?: string }}
  */
 function rejectBookingRequest(requestId, note) {
-  return withLock(function() {
+  // ─ フェーズ1: シート操作のみ（ロック内）────────────────────────────────────
+  var notifyInfo = null;
+
+  var result = withLock(function() {
     var sheet = getSheet(BOOKING_REQUESTS_SHEET);
     var rowNumber = findRowById(sheet, requestId);
     if (rowNumber === -1) return { success: false, reason: 'リクエストが見つかりません: ' + requestId };
@@ -280,20 +301,30 @@ function rejectBookingRequest(requestId, note) {
       updateCell(sheet, rowNumber, 'note', note);
     }
 
-    // LINE 通知送信（line_user_id が設定されている場合のみ）
+    // ロック解放後の通知に必要な情報を保存しておく
     if (req.line_user_id) {
-      var notifyResult = sendBookingRejectedMessage(req.line_user_id, note || '');
-      addNotification({
-        student_id:   req.student_id,
+      notifyInfo = {
         line_user_id: req.line_user_id,
-        type:         'booking_rejected',
-        related_id:   requestId,
-        status:       notifyResult.success ? 'sent' : 'failed',
-      });
+        student_id:   req.student_id,
+      };
     }
 
     return { success: true };
   });
+
+  // ─ フェーズ2: LINE 通知（ロック解放後）─────────────────────────────────────
+  if (result.success && notifyInfo) {
+    var notifyResult = sendBookingRejectedMessage(notifyInfo.line_user_id, note || '');
+    addNotification({
+      student_id:   notifyInfo.student_id,
+      line_user_id: notifyInfo.line_user_id,
+      type:         'booking_rejected',
+      related_id:   requestId,
+      status:       notifyResult.success ? 'sent' : 'failed',
+    });
+  }
+
+  return result;
 }
 
 /**
