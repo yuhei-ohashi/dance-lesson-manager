@@ -71,6 +71,9 @@ function _requireParams(params, keys) {
 /**
  * GET リクエストを処理する（参照系）。
  *
+ * クエリパラメータなし（action 省略）:
+ *   → LIFF 予約ページ（liff.html）を HtmlService で返す
+ *
  * クエリパラメータ:
  *   action=availability         + date=YYYY-MM-DD
  *   action=availability_week    + weekStartDate=YYYY-MM-DD
@@ -79,13 +82,30 @@ function _requireParams(params, keys) {
  *   action=booking_requests
  *
  * @param {GoogleAppsScript.Events.DoGet} e
- * @returns {GoogleAppsScript.Content.TextOutput}
+ * @returns {GoogleAppsScript.Content.TextOutput|GoogleAppsScript.HTML.HtmlOutput}
  */
 function doGet(e) {
-  try {
-    var params = (e && e.parameter) ? e.parameter : {};
-    var action = params.action || '';
+  var params = (e && e.parameter) ? e.parameter : {};
+  var action = params.action || '';
 
+  // action なし → LIFF 予約ページを返す
+  //
+  // HtmlService.createTemplateFromFile('liff') は gas/src/liff.html を読み込み、
+  // <?= LIFF_ID ?> などのテンプレート変数を置き換えてから HTML として返す。
+  //
+  // LIFF_ID は GAS スクリプトプロパティ（Script Properties）に
+  // キー名「LIFF_ID」で設定しておくこと。
+  if (!action) {
+    var liffId = PropertiesService.getScriptProperties().getProperty('LIFF_ID') || '';
+    var tmpl   = HtmlService.createTemplateFromFile('liff');
+    tmpl.LIFF_ID = liffId;
+    return tmpl.evaluate()
+      .setTitle('レッスン予約 | ダンス手帳')
+      .addMetaTag('viewport', 'width=device-width, initial-scale=1.0, viewport-fit=cover')
+      .setXFrameOptionsMode(HtmlService.XFrameOptionsMode.ALLOWALL);
+  }
+
+  try {
     switch (action) {
 
       // ── 日次空き枠一覧 ──────────────────────────────────────────────────────
