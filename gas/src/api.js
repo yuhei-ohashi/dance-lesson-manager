@@ -96,9 +96,12 @@ function doGet(e) {
   // LIFF_ID は GAS スクリプトプロパティ（Script Properties）に
   // キー名「LIFF_ID」で設定しておくこと。
   if (!action) {
-    var liffId = PropertiesService.getScriptProperties().getProperty('LIFF_ID') || '';
+    var props  = PropertiesService.getScriptProperties();
+    var liffId = props.getProperty('LIFF_ID') || '';
     var tmpl   = HtmlService.createTemplateFromFile('liff');
-    tmpl.LIFF_ID = liffId;
+    tmpl.LIFF_ID  = liffId;
+    // LIFF HTML から fetch() で API を呼ぶための URL を注入する
+    tmpl.API_URL  = ScriptApp.getService().getUrl();
     return tmpl.evaluate()
       .setTitle('レッスン予約 | ダンス手帳')
       .addMetaTag('viewport', 'width=device-width, initial-scale=1.0, viewport-fit=cover')
@@ -146,6 +149,42 @@ function doGet(e) {
       case 'booking_requests': {
         var result = getPendingBookingRequests();
         return _ok(result);
+      }
+
+      // ── LIFF からの予約リクエスト作成（GET 版）─────────────────────────────
+      // fetch() の POST は GAS の 302 リダイレクト仕様で body が失われるため、
+      // LIFF クライアントからは GET クエリパラメータで送信する。
+      case 'booking_request': {
+        _requireParams(params, [
+          'student_name_input',
+          'requested_date',
+          'requested_start',
+          'requested_end',
+          'studio_id',
+        ]);
+
+        var validation = validateBookingRequest({
+          requested_date:  params.requested_date,
+          requested_start: params.requested_start,
+          requested_end:   params.requested_end,
+          studio_id:       params.studio_id,
+        });
+        if (!validation.valid) {
+          return _err('SLOT_UNAVAILABLE', validation.reason);
+        }
+
+        var requestId = addBookingRequest({
+          student_id:         '',
+          student_name_input: params.student_name_input,
+          requested_date:     params.requested_date,
+          requested_start:    params.requested_start,
+          requested_end:      params.requested_end,
+          studio_id:          params.studio_id,
+          note:               params.note          || '',
+          line_user_id:       params.line_user_id  || '',
+        });
+
+        return _ok({ request_id: requestId });
       }
 
       default:
