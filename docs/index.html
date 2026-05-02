@@ -567,6 +567,13 @@ async function loadWeek(mondayDate) {
   try {
     const summary = await apiFetch({ action: 'availability_week', weekStartDate });
     renderCalendar(summary);
+
+    // 週の中で最初に空き枠がある日を自動選択する（1タップ削減）
+    const todayStr   = fmtDate(new Date());
+    const firstAvail = summary.find(day => day.available_count > 0 && day.date >= todayStr);
+    if (firstAvail) {
+      await selectDate(firstAvail.date);
+    }
   } catch (err) {
     showError('カレンダーの読み込みに失敗しました。\n時間をおいて再試行してください。');
   }
