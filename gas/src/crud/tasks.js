@@ -110,6 +110,21 @@ function reopenTask(taskId) {
 }
 
 /**
+ * タスクを削除する（行ごと物理削除）。
+ * @param {number} taskId
+ * @returns {boolean}
+ */
+function deleteTask(taskId) {
+  return withLock(function() {
+    var sheet = getSheet(TASKS_SHEET);
+    var rowNumber = findRowById(sheet, taskId);
+    if (rowNumber === -1) return false;
+    sheet.deleteRow(rowNumber);
+    return true;
+  });
+}
+
+/**
  * タスクを更新する。
  *
  * @param {number} taskId
