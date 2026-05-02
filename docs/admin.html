@@ -2,8 +2,8 @@
 <html lang="ja">
 <head>
   <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>予約管理 | ダンス手帳</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+  <title>ダンス手帳 | 管理</title>
   <script src="https://cdn.tailwindcss.com"></script>
   <style>
     *, *::before, *::after { box-sizing: border-box; }
@@ -11,137 +11,535 @@
       font-family: -apple-system, BlinkMacSystemFont, 'Hiragino Sans',
                    'Noto Sans JP', 'Yu Gothic', sans-serif;
       background: #f3f4f6;
+      min-height: 100dvh;
     }
     .grad { background: linear-gradient(135deg, #6366f1 0%, #8b5cf6 100%); }
+
     @keyframes spin { to { transform: rotate(360deg); } }
-    .spinner { animation: spin 0.75s linear infinite; }
+    .spinner { animation: spin 0.8s linear infinite; }
+
+    /* タブコンテンツ切り替え */
+    .tab-content { display: none; }
+    .tab-content.active { display: block; }
+
+    /* コンテンツエリア: ボトムナビ分の余白 */
+    .content-area {
+      padding-top: 4px;
+      padding-bottom: calc(env(safe-area-inset-bottom, 0px) + 72px);
+    }
+
+    /* ボトムナビ */
+    .bottom-nav {
+      position: fixed; bottom: 0; left: 0; right: 0;
+      background: white;
+      border-top: 1px solid #e5e7eb;
+      display: flex;
+      padding-bottom: env(safe-area-inset-bottom, 0px);
+      z-index: 40;
+      max-width: 480px; /* ← デスクトップでも中央揃え */
+      margin: 0 auto;
+    }
+    /* ボトムナビの幅制限に対応するためbodyに中央揃えを追加 */
+    body { display: flex; flex-direction: column; align-items: center; }
+    #app-root { width: 100%; max-width: 480px; }
+
+    /* カード */
     .card {
       background: white; border-radius: 16px;
-      padding: 20px; margin-bottom: 12px;
-      box-shadow: 0 1px 6px rgba(0,0,0,0.07);
-      border: 1px solid #e5e7eb;
+      padding: 16px; margin-bottom: 10px;
+      box-shadow: 0 1px 4px rgba(0,0,0,0.06);
+      border: 1px solid #f0f1f3;
     }
+
+    /* スタジオカラー */
+    .studio-saito  { background: #dcfce7; color: #166534; }
+    .studio-sendai { background: #fff7ed; color: #9a3412; }
+    .studio-izumi  { background: #dbeafe; color: #1e3a8a; }
+
+    /* アバター（生徒イニシャル円） */
+    .avatar {
+      width: 38px; height: 38px; border-radius: 50%;
+      display: flex; align-items: center; justify-content: center;
+      font-size: 15px; font-weight: 800; color: white; flex-shrink: 0;
+    }
+
+    /* ボトムシート */
+    .sheet-backdrop {
+      position: fixed; inset: 0;
+      background: rgba(0,0,0,0.45);
+      z-index: 50; display: none; align-items: flex-end;
+    }
+    .sheet-backdrop.open { display: flex; }
+    .sheet {
+      background: white; border-radius: 20px 20px 0 0;
+      width: 100%; max-width: 480px; margin: 0 auto;
+      max-height: 88vh; overflow-y: auto;
+      padding-bottom: calc(env(safe-area-inset-bottom, 0px) + 16px);
+      transform: translateY(100%);
+      transition: transform 0.3s cubic-bezier(0.32, 0.72, 0, 1);
+    }
+    .sheet-backdrop.open .sheet { transform: translateY(0); }
+    .sheet-handle {
+      width: 36px; height: 4px; background: #d1d5db;
+      border-radius: 2px; margin: 12px auto 0;
+    }
+
+    /* ダイアログ（小さいモーダル） */
+    .dialog-backdrop {
+      position: fixed; inset: 0;
+      background: rgba(0,0,0,0.45);
+      z-index: 60; display: none;
+      align-items: center; justify-content: center; padding: 20px;
+    }
+    .dialog-backdrop.open { display: flex; }
+    .dialog {
+      background: white; border-radius: 20px;
+      padding: 24px; width: 100%; max-width: 360px;
+      box-shadow: 0 20px 60px rgba(0,0,0,0.2);
+    }
+
+    /* トースト */
+    #toast {
+      position: fixed; bottom: 82px; left: 50%;
+      transform: translateX(-50%);
+      background: #1f2937; color: white;
+      padding: 10px 18px; border-radius: 99px;
+      font-size: 13px; font-weight: 600;
+      z-index: 100; opacity: 0;
+      transition: opacity 0.2s; pointer-events: none; white-space: nowrap;
+    }
+    #toast.show { opacity: 1; }
+
+    /* 週カレンダー */
+    .week-day {
+      flex: 1; padding: 6px 2px; text-align: center;
+      cursor: pointer; border-radius: 10px; transition: background 0.15s;
+    }
+    .week-day.selected { background: #6366f1; color: white !important; }
+    .week-day.selected .wday-num, .week-day.selected .wday-name { color: white !important; }
+    .wday-num { font-size: 15px; font-weight: 800; color: #1f2937; }
+    .wday-name { font-size: 10px; color: #9ca3af; }
+    .week-day.is-today .wday-num { color: #6366f1; }
+    .week-day.is-today .wday-name { color: #8b5cf6; }
+
+    /* タスク行 */
+    .task-row {
+      display: flex; align-items: center; gap: 10px;
+      padding: 12px 0; border-bottom: 1px solid #f3f4f6;
+    }
+    .task-row:last-child { border-bottom: none; }
+
+    /* フィルタータブ */
+    .filter-tab {
+      padding: 6px 14px; border-radius: 99px;
+      font-size: 13px; font-weight: 600; cursor: pointer;
+      transition: background 0.15s, color 0.15s;
+      border: none; background: transparent; color: #6b7280;
+    }
+    .filter-tab.active { background: #6366f1; color: white; }
+
+    /* バッジ */
     .badge {
-      display: inline-block;
-      padding: 2px 10px; border-radius: 999px;
-      font-size: 12px; font-weight: 700;
+      display: inline-block; padding: 2px 8px; border-radius: 999px;
+      font-size: 11px; font-weight: 700;
     }
     .badge-pending  { background: #fef3c7; color: #92400e; }
     .badge-approved { background: #d1fae5; color: #065f46; }
     .badge-rejected { background: #fee2e2; color: #991b1b; }
-    .badge-new-student { background: #ede9fe; color: #5b21b6; }
+    .badge-new      { background: #ede9fe; color: #5b21b6; }
+    .badge-today    { background: #d1fae5; color: #065f46; }
+    .badge-paid     { background: #d1fae5; color: #065f46; }
+    .badge-unpaid   { background: #fee2e2; color: #991b1b; }
+
+    /* セクション折り畳み矢印 */
+    .collapse-arrow { transition: transform 0.2s; display: inline-block; }
+    .collapse-arrow.open { transform: rotate(180deg); }
   </style>
 </head>
 <body>
+<div id="app-root">
 
-<!-- ヘッダー -->
-<div class="grad text-white px-5 py-4">
-  <div class="max-w-2xl mx-auto flex items-center justify-between">
-    <div>
-      <h1 class="text-lg font-bold">予約管理ダッシュボード</h1>
-      <p class="text-xs opacity-75 mt-0.5">ダンス手帳 管理者専用</p>
+<!-- ════════════════════════════════════════════════════════
+     ログイン画面
+════════════════════════════════════════════════════════ -->
+<div id="screen-login">
+  <!-- ヘッダー -->
+  <div class="grad text-white px-5 py-4">
+    <h1 class="text-lg font-bold">ダンス手帳</h1>
+    <p class="text-xs opacity-75 mt-0.5">管理者専用</p>
+  </div>
+
+  <div class="max-w-sm mx-auto px-5 py-12">
+    <div class="text-center mb-8">
+      <div class="w-16 h-16 grad rounded-2xl flex items-center justify-center mx-auto mb-4">
+        <svg width="32" height="32" viewBox="0 0 24 24" fill="none"
+             stroke="white" stroke-width="2" stroke-linecap="round">
+          <rect x="3" y="11" width="18" height="11" rx="2"/>
+          <path d="M7 11V7a5 5 0 0 1 10 0v4"/>
+        </svg>
+      </div>
+      <h2 class="text-xl font-bold text-gray-800">管理者ログイン</h2>
+      <p class="text-sm text-gray-500 mt-1">管理者シークレットを入力してください</p>
     </div>
-    <button id="btn-logout" onclick="logout()"
-      class="text-xs px-3 py-1.5 rounded-full font-semibold"
-      style="background:rgba(255,255,255,0.2); display:none;">
-      ログアウト
-    </button>
+
+    <div class="card">
+      <label class="block text-sm font-bold text-gray-700 mb-2">管理者シークレット</label>
+      <input id="input-secret" type="password" placeholder="シークレットキーを入力"
+        class="w-full border-2 border-gray-200 rounded-xl px-4 py-3 text-base
+               focus:outline-none focus:border-indigo-500 transition-colors"
+        onkeydown="if(event.key==='Enter') login()">
+      <p id="login-error" class="text-red-500 text-sm mt-2 hidden">
+        シークレットが正しくありません。
+      </p>
+      <button onclick="login()" id="btn-login"
+        class="w-full mt-4 py-3 grad text-white font-bold rounded-xl text-base
+               hover:opacity-90 transition-opacity">
+        ログイン
+      </button>
+    </div>
   </div>
 </div>
 
-<!-- ════════════════════════════════════════════
-     画面①: ログイン
-════════════════════════════════════════════ -->
-<div id="screen-login" class="max-w-sm mx-auto px-5 py-12">
-  <div class="text-center mb-8">
-    <div class="w-16 h-16 grad rounded-2xl flex items-center justify-center mx-auto mb-4">
-      <svg width="32" height="32" viewBox="0 0 24 24" fill="none"
-           stroke="white" stroke-width="2" stroke-linecap="round">
-        <rect x="3" y="11" width="18" height="11" rx="2"/>
-        <path d="M7 11V7a5 5 0 0 1 10 0v4"/>
+<!-- ════════════════════════════════════════════════════════
+     メインアプリ（ログイン後）
+════════════════════════════════════════════════════════ -->
+<div id="screen-app" style="display:none;">
+
+  <!-- アプリヘッダー -->
+  <div class="grad text-white px-4 pt-4 pb-3 sticky top-0 z-30">
+    <div class="flex items-center justify-between">
+      <div>
+        <h1 class="text-base font-bold leading-tight">ダンス手帳</h1>
+        <p id="header-sub" class="text-xs opacity-80 mt-0.5"></p>
+      </div>
+      <button onclick="logout()"
+        class="text-xs px-3 py-1.5 rounded-full font-semibold"
+        style="background:rgba(255,255,255,0.2);">
+        ログアウト
+      </button>
+    </div>
+  </div>
+
+  <!-- 初期ロード中スピナー -->
+  <div id="app-loading" class="flex flex-col items-center justify-center py-24">
+    <div class="w-10 h-10 border-4 border-indigo-500 border-t-transparent rounded-full spinner mb-4"></div>
+    <p class="text-sm text-gray-400">データを読み込み中...</p>
+  </div>
+
+  <!-- ══ タブ: カレンダー ══════════════════════════════════ -->
+  <div id="tab-calendar" class="tab-content content-area px-4 py-4">
+
+    <!-- 承認待ちバナー -->
+    <div id="req-banner" class="hidden mb-3">
+      <button onclick="openRequestsSheet()"
+        class="w-full flex items-center justify-between
+               bg-amber-50 border border-amber-200 rounded-2xl px-4 py-3
+               hover:bg-amber-100 transition-colors">
+        <div class="flex items-center gap-2">
+          <span class="text-lg">🔔</span>
+          <span class="text-sm font-bold text-amber-800">
+            <span id="req-count-badge">0</span>件の承認待ちリクエスト
+          </span>
+        </div>
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="none"
+             stroke="#92400e" stroke-width="2.5" stroke-linecap="round">
+          <path d="M9 18l6-6-6-6"/>
+        </svg>
+      </button>
+    </div>
+
+    <!-- 日報 / 今週 トグル -->
+    <div class="flex gap-2 mb-4">
+      <button onclick="setCalMode('daily')" id="btn-mode-daily"
+        class="filter-tab active">日報</button>
+      <button onclick="setCalMode('weekly')" id="btn-mode-weekly"
+        class="filter-tab">今週</button>
+      <div class="flex-1"></div>
+      <button onclick="refreshCalendar()"
+        class="text-xs text-indigo-600 font-semibold flex items-center gap-1">
+        <svg width="13" height="13" viewBox="0 0 24 24" fill="none"
+             stroke="currentColor" stroke-width="2.5" stroke-linecap="round">
+          <path d="M3 12a9 9 0 0 1 9-9 9.75 9.75 0 0 1 6.74 2.74L21 8"/>
+          <path d="M21 3v5h-5"/>
+        </svg>
+        更新
+      </button>
+    </div>
+
+    <!-- 週ヘッダー（今週モード時のみ表示） -->
+    <div id="week-header" class="hidden mb-4">
+      <div class="flex items-center justify-between mb-2">
+        <button onclick="shiftWeek(-1)" class="p-2 rounded-xl hover:bg-gray-100 transition-colors">
+          <svg width="18" height="18" viewBox="0 0 24 24" fill="none"
+               stroke="#6b7280" stroke-width="2.5" stroke-linecap="round">
+            <path d="M15 18l-6-6 6-6"/>
+          </svg>
+        </button>
+        <span id="week-range-label" class="text-sm font-bold text-gray-600"></span>
+        <button onclick="shiftWeek(1)" class="p-2 rounded-xl hover:bg-gray-100 transition-colors">
+          <svg width="18" height="18" viewBox="0 0 24 24" fill="none"
+               stroke="#6b7280" stroke-width="2.5" stroke-linecap="round">
+            <path d="M9 18l6-6-6-6"/>
+          </svg>
+        </button>
+      </div>
+      <div id="week-days" class="flex gap-1"></div>
+    </div>
+
+    <!-- スタジオフィルター -->
+    <div class="flex gap-2 overflow-x-auto pb-1 mb-4" style="scrollbar-width:none;">
+      <button onclick="setStudio('all')" id="sf-all" class="filter-tab active whitespace-nowrap">すべて</button>
+      <button onclick="setStudio('saito')" id="sf-saito" class="filter-tab whitespace-nowrap">@齊藤DG</button>
+      <button onclick="setStudio('sendai')" id="sf-sendai" class="filter-tab whitespace-nowrap">@仙台SS</button>
+      <button onclick="setStudio('izumi')" id="sf-izumi" class="filter-tab whitespace-nowrap">@泉中央</button>
+    </div>
+
+    <!-- 日付ヘッダー -->
+    <div id="cal-date-header" class="flex items-center justify-between mb-3">
+      <span id="cal-date-label" class="text-base font-bold text-gray-800"></span>
+      <span id="cal-lesson-count" class="text-sm text-gray-500"></span>
+    </div>
+
+    <!-- ローディング -->
+    <div id="cal-spinner" class="hidden text-center py-10">
+      <div class="w-8 h-8 border-4 border-indigo-500 border-t-transparent rounded-full spinner mx-auto"></div>
+    </div>
+
+    <!-- レッスン一覧 -->
+    <div id="lesson-list"></div>
+
+    <!-- 空状態 -->
+    <div id="lesson-empty" class="hidden text-center py-14">
+      <div class="text-4xl mb-3">📅</div>
+      <p class="text-gray-500 font-semibold">この日のレッスンはありません</p>
+    </div>
+  </div>
+
+  <!-- ══ タブ: 生徒メモ ════════════════════════════════════ -->
+  <div id="tab-memos" class="tab-content content-area px-4 py-4">
+
+    <!-- ソートボタン -->
+    <div class="flex gap-2 mb-4">
+      <button onclick="setMemoSort('today')" id="ms-today" class="filter-tab active">今日順</button>
+      <button onclick="setMemoSort('updated')" id="ms-updated" class="filter-tab">更新順</button>
+      <button onclick="setMemoSort('name')" id="ms-name" class="filter-tab">名前順</button>
+    </div>
+
+    <!-- 生徒カード一覧 -->
+    <div id="memo-list"></div>
+
+    <!-- ローディング -->
+    <div id="memo-spinner" class="hidden text-center py-10">
+      <div class="w-8 h-8 border-4 border-indigo-500 border-t-transparent rounded-full spinner mx-auto"></div>
+    </div>
+
+    <!-- 空状態 -->
+    <div id="memo-empty" class="hidden text-center py-14">
+      <div class="text-4xl mb-3">👤</div>
+      <p class="text-gray-500 font-semibold">生徒が登録されていません</p>
+    </div>
+  </div>
+
+  <!-- ══ タブ: タスク ══════════════════════════════════════ -->
+  <div id="tab-tasks" class="tab-content content-area px-4 py-4">
+
+    <!-- ヘッダー -->
+    <div class="flex items-center justify-between mb-4">
+      <div>
+        <p id="task-date-label" class="text-base font-bold text-gray-800"></p>
+        <p id="task-pending-count" class="text-sm text-gray-500 mt-0.5"></p>
+      </div>
+      <button onclick="toggleTaskForm()"
+        class="flex items-center gap-1.5 px-3 py-2 grad text-white
+               text-sm font-bold rounded-xl hover:opacity-90 transition-opacity">
+        <svg width="14" height="14" viewBox="0 0 24 24" fill="none"
+             stroke="white" stroke-width="3" stroke-linecap="round">
+          <path d="M12 5v14M5 12h14"/>
+        </svg>
+        追加
+      </button>
+    </div>
+
+    <!-- タスク追加フォーム（折り畳み） -->
+    <div id="task-form" class="hidden card mb-4">
+      <p class="text-sm font-bold text-gray-700 mb-2">新しいタスクを追加</p>
+      <input id="new-task-text" type="text" placeholder="タスクを入力..."
+        class="w-full border-2 border-gray-200 rounded-xl px-3 py-2.5 text-sm
+               focus:outline-none focus:border-indigo-500 transition-colors mb-3"
+        onkeydown="if(event.key==='Enter') submitAddTask()">
+      <label class="flex items-center gap-2 text-sm text-gray-700 cursor-pointer mb-3">
+        <input id="new-task-urgent" type="checkbox"
+          class="w-4 h-4 rounded accent-orange-500">
+        <span>⚡ 急ぎ（優先タスク）</span>
+      </label>
+      <div class="flex gap-2">
+        <button onclick="toggleTaskForm()"
+          class="flex-1 py-2.5 border-2 border-gray-200 rounded-xl text-gray-600
+                 text-sm font-semibold hover:bg-gray-50 transition-colors">
+          キャンセル
+        </button>
+        <button onclick="submitAddTask()"
+          class="flex-1 py-2.5 grad text-white text-sm font-bold rounded-xl
+                 hover:opacity-90 transition-opacity">
+          追加する
+        </button>
+      </div>
+    </div>
+
+    <!-- ローディング -->
+    <div id="task-spinner" class="hidden text-center py-10">
+      <div class="w-8 h-8 border-4 border-indigo-500 border-t-transparent rounded-full spinner mx-auto"></div>
+    </div>
+
+    <!-- 未完了タスク一覧 -->
+    <div id="task-list" class="card" style="display:none;"></div>
+
+    <!-- 空状態 -->
+    <div id="task-empty" class="hidden text-center py-10">
+      <div class="text-4xl mb-3">✅</div>
+      <p class="text-gray-500 font-semibold">すべてのタスクが完了しています！</p>
+    </div>
+
+    <!-- 完了済みセクション -->
+    <div id="done-section" class="hidden mt-2">
+      <button onclick="toggleDoneSection()"
+        class="flex items-center gap-2 text-sm font-bold text-gray-500 py-3 w-full">
+        <span class="collapse-arrow" id="done-arrow">▼</span>
+        完了済み
+        <span id="done-count-label" class="text-gray-400 font-normal"></span>
+      </button>
+      <div id="done-list" class="hidden card"></div>
+    </div>
+  </div>
+
+  <!-- ══ タブ: 売上 ════════════════════════════════════════ -->
+  <div id="tab-sales" class="tab-content content-area px-4 py-4">
+
+    <!-- 期間フィルター -->
+    <div class="flex gap-2 mb-4">
+      <button onclick="setSalesPeriod('month')" id="sp-month" class="filter-tab active">今月</button>
+      <button onclick="setSalesPeriod('all')" id="sp-all" class="filter-tab">全期間</button>
+    </div>
+
+    <!-- サマリー -->
+    <div id="sales-summary" class="card mb-4 hidden">
+      <div class="flex justify-between items-center">
+        <div>
+          <p class="text-xs text-gray-500 font-semibold">合計売上</p>
+          <p id="sales-total" class="text-2xl font-black text-gray-900 mt-0.5">¥0</p>
+        </div>
+        <div class="text-right">
+          <p class="text-xs text-gray-500">
+            <span id="sales-paid-count">0</span>件 支払済み
+          </p>
+          <p class="text-xs text-red-500 mt-0.5">
+            未払い <span id="sales-unpaid-total">¥0</span>
+          </p>
+        </div>
+      </div>
+    </div>
+
+    <!-- ローディング -->
+    <div id="sales-spinner" class="hidden text-center py-10">
+      <div class="w-8 h-8 border-4 border-indigo-500 border-t-transparent rounded-full spinner mx-auto"></div>
+    </div>
+
+    <!-- 売上一覧 -->
+    <div id="sales-list"></div>
+
+    <!-- 空状態 -->
+    <div id="sales-empty" class="hidden text-center py-14">
+      <div class="text-4xl mb-3">💰</div>
+      <p class="text-gray-500 font-semibold">売上データがありません</p>
+    </div>
+  </div>
+
+  <!-- ボトムナビ -->
+  <nav class="bottom-nav">
+    <button onclick="setTab('calendar')" id="nav-calendar"
+      class="flex-1 flex flex-col items-center justify-center py-3 gap-0.5
+             text-xs font-bold text-indigo-600 transition-colors">
+      <svg width="22" height="22" viewBox="0 0 24 24" fill="none"
+           stroke="currentColor" stroke-width="2" stroke-linecap="round">
+        <rect x="3" y="4" width="18" height="18" rx="2"/>
+        <path d="M16 2v4M8 2v4M3 10h18"/>
       </svg>
-    </div>
-    <h2 class="text-xl font-bold text-gray-800">管理者ログイン</h2>
-    <p class="text-sm text-gray-500 mt-1">管理者シークレットを入力してください</p>
-  </div>
-
-  <div class="card">
-    <label class="block text-sm font-bold text-gray-700 mb-2">
-      管理者シークレット
-    </label>
-    <input id="input-secret" type="password" placeholder="シークレットキーを入力"
-      class="w-full border-2 border-gray-200 rounded-xl px-4 py-3 text-base
-             focus:outline-none focus:border-indigo-500 transition-colors"
-      onkeydown="if(event.key==='Enter') login()">
-    <p id="login-error" class="text-red-500 text-sm mt-2" style="display:none;">
-      シークレットが正しくありません。
-    </p>
-    <button onclick="login()"
-      class="w-full mt-4 py-3 grad text-white font-bold rounded-xl text-base
-             hover:opacity-90 transition-opacity">
-      ログイン
+      <span>カレンダー</span>
     </button>
-  </div>
-
-  <p class="text-center text-xs text-gray-400 mt-4">
-    ※ シークレットは GAS スクリプトプロパティで設定します
-  </p>
-</div>
-
-<!-- ════════════════════════════════════════════
-     画面②: ダッシュボード
-════════════════════════════════════════════ -->
-<div id="screen-dashboard" class="max-w-2xl mx-auto px-4 py-6" style="display:none;">
-
-  <!-- ステータスバー -->
-  <div class="flex items-center justify-between mb-4">
-    <div>
-      <h2 class="text-base font-bold text-gray-800">承認待ち予約リクエスト</h2>
-      <p id="req-count" class="text-sm text-gray-500 mt-0.5"></p>
-    </div>
-    <button onclick="loadRequests()"
-      class="flex items-center gap-1.5 text-sm font-semibold text-indigo-600
-             bg-indigo-50 px-3 py-2 rounded-xl hover:bg-indigo-100 transition-colors">
-      <svg width="16" height="16" viewBox="0 0 24 24" fill="none"
-           stroke="currentColor" stroke-width="2.5" stroke-linecap="round">
-        <path d="M3 12a9 9 0 0 1 9-9 9.75 9.75 0 0 1 6.74 2.74L21 8"/>
-        <path d="M21 3v5h-5"/>
-        <path d="M21 12a9 9 0 0 1-9 9 9.75 9.75 0 0 1-6.74-2.74L3 16"/>
-        <path d="M8 16H3v5"/>
+    <button onclick="setTab('memos')" id="nav-memos"
+      class="flex-1 flex flex-col items-center justify-center py-3 gap-0.5
+             text-xs font-bold text-gray-400 transition-colors">
+      <svg width="22" height="22" viewBox="0 0 24 24" fill="none"
+           stroke="currentColor" stroke-width="2" stroke-linecap="round">
+        <path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/>
+        <circle cx="12" cy="7" r="4"/>
       </svg>
-      更新
+      <span>生徒メモ</span>
     </button>
-  </div>
+    <button onclick="setTab('tasks')" id="nav-tasks"
+      class="flex-1 flex flex-col items-center justify-center py-3 gap-0.5
+             text-xs font-bold text-gray-400 transition-colors">
+      <svg width="22" height="22" viewBox="0 0 24 24" fill="none"
+           stroke="currentColor" stroke-width="2" stroke-linecap="round">
+        <path d="M9 11l3 3L22 4"/>
+        <path d="M21 12v7a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11"/>
+      </svg>
+      <span>タスク</span>
+    </button>
+    <button onclick="setTab('sales')" id="nav-sales"
+      class="flex-1 flex flex-col items-center justify-center py-3 gap-0.5
+             text-xs font-bold text-gray-400 transition-colors">
+      <svg width="22" height="22" viewBox="0 0 24 24" fill="none"
+           stroke="currentColor" stroke-width="2" stroke-linecap="round">
+        <line x1="12" y1="1" x2="12" y2="23"/>
+        <path d="M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6"/>
+      </svg>
+      <span>売上</span>
+    </button>
+  </nav>
 
-  <!-- ローディング -->
-  <div id="req-spinner" class="flex justify-center py-16">
-    <div class="w-10 h-10 border-4 border-indigo-500 border-t-transparent rounded-full spinner"></div>
-  </div>
+</div><!-- /screen-app -->
 
-  <!-- リクエスト一覧 -->
-  <div id="req-list" style="display:none;"></div>
+<!-- ════════════════════════════════════════════════════════
+     ボトムシート: 承認待ちリクエスト
+════════════════════════════════════════════════════════ -->
+<div id="req-sheet-backdrop" class="sheet-backdrop" onclick="closeRequestsSheet(event)">
+  <div class="sheet" onclick="event.stopPropagation()">
+    <div class="sheet-handle"></div>
+    <div class="px-4 pb-2">
+      <div class="flex items-center justify-between mb-4">
+        <h2 class="text-base font-bold text-gray-800">承認待ちリクエスト</h2>
+        <button onclick="closeRequestsSheet()"
+          class="w-8 h-8 rounded-full bg-gray-100 flex items-center justify-center
+                 text-gray-500 hover:bg-gray-200 transition-colors text-lg leading-none">
+          ×
+        </button>
+      </div>
 
-  <!-- 空状態 -->
-  <div id="req-empty" class="text-center py-16" style="display:none;">
-    <div class="text-5xl mb-4">🎉</div>
-    <p class="text-gray-600 font-semibold">承認待ちのリクエストはありません</p>
-    <p class="text-gray-400 text-sm mt-1">すべて対応済みです</p>
+      <div id="req-sheet-spinner" class="text-center py-10">
+        <div class="w-8 h-8 border-4 border-indigo-500 border-t-transparent rounded-full spinner mx-auto"></div>
+      </div>
+      <div id="req-sheet-list"></div>
+      <div id="req-sheet-empty" class="hidden text-center py-10">
+        <div class="text-3xl mb-2">🎉</div>
+        <p class="text-gray-500 font-semibold text-sm">承認待ちはありません</p>
+      </div>
+    </div>
   </div>
 </div>
 
-<!-- ════════════════════════════════════════════
-     モーダル: 却下理由入力
-════════════════════════════════════════════ -->
-<div id="reject-modal" class="fixed inset-0 z-50 flex items-center justify-center px-4"
-     style="display:none; background:rgba(0,0,0,0.5);">
-  <div class="bg-white rounded-2xl p-6 w-full max-w-sm shadow-2xl">
+<!-- ════════════════════════════════════════════════════════
+     ダイアログ: 却下理由
+════════════════════════════════════════════════════════ -->
+<div id="reject-dialog-backdrop" class="dialog-backdrop">
+  <div class="dialog">
     <h3 class="text-base font-bold text-gray-800 mb-3">却下理由（任意）</h3>
     <textarea id="reject-note" rows="3" placeholder="理由を入力（省略可）"
       class="w-full border-2 border-gray-200 rounded-xl px-3 py-2.5 text-sm
              focus:outline-none focus:border-indigo-500 transition-colors resize-none"></textarea>
-    <p id="reject-error" class="text-red-500 text-sm mt-2" style="display:none;"></p>
+    <p id="reject-err" class="text-red-500 text-sm mt-2 hidden"></p>
     <div class="flex gap-3 mt-4">
-      <button onclick="closeRejectModal()"
+      <button onclick="closeRejectDialog()"
         class="flex-1 py-2.5 border-2 border-gray-200 rounded-xl text-gray-600
                font-semibold text-sm hover:bg-gray-50 transition-colors">
         キャンセル
@@ -155,416 +553,1098 @@
   </div>
 </div>
 
-<!-- ════════════════════════════════════════════
+<!-- ════════════════════════════════════════════════════════
+     ボトムシート: 生徒メモ詳細
+════════════════════════════════════════════════════════ -->
+<div id="memo-sheet-backdrop" class="sheet-backdrop" onclick="closeMemoSheet(event)">
+  <div class="sheet" onclick="event.stopPropagation()">
+    <div class="sheet-handle"></div>
+    <div class="px-4 pb-2">
+      <div class="flex items-center gap-3 mb-4">
+        <div id="memo-sheet-avatar" class="avatar"></div>
+        <div>
+          <p id="memo-sheet-name" class="text-base font-bold text-gray-800"></p>
+          <p id="memo-sheet-sub" class="text-xs text-gray-500 mt-0.5"></p>
+        </div>
+        <button onclick="closeMemoSheet()"
+          class="ml-auto w-8 h-8 rounded-full bg-gray-100 flex items-center justify-center
+                 text-gray-500 hover:bg-gray-200 transition-colors text-lg leading-none">
+          ×
+        </button>
+      </div>
+
+      <!-- メモ追加フォーム -->
+      <div class="card mb-4" style="border: 2px solid #e0e7ff;">
+        <p class="text-xs font-bold text-indigo-600 mb-2">＋ 新しいメモを追加</p>
+        <input id="memo-add-date" type="date"
+          class="w-full border-2 border-gray-200 rounded-xl px-3 py-2 text-sm
+                 focus:outline-none focus:border-indigo-500 transition-colors mb-2">
+        <textarea id="memo-add-text" rows="3" placeholder="今日のレッスンメモを入力..."
+          class="w-full border-2 border-gray-200 rounded-xl px-3 py-2 text-sm
+                 focus:outline-none focus:border-indigo-500 transition-colors resize-none mb-2"></textarea>
+        <textarea id="memo-add-goal" rows="2" placeholder="次回の目標（任意）"
+          class="w-full border-2 border-gray-200 rounded-xl px-3 py-2 text-sm
+                 focus:outline-none focus:border-indigo-500 transition-colors resize-none mb-3"></textarea>
+        <button onclick="submitAddMemo()"
+          class="w-full py-2.5 grad text-white text-sm font-bold rounded-xl
+                 hover:opacity-90 transition-opacity">
+          メモを保存
+        </button>
+      </div>
+
+      <!-- 過去メモ一覧 -->
+      <p class="text-xs font-bold text-gray-500 mb-2">過去のメモ</p>
+      <div id="memo-sheet-history"></div>
+      <div id="memo-sheet-empty" class="hidden text-center py-6">
+        <p class="text-sm text-gray-400">まだメモがありません</p>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ════════════════════════════════════════════════════════
+     ダイアログ: タスク編集
+════════════════════════════════════════════════════════ -->
+<div id="task-edit-dialog-backdrop" class="dialog-backdrop">
+  <div class="dialog">
+    <h3 class="text-base font-bold text-gray-800 mb-3">タスクを編集</h3>
+    <input id="edit-task-text" type="text"
+      class="w-full border-2 border-gray-200 rounded-xl px-3 py-2.5 text-sm
+             focus:outline-none focus:border-indigo-500 transition-colors mb-3">
+    <label class="flex items-center gap-2 text-sm text-gray-700 cursor-pointer mb-4">
+      <input id="edit-task-urgent" type="checkbox"
+        class="w-4 h-4 rounded accent-orange-500">
+      <span>⚡ 急ぎ（優先タスク）</span>
+    </label>
+    <div class="flex gap-3">
+      <button onclick="closeTaskEditDialog()"
+        class="flex-1 py-2.5 border-2 border-gray-200 rounded-xl text-gray-600
+               font-semibold text-sm hover:bg-gray-50 transition-colors">
+        キャンセル
+      </button>
+      <button onclick="confirmEditTask()"
+        class="flex-1 py-2.5 grad text-white text-sm font-bold rounded-xl
+               hover:opacity-90 transition-opacity">
+        保存
+      </button>
+    </div>
+  </div>
+</div>
+
+<!-- ════════════════════════════════════════════════════════
+     ダイアログ: レッスンキャンセル確認
+════════════════════════════════════════════════════════ -->
+<div id="cancel-dialog-backdrop" class="dialog-backdrop">
+  <div class="dialog">
+    <h3 class="text-base font-bold text-gray-800 mb-2">レッスンをキャンセル</h3>
+    <p id="cancel-dialog-body" class="text-sm text-gray-600 mb-4"></p>
+    <div class="flex gap-3">
+      <button onclick="closeCancelDialog()"
+        class="flex-1 py-2.5 border-2 border-gray-200 rounded-xl text-gray-600
+               font-semibold text-sm hover:bg-gray-50 transition-colors">
+        戻る
+      </button>
+      <button id="cancel-confirm-btn" onclick="confirmCancelLesson()"
+        class="flex-1 py-2.5 bg-red-500 text-white rounded-xl font-bold text-sm
+               hover:bg-red-600 transition-colors">
+        キャンセルする
+      </button>
+    </div>
+  </div>
+</div>
+
+<!-- トースト -->
+<div id="toast"></div>
+
+</div><!-- /app-root -->
+
+<!-- ════════════════════════════════════════════════════════
      JavaScript
-════════════════════════════════════════════ -->
+════════════════════════════════════════════════════════ -->
 <script>
 // ─── 定数 ─────────────────────────────────────────────────────────────────────
 
 const API_URL = 'https://script.google.com/macros/s/AKfycbxoYZ1uagSAaoF3PSRl0DBkpD1xSDxfMUVI1tg3Q-sq8eYxXUGTBmE_BmJ9w8ONUC8/exec';
 
 const STUDIO_LABELS = {
-  saito:  '齊藤DG（lime）',
-  sendai: '仙台SS（orange）',
-  izumi:  '泉中央（blue）',
+  saito:  '齊藤DG',
+  sendai: '仙台SS',
+  izumi:  '泉中央',
 };
+const STUDIO_COLORS = {
+  saito:  'studio-saito',
+  sendai: 'studio-sendai',
+  izumi:  'studio-izumi',
+};
+const AVATAR_COLORS = [
+  '#818cf8','#34d399','#fb923c','#f472b6',
+  '#60a5fa','#a78bfa','#fbbf24','#4ade80',
+];
+const SALE_TYPE_LABELS = {
+  lesson:          'レッスン',
+  ticket_purchase: 'チケット購入',
+  other:           'その他',
+};
+const DAY_NAMES = ['日','月','火','水','木','金','土'];
 
-// ─── 状態変数 ─────────────────────────────────────────────────────────────────
+// ─── 状態 ─────────────────────────────────────────────────────────────────────
 
 let adminSecret = '';
-let rejectTargetId = null;  // 却下モーダルで操作中のリクエスト ID
+let state = {
+  students:        [],
+  studentMap:      {},   // studentId → student object
+  calLessons:      [],   // 現在表示中の日付のレッスン
+  allMemos:        [],
+  pendingRequests: [],
+  pendingTasks:    [],
+  doneTasks:       [],
+  allSales:        [],
 
-// ─── ローカルストレージ ────────────────────────────────────────────────────────
+  activeTab:    'calendar',
+  calMode:      'daily',   // 'daily' | 'weekly'
+  calDate:      todayStr(),
+  weekOffset:   0,         // 今週から何週ずれているか
+  studioFilter: 'all',
+  memoSort:     'today',
+  salesPeriod:  'month',
 
-/**
- * ページを開いたとき、前回保存したシークレットがあれば自動ログイン試行する。
- * セキュリティ上、ブラウザを閉じても使えるようにする（ブックマーク運用を想定）。
- */
+  // モーダル用
+  rejectTargetId:   null,
+  editingTaskId:    null,
+  editingMemoStudentId: null,
+  cancelLessonId:   null,
+  taskFormOpen:     false,
+  doneOpen:         false,
+};
+
+// ─── ユーティリティ ────────────────────────────────────────────────────────────
+
+function todayStr() {
+  const d = new Date();
+  return [
+    d.getFullYear(),
+    String(d.getMonth()+1).padStart(2,'0'),
+    String(d.getDate()).padStart(2,'0'),
+  ].join('-');
+}
+
+function escapeHtml(s) {
+  return String(s||'')
+    .replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;')
+    .replace(/"/g,'&quot;').replace(/'/g,'&#39;');
+}
+
+/** YYYY-MM-DD → M月D日（曜） */
+function fmtDate(dateStr) {
+  if (!dateStr) return '';
+  const d = new Date(dateStr + 'T00:00:00');
+  return (d.getMonth()+1) + '月' + d.getDate() + '日（' + DAY_NAMES[d.getDay()] + '）';
+}
+
+/** YYYY-MM-DD → M/D */
+function fmtDateShort(dateStr) {
+  if (!dateStr) return '';
+  const [,m,d] = dateStr.split('-');
+  return parseInt(m)+'/'+parseInt(d);
+}
+
+/** 名前のイニシャルからアバター色を決める */
+function avatarColor(name) {
+  const c = (name||'').charCodeAt(0) || 0;
+  return AVATAR_COLORS[c % AVATAR_COLORS.length];
+}
+
+/** 名前の最初の1文字を取り出す */
+function avatarChar(name) {
+  return (name||'？').charAt(0);
+}
+
+/** トーストを表示する */
+let _toastTimer = null;
+function showToast(msg) {
+  const el = document.getElementById('toast');
+  el.textContent = msg;
+  el.classList.add('show');
+  clearTimeout(_toastTimer);
+  _toastTimer = setTimeout(() => el.classList.remove('show'), 2500);
+}
+
+// ─── API ヘルパー ─────────────────────────────────────────────────────────────
+
+/** GAS Web App を GET で呼ぶ */
+async function apiFetch(params) {
+  const url = API_URL + '?' + new URLSearchParams(params).toString();
+  const res = await fetch(url, { redirect: 'follow' });
+  if (!res.ok) throw new Error('HTTP ' + res.status);
+  const json = await res.json();
+  if (!json.success) throw new Error((json.error && json.error.message) || 'APIエラー');
+  return json.data;
+}
+
+/** GAS Web App を POST で呼ぶ */
+async function apiPost(action, body) {
+  const res = await fetch(API_URL, {
+    method: 'POST',
+    redirect: 'follow',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ action, secret: adminSecret, ...body }),
+  });
+  if (!res.ok) throw new Error('HTTP ' + res.status);
+  const json = await res.json();
+  if (!json.success) throw new Error((json.error && json.error.message) || 'APIエラー');
+  return json.data;
+}
+
+// ─── ログイン / ログアウト ─────────────────────────────────────────────────────
+
 window.addEventListener('load', function() {
   const saved = localStorage.getItem('admin_secret');
   if (saved) {
     adminSecret = saved;
-    showDashboard();
+    showApp();
   }
 });
 
-// ─── ログイン / ログアウト ────────────────────────────────────────────────────
-
-/**
- * ログインボタンを押したとき。
- * シークレットを保存してダッシュボードへ遷移する。
- * 実際の認証は API を呼ぶときに GAS 側で行われる。
- */
 async function login() {
   const input = document.getElementById('input-secret').value.trim();
   if (!input) return;
 
-  // 仮のシークレットをセットして API を叩いて認証確認
+  const btn = document.getElementById('btn-login');
+  btn.disabled = true;
+  btn.textContent = '確認中...';
+
   adminSecret = input;
-  document.getElementById('login-error').style.display = 'none';
+  document.getElementById('login-error').classList.add('hidden');
 
   try {
-    // booking_requests を取得して認証確認（エラーなら UNAUTHORIZED が返る）
     await apiFetch({ action: 'booking_requests', secret: adminSecret });
     localStorage.setItem('admin_secret', adminSecret);
-    showDashboard();
+    showApp();
   } catch (err) {
     adminSecret = '';
-    document.getElementById('login-error').style.display = 'block';
-    document.getElementById('login-error').textContent =
-      err.message.includes('認証') ? 'シークレットが正しくありません。' : err.message;
+    document.getElementById('login-error').classList.remove('hidden');
+  } finally {
+    btn.disabled = false;
+    btn.textContent = 'ログイン';
   }
 }
 
 function logout() {
   localStorage.removeItem('admin_secret');
   adminSecret = '';
-  document.getElementById('screen-dashboard').style.display = 'none';
-  document.getElementById('screen-login').style.display     = 'block';
-  document.getElementById('btn-logout').style.display       = 'none';
+  document.getElementById('screen-app').style.display = 'none';
+  document.getElementById('screen-login').style.display = 'block';
   document.getElementById('input-secret').value = '';
 }
 
-// ─── 画面遷移 ─────────────────────────────────────────────────────────────────
+// ─── アプリ起動 ───────────────────────────────────────────────────────────────
 
-function showDashboard() {
-  document.getElementById('screen-login').style.display     = 'none';
-  document.getElementById('screen-dashboard').style.display = 'block';
-  document.getElementById('btn-logout').style.display       = 'inline-block';
-  loadRequests();
-}
-
-// ─── API ヘルパー ─────────────────────────────────────────────────────────────
-
-/**
- * GAS Web App を GET リクエストで呼ぶ共通ヘルパー。
- * GAS は POST で 302 リダイレクトを返すことがあり body が失われるため、
- * 管理画面からはすべて GET クエリパラメータで操作する。
- */
-async function apiFetch(params) {
-  const url = API_URL + '?' + new URLSearchParams(params).toString();
-  const res = await fetch(url, { redirect: 'follow' });
-  if (!res.ok) throw new Error(`HTTP ${res.status}`);
-  const json = await res.json();
-  if (!json.success) {
-    throw new Error((json.error && json.error.message) || 'APIエラー');
-  }
-  return json.data;
-}
-
-// ─── 予約リクエスト一覧の取得・描画 ──────────────────────────────────────────
-
-async function loadRequests() {
-  document.getElementById('req-spinner').style.display = 'flex';
-  document.getElementById('req-list').style.display    = 'none';
-  document.getElementById('req-empty').style.display   = 'none';
+async function showApp() {
+  document.getElementById('screen-login').style.display = 'none';
+  document.getElementById('screen-app').style.display   = 'block';
+  document.getElementById('app-loading').style.display  = 'flex';
+  document.querySelectorAll('.tab-content').forEach(el => el.classList.remove('active'));
 
   try {
-    const requests = await apiFetch({ action: 'booking_requests', secret: adminSecret });
-    renderRequests(requests);
-  } catch (err) {
-    if (err.message.includes('認証')) {
-      logout();
-      return;
-    }
-    document.getElementById('req-spinner').style.display = 'none';
-    alert('一覧の取得に失敗しました：' + err.message);
+    await loadAllData();
+  } catch(e) {
+    console.error(e);
+  }
+
+  document.getElementById('app-loading').style.display = 'none';
+  setTab('calendar');
+}
+
+async function loadAllData() {
+  const today = todayStr();
+
+  const [students, lessons, memos, requests, tasks, allTasks, sales] = await Promise.all([
+    apiFetch({ action: 'students',        secret: adminSecret }),
+    apiFetch({ action: 'lessons',   date: today, secret: adminSecret }),
+    apiFetch({ action: 'lesson_memos',    secret: adminSecret }),
+    apiFetch({ action: 'booking_requests',secret: adminSecret }),
+    apiFetch({ action: 'tasks',           secret: adminSecret }),
+    apiFetch({ action: 'tasks', all: '1', secret: adminSecret }),
+    apiFetch({ action: 'sales',           secret: adminSecret }),
+  ]);
+
+  state.students   = students || [];
+  state.studentMap = {};
+  state.students.forEach(s => { state.studentMap[String(s.student_id)] = s; });
+
+  state.calLessons      = (lessons  || []).filter(l => l.status !== 'cancelled');
+  state.allMemos        = memos    || [];
+  state.pendingRequests = requests || [];
+  state.pendingTasks    = (tasks   || []).filter(t => !isBool(t.is_done));
+  state.doneTasks       = (allTasks|| []).filter(t =>  isBool(t.is_done));
+  state.allSales        = sales    || [];
+
+  updateHeaderSub();
+  updateReqBanner();
+}
+
+/** スプレッドシートの BOOLEAN 値の正規化 */
+function isBool(v) {
+  return v === true || v === 'TRUE';
+}
+
+function updateHeaderSub() {
+  const today = fmtDate(todayStr());
+  const cnt = state.calLessons.length;
+  document.getElementById('header-sub').textContent =
+    today + ' · 本日 ' + cnt + 'レッスン';
+}
+
+function updateReqBanner() {
+  const cnt = state.pendingRequests.length;
+  document.getElementById('req-count-badge').textContent = cnt;
+  document.getElementById('req-banner').classList.toggle('hidden', cnt === 0);
+}
+
+// ─── タブ切り替え ──────────────────────────────────────────────────────────────
+
+function setTab(tab) {
+  state.activeTab = tab;
+  ['calendar','memos','tasks','sales'].forEach(t => {
+    document.getElementById('tab-' + t).classList.toggle('active', t === tab);
+    const nav = document.getElementById('nav-' + t);
+    nav.classList.toggle('text-indigo-600', t === tab);
+    nav.classList.toggle('text-gray-400',   t !== tab);
+  });
+
+  if (tab === 'calendar') renderCalendar();
+  if (tab === 'memos')    renderMemos();
+  if (tab === 'tasks')    renderTasks();
+  if (tab === 'sales')    renderSales();
+}
+
+// ─── カレンダータブ ────────────────────────────────────────────────────────────
+
+function setCalMode(mode) {
+  state.calMode = mode;
+  document.getElementById('btn-mode-daily').classList.toggle('active',  mode === 'daily');
+  document.getElementById('btn-mode-weekly').classList.toggle('active', mode === 'weekly');
+  document.getElementById('week-header').classList.toggle('hidden', mode === 'daily');
+  if (mode === 'weekly') renderWeekHeader();
+  renderCalendar();
+}
+
+function setStudio(studio) {
+  state.studioFilter = studio;
+  ['all','saito','sendai','izumi'].forEach(s => {
+    document.getElementById('sf-' + s).classList.toggle('active', s === studio);
+  });
+  renderLessonList();
+}
+
+async function refreshCalendar() {
+  document.getElementById('cal-spinner').classList.remove('hidden');
+  try {
+    const data = await apiFetch({
+      action: 'lessons', date: state.calDate, secret: adminSecret,
+    });
+    state.calLessons = (data || []).filter(l => l.status !== 'cancelled');
+    updateHeaderSub();
+    renderLessonList();
+  } catch(e) {
+    showToast('更新失敗: ' + e.message);
+  } finally {
+    document.getElementById('cal-spinner').classList.add('hidden');
   }
 }
 
-/**
- * 予約リクエスト一覧を HTML に描画する。
- * @param {Object[]} requests  booking_requests シートの pending レコード配列
- */
-function renderRequests(requests) {
-  document.getElementById('req-spinner').style.display = 'none';
+async function selectCalDate(dateStr) {
+  state.calDate = dateStr;
+  document.getElementById('cal-spinner').classList.remove('hidden');
+  document.getElementById('lesson-list').innerHTML = '';
+  document.getElementById('lesson-empty').classList.add('hidden');
+  try {
+    const data = await apiFetch({
+      action: 'lessons', date: dateStr, secret: adminSecret,
+    });
+    state.calLessons = (data || []).filter(l => l.status !== 'cancelled');
+  } catch(e) {
+    showToast('取得失敗: ' + e.message);
+  } finally {
+    document.getElementById('cal-spinner').classList.add('hidden');
+  }
+  if (state.calMode === 'weekly') renderWeekHeader();
+  renderCalendar();
+}
 
-  if (!requests || requests.length === 0) {
-    document.getElementById('req-empty').style.display = 'block';
-    document.getElementById('req-count').textContent   = '';
+function renderCalendar() {
+  // 日付ヘッダー
+  document.getElementById('cal-date-label').textContent = fmtDate(state.calDate);
+  renderLessonList();
+}
+
+function renderLessonList() {
+  const lessons = state.calLessons.filter(l => {
+    if (state.studioFilter === 'all') return true;
+    return l.studio_id === state.studioFilter;
+  }).sort((a, b) => (a.start_time || '').localeCompare(b.start_time || ''));
+
+  const count = lessons.length;
+  document.getElementById('cal-lesson-count').textContent =
+    count > 0 ? count + '件' : '';
+
+  if (count === 0) {
+    document.getElementById('lesson-list').innerHTML = '';
+    document.getElementById('lesson-empty').classList.remove('hidden');
     return;
   }
+  document.getElementById('lesson-empty').classList.add('hidden');
 
-  // 日付の新しい順に並べる
-  const sorted = requests.slice().sort(function(a, b) {
-    return (b.requested_date + b.requested_start).localeCompare(
-            a.requested_date + a.requested_start);
-  });
-
-  document.getElementById('req-count').textContent =
-    sorted.length + ' 件の承認待ちリクエスト';
-
-  document.getElementById('req-list').innerHTML = sorted.map(function(req) {
-    const studio      = STUDIO_LABELS[req.studio_id] || req.studio_id;
-    const dateLabel   = formatDate(req.requested_date);
-    const timeLabel   = req.requested_start + ' 〜 ' + req.requested_end;
-    const isNewStudent = !req.student_id || req.student_id === '';
+  document.getElementById('lesson-list').innerHTML = lessons.map(lesson => {
+    const student = state.studentMap[String(lesson.student_id)] || {};
+    const name    = student.name || lesson.student_name_input || '（名前未設定）';
+    const studioLbl = STUDIO_LABELS[lesson.studio_id] || lesson.studio_id || '';
+    const studioClr = STUDIO_COLORS[lesson.studio_id] || '';
+    const level   = lesson.level || '';
+    const count   = lesson.lesson_count ? lesson.lesson_count + '回目' : '';
+    const time    = (lesson.start_time || '') + '〜' + (lesson.end_time || '');
+    const ticketType = student.ticket_type_id || '';
+    const av = avatarChar(name);
+    const ac = avatarColor(name);
 
     return `
-    <div class="card" id="req-card-${req.request_id}">
+    <div class="card flex items-start gap-3" id="lesson-card-${lesson.lesson_id}">
+      <div class="avatar mt-0.5" style="background:${ac};">${escapeHtml(av)}</div>
+      <div class="flex-1 min-w-0">
+        <div class="flex items-center gap-2 mb-1 flex-wrap">
+          <span class="text-sm font-bold text-gray-900">${escapeHtml(name)}</span>
+          ${level ? `<span class="badge" style="background:#e0e7ff;color:#3730a3;">${escapeHtml(level)}</span>` : ''}
+        </div>
+        <div class="flex items-center gap-2 text-xs text-gray-500 flex-wrap">
+          <span class="badge ${studioClr}">@${escapeHtml(studioLbl)}</span>
+          ${ticketType ? `<span>${escapeHtml(ticketType)}</span>` : ''}
+          ${count ? `<span>${escapeHtml(count)}</span>` : ''}
+          <span class="font-semibold text-indigo-600">${escapeHtml(time)}</span>
+        </div>
+        ${lesson.note ? `<p class="text-xs text-amber-700 mt-1 bg-amber-50 rounded-lg px-2 py-1">${escapeHtml(lesson.note)}</p>` : ''}
+      </div>
+      <button onclick="openCancelDialog(${lesson.lesson_id}, '${escapeHtml(name)}')"
+        class="text-gray-300 hover:text-red-400 transition-colors flex-shrink-0 p-1">
+        <svg width="14" height="14" viewBox="0 0 24 24" fill="none"
+             stroke="currentColor" stroke-width="2.5" stroke-linecap="round">
+          <path d="M18 6L6 18M6 6l12 12"/>
+        </svg>
+      </button>
+    </div>`;
+  }).join('');
+}
 
-      <!-- リクエスト ID + ステータス -->
-      <div class="flex items-center justify-between mb-3">
-        <span class="text-xs text-gray-400 font-mono">
-          #${req.request_id}
-          <span class="ml-1 text-gray-300">·</span>
-          ${req.requested_at || ''}
-        </span>
-        <div class="flex gap-1.5 items-center">
-          ${isNewStudent
-            ? '<span class="badge badge-new-student">新規仮登録</span>'
-            : '<span class="badge" style="background:#e0e7ff;color:#3730a3;">既存生徒</span>'}
+// 週ヘッダー描画
+function renderWeekHeader() {
+  const today = new Date();
+  today.setHours(0,0,0,0);
+  // 今週の月曜日を計算
+  const dow = today.getDay(); // 0=日
+  const mondayOffset = dow === 0 ? -6 : 1 - dow;
+  const baseMonday = new Date(today);
+  baseMonday.setDate(today.getDate() + mondayOffset + state.weekOffset * 7);
+
+  const days = Array.from({length:7}, (_,i) => {
+    const d = new Date(baseMonday);
+    d.setDate(baseMonday.getDate() + i);
+    return d;
+  });
+
+  // 週ラベル更新
+  const m1 = days[0], m7 = days[6];
+  document.getElementById('week-range-label').textContent =
+    (m1.getMonth()+1)+'月'+m1.getDate()+'日〜'+(m7.getMonth()+1)+'月'+m7.getDate()+'日';
+
+  const dayNames2 = ['月','火','水','木','金','土','日'];
+  const todayStr2 = todayStr();
+
+  document.getElementById('week-days').innerHTML = days.map((d, i) => {
+    const ds = [
+      d.getFullYear(),
+      String(d.getMonth()+1).padStart(2,'0'),
+      String(d.getDate()).padStart(2,'0'),
+    ].join('-');
+    const isToday    = ds === todayStr2;
+    const isSelected = ds === state.calDate;
+    return `
+    <div class="week-day ${isToday?'is-today':''} ${isSelected?'selected':''}"
+         onclick="selectCalDate('${ds}')">
+      <div class="wday-name">${dayNames2[i]}</div>
+      <div class="wday-num">${d.getDate()}</div>
+    </div>`;
+  }).join('');
+}
+
+function shiftWeek(dir) {
+  state.weekOffset += dir;
+  renderWeekHeader();
+}
+
+// ─── 承認待ちシート ────────────────────────────────────────────────────────────
+
+function openRequestsSheet() {
+  document.getElementById('req-sheet-backdrop').classList.add('open');
+  renderRequestsSheet();
+}
+
+function closeRequestsSheet(e) {
+  if (e && e.target !== document.getElementById('req-sheet-backdrop')) return;
+  document.getElementById('req-sheet-backdrop').classList.remove('open');
+}
+
+function renderRequestsSheet() {
+  const reqs = state.pendingRequests;
+  document.getElementById('req-sheet-spinner').style.display = 'none';
+
+  if (!reqs || reqs.length === 0) {
+    document.getElementById('req-sheet-list').innerHTML = '';
+    document.getElementById('req-sheet-empty').classList.remove('hidden');
+    return;
+  }
+  document.getElementById('req-sheet-empty').classList.add('hidden');
+
+  const sorted = [...reqs].sort((a,b) =>
+    (b.requested_date+b.requested_start).localeCompare(a.requested_date+a.requested_start));
+
+  document.getElementById('req-sheet-list').innerHTML = sorted.map(req => {
+    const studio = STUDIO_LABELS[req.studio_id] || req.studio_id;
+    const sc     = STUDIO_COLORS[req.studio_id] || '';
+    const isNew  = !req.student_id || req.student_id === '';
+    return `
+    <div class="card mb-3" id="req-card-${req.request_id}">
+      <div class="flex items-center justify-between mb-2">
+        <span class="text-xs text-gray-400 font-mono">#${req.request_id}</span>
+        <div class="flex gap-1.5">
+          ${isNew ? '<span class="badge badge-new">新規</span>' : ''}
           <span class="badge badge-pending">承認待ち</span>
         </div>
       </div>
-
-      <!-- 日時・スタジオ -->
-      <div class="mb-3">
-        <p class="text-lg font-bold text-gray-900">${dateLabel}</p>
-        <p class="text-base font-semibold text-indigo-600 mt-0.5">${timeLabel}</p>
-        <p class="text-sm text-gray-500 mt-1">🏢 ${studio}</p>
+      <p class="text-base font-bold text-gray-900">${fmtDate(req.requested_date)}</p>
+      <p class="text-sm font-semibold text-indigo-600 mt-0.5">
+        ${escapeHtml(req.requested_start)}〜${escapeHtml(req.requested_end)}
+      </p>
+      <div class="flex items-center gap-2 mt-1.5">
+        <span class="badge ${sc}">@${escapeHtml(studio)}</span>
+        <span class="text-sm font-bold text-gray-700">${escapeHtml(req.student_name_input||'（名前なし）')}</span>
       </div>
-
-      <!-- 生徒情報 -->
-      <div class="bg-gray-50 rounded-xl p-3 mb-3">
-        <div class="flex items-center gap-2 mb-1">
-          <svg width="14" height="14" viewBox="0 0 24 24" fill="none"
-               stroke="#6b7280" stroke-width="2.5" stroke-linecap="round">
-            <path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/>
-            <circle cx="12" cy="7" r="4"/>
-          </svg>
-          <span class="text-sm font-bold text-gray-700">${escapeHtml(req.student_name_input || '（名前なし）')}</span>
-          ${req.student_id
-            ? `<span class="text-xs text-gray-400">生徒ID: ${req.student_id}</span>`
-            : '<span class="text-xs text-red-400">⚠ student_id 未設定</span>'}
-        </div>
-        ${req.line_user_id
-          ? `<p class="text-xs text-gray-400 font-mono pl-5">LINE: ${escapeHtml(req.line_user_id)}</p>`
-          : '<p class="text-xs text-gray-400 pl-5">LINE ID なし</p>'}
-      </div>
-
-      <!-- メモ -->
-      ${req.note
-        ? `<div class="bg-amber-50 border border-amber-200 rounded-xl px-3 py-2 mb-3">
-             <p class="text-xs text-amber-700">
-               <span class="font-bold">メモ:</span> ${escapeHtml(req.note)}
-             </p>
-           </div>`
-        : ''}
-
-      <!-- 承認・却下ボタン -->
-      <div class="flex gap-3 mt-1">
+      ${req.note ? `<p class="text-xs text-amber-700 bg-amber-50 rounded-lg px-2 py-1.5 mt-2">${escapeHtml(req.note)}</p>` : ''}
+      <div class="flex gap-2 mt-3">
         <button onclick="approveRequest(${req.request_id})"
           id="btn-approve-${req.request_id}"
           class="flex-1 py-2.5 grad text-white font-bold text-sm rounded-xl
-                 hover:opacity-90 transition-opacity disabled:opacity-40">
-          ✓ 承認する
+                 hover:opacity-90 transition-opacity">
+          ✓ 承認
         </button>
-        <button onclick="openRejectModal(${req.request_id})"
+        <button onclick="openRejectDialog(${req.request_id})"
           id="btn-reject-${req.request_id}"
           class="flex-1 py-2.5 bg-red-50 border-2 border-red-200 text-red-600
-                 font-bold text-sm rounded-xl hover:bg-red-100 transition-colors
-                 disabled:opacity-40">
-          ✕ 却下する
+                 font-bold text-sm rounded-xl hover:bg-red-100 transition-colors">
+          ✕ 却下
         </button>
       </div>
-
-      <!-- 操作中メッセージ（非表示） -->
-      <p id="req-msg-${req.request_id}" class="text-sm text-center mt-2 font-semibold"
-         style="display:none;"></p>
+      <p id="req-msg-${req.request_id}" class="text-sm text-center mt-2 font-semibold hidden"></p>
     </div>`;
   }).join('');
-
-  document.getElementById('req-list').style.display = 'block';
 }
 
-// ─── 承認処理 ─────────────────────────────────────────────────────────────────
-
-/**
- * 「承認する」ボタンを押したとき。
- * @param {number} requestId
- */
 async function approveRequest(requestId) {
-  if (!confirm('予約リクエスト #' + requestId + ' を承認しますか？\n生徒に LINE 通知が送信されます。')) {
-    return;
-  }
+  if (!confirm('予約リクエスト #' + requestId + ' を承認しますか？\n生徒に LINE 通知が送信されます。')) return;
 
-  setCardBusy(requestId, true, '承認処理中...');
+  const approveBtn = document.getElementById('btn-approve-' + requestId);
+  const rejectBtn  = document.getElementById('btn-reject-'  + requestId);
+  if (approveBtn) approveBtn.disabled = true;
+  if (rejectBtn)  rejectBtn.disabled  = true;
 
   try {
-    const result = await apiFetch({
-      action:    'approve',
-      requestId: requestId,
-      secret:    adminSecret,
-    });
-    const notifyLabel = buildNotifyLabel(result);
-    showCardResult(requestId, 'approved', '✓ 承認しました（レッスンID: ' + result.lesson_id + '）\n' + notifyLabel);
-  } catch (err) {
-    setCardBusy(requestId, false);
-    showCardError(requestId, '承認に失敗しました: ' + err.message);
+    await apiFetch({ action:'approve', requestId, secret: adminSecret });
+    showToast('✓ 承認しました');
+    removeRequestCard(requestId);
+    await reloadRequests();
+  } catch(e) {
+    showToast('承認に失敗しました: ' + e.message);
+    if (approveBtn) approveBtn.disabled = false;
+    if (rejectBtn)  rejectBtn.disabled  = false;
   }
 }
 
-// ─── 却下処理 ─────────────────────────────────────────────────────────────────
-
-/**
- * 「却下する」ボタンを押したとき: 理由入力モーダルを開く。
- * @param {number} requestId
- */
-function openRejectModal(requestId) {
-  rejectTargetId = requestId;
-  document.getElementById('reject-note').value            = '';
-  document.getElementById('reject-error').style.display   = 'none';
-  document.getElementById('reject-modal').style.display   = 'flex';
+function openRejectDialog(requestId) {
+  state.rejectTargetId = requestId;
+  document.getElementById('reject-note').value = '';
+  document.getElementById('reject-err').classList.add('hidden');
+  document.getElementById('reject-dialog-backdrop').classList.add('open');
 }
 
-function closeRejectModal() {
-  rejectTargetId = null;
-  document.getElementById('reject-modal').style.display   = 'none';
+function closeRejectDialog() {
+  state.rejectTargetId = null;
+  document.getElementById('reject-dialog-backdrop').classList.remove('open');
 }
 
-/**
- * モーダルの「却下する」ボタンを押したとき。
- */
 async function confirmReject() {
   const note = document.getElementById('reject-note').value.trim();
   const btn  = document.getElementById('reject-confirm-btn');
-  btn.disabled    = true;
-  btn.textContent = '処理中...';
+  btn.disabled = true; btn.textContent = '処理中...';
 
   try {
-    const result = await apiFetch({
-      action:    'reject',
-      requestId: rejectTargetId,
-      secret:    adminSecret,
-      note:      note,
+    await apiFetch({
+      action: 'reject', requestId: state.rejectTargetId,
+      secret: adminSecret, note,
     });
-    const notifyLabel = buildNotifyLabel(result);
-    const savedId = rejectTargetId;
-    closeRejectModal();
-    showCardResult(savedId, 'rejected', '✕ 却下しました\n' + notifyLabel);
-  } catch (err) {
-    document.getElementById('reject-error').textContent   = '却下に失敗しました: ' + err.message;
-    document.getElementById('reject-error').style.display = 'block';
+    const id = state.rejectTargetId;
+    closeRejectDialog();
+    showToast('✕ 却下しました');
+    removeRequestCard(id);
+    await reloadRequests();
+  } catch(e) {
+    document.getElementById('reject-err').textContent   = '却下に失敗しました: ' + e.message;
+    document.getElementById('reject-err').classList.remove('hidden');
   } finally {
-    btn.disabled    = false;
-    btn.textContent = '却下する';
+    btn.disabled = false; btn.textContent = '却下する';
   }
 }
 
-// ─── カード UI ヘルパー ────────────────────────────────────────────────────────
+function removeRequestCard(requestId) {
+  const card = document.getElementById('req-card-' + requestId);
+  if (card) card.remove();
+  if (document.getElementById('req-sheet-list').children.length === 0) {
+    document.getElementById('req-sheet-empty').classList.remove('hidden');
+  }
+}
 
-/** ボタンを無効化してローディングメッセージを表示する */
-function setCardBusy(requestId, busy, msg) {
-  const approveBtn = document.getElementById('btn-approve-' + requestId);
-  const rejectBtn  = document.getElementById('btn-reject-'  + requestId);
-  const msgEl      = document.getElementById('req-msg-'     + requestId);
+async function reloadRequests() {
+  try {
+    state.pendingRequests = await apiFetch({ action:'booking_requests', secret:adminSecret }) || [];
+    updateReqBanner();
+  } catch(e) { /* silent */ }
+}
 
-  if (approveBtn) approveBtn.disabled = busy;
-  if (rejectBtn)  rejectBtn.disabled  = busy;
+// ─── 生徒メモタブ ──────────────────────────────────────────────────────────────
 
-  if (msg) {
-    msgEl.textContent   = msg;
-    msgEl.style.display = 'block';
-    msgEl.style.color   = '#6b7280';
+function setMemoSort(sort) {
+  state.memoSort = sort;
+  ['today','updated','name'].forEach(s => {
+    document.getElementById('ms-' + s).classList.toggle('active', s === sort);
+  });
+  renderMemos();
+}
+
+function renderMemos() {
+  const students = [...state.students];
+  const memos    = state.allMemos;
+  const today    = todayStr();
+
+  // 今日のレッスンに来る生徒のIDセット
+  const todayStudentIds = new Set(state.calLessons.map(l => String(l.student_id)));
+
+  // 生徒ごとに最新メモを付ける
+  const withMemo = students.map(s => {
+    const sid = String(s.student_id);
+    const sm = memos.filter(m => String(m.student_id) === sid)
+                    .sort((a,b) => b.lesson_date > a.lesson_date ? 1 : -1);
+    return { ...s, latestMemo: sm[0] || null, memoCount: sm.length, hasToday: todayStudentIds.has(sid) };
+  });
+
+  // ソート
+  let sorted = [...withMemo];
+  if (state.memoSort === 'today') {
+    sorted.sort((a,b) => {
+      if (a.hasToday !== b.hasToday) return a.hasToday ? -1 : 1;
+      const ad = a.latestMemo ? a.latestMemo.lesson_date : '';
+      const bd = b.latestMemo ? b.latestMemo.lesson_date : '';
+      return bd.localeCompare(ad);
+    });
+  } else if (state.memoSort === 'updated') {
+    sorted.sort((a,b) => {
+      const ad = a.latestMemo ? a.latestMemo.lesson_date : '';
+      const bd = b.latestMemo ? b.latestMemo.lesson_date : '';
+      return bd.localeCompare(ad);
+    });
   } else {
-    msgEl.style.display = 'none';
+    sorted.sort((a,b) => (a.name||'').localeCompare(b.name||'', 'ja'));
+  }
+
+  if (sorted.length === 0) {
+    document.getElementById('memo-list').innerHTML = '';
+    document.getElementById('memo-empty').classList.remove('hidden');
+    return;
+  }
+  document.getElementById('memo-empty').classList.add('hidden');
+
+  document.getElementById('memo-list').innerHTML = sorted.map(s => {
+    const av  = avatarChar(s.name);
+    const ac  = avatarColor(s.name);
+    const lm  = s.latestMemo;
+    const sinceStr = s.since ? ' · ' + s.since + '〜' : '';
+    const dancesStr = s.dances ? s.dances : '';
+
+    return `
+    <div class="card cursor-pointer hover:shadow-md transition-shadow"
+         onclick="openMemoSheet(${s.student_id})">
+      <div class="flex items-start gap-3">
+        <div class="avatar" style="background:${ac};">${escapeHtml(av)}</div>
+        <div class="flex-1 min-w-0">
+          <div class="flex items-center gap-2 flex-wrap mb-0.5">
+            <span class="text-sm font-bold text-gray-900">${escapeHtml(s.name)}</span>
+            ${s.ticket_type_id ? `<span class="text-xs text-gray-500">${escapeHtml(s.ticket_type_id)}</span>` : ''}
+            ${s.hasToday ? '<span class="badge badge-today">本日レッスン</span>' : ''}
+          </div>
+          ${(dancesStr || sinceStr) ? `<p class="text-xs text-gray-400 mb-1">${escapeHtml(dancesStr)}${escapeHtml(sinceStr)}</p>` : ''}
+          ${lm
+            ? `<p class="text-xs text-gray-600 line-clamp-2 leading-relaxed">${escapeHtml(lm.memo||lm.goal||'（本文なし）')}</p>
+               <p class="text-xs text-gray-400 mt-1">計${s.memoCount}件 · 最終: ${fmtDateShort(lm.lesson_date)}</p>`
+            : `<p class="text-xs text-gray-400">まだメモがありません</p>`}
+        </div>
+        <svg width="14" height="14" viewBox="0 0 24 24" fill="none"
+             stroke="#9ca3af" stroke-width="2.5" stroke-linecap="round" class="mt-1 flex-shrink-0">
+          <path d="M9 18l6-6-6-6"/>
+        </svg>
+      </div>
+    </div>`;
+  }).join('');
+}
+
+// メモ詳細シート
+function openMemoSheet(studentId) {
+  state.editingMemoStudentId = studentId;
+  const s = state.students.find(x => String(x.student_id) === String(studentId)) || {};
+  const av = avatarChar(s.name);
+  const ac = avatarColor(s.name);
+
+  document.getElementById('memo-sheet-avatar').style.background = ac;
+  document.getElementById('memo-sheet-avatar').textContent = av;
+  document.getElementById('memo-sheet-name').textContent   = s.name || '（名前なし）';
+  document.getElementById('memo-sheet-sub').textContent    = [s.dances, s.since ? s.since+'〜' : ''].filter(Boolean).join(' · ');
+  document.getElementById('memo-add-date').value  = todayStr();
+  document.getElementById('memo-add-text').value  = '';
+  document.getElementById('memo-add-goal').value  = '';
+
+  renderMemoHistory(studentId);
+  document.getElementById('memo-sheet-backdrop').classList.add('open');
+}
+
+function closeMemoSheet(e) {
+  if (e && e.target !== document.getElementById('memo-sheet-backdrop')) return;
+  document.getElementById('memo-sheet-backdrop').classList.remove('open');
+}
+
+function renderMemoHistory(studentId) {
+  const memos = state.allMemos
+    .filter(m => String(m.student_id) === String(studentId))
+    .sort((a,b) => b.lesson_date > a.lesson_date ? 1 : -1);
+
+  if (memos.length === 0) {
+    document.getElementById('memo-sheet-history').innerHTML = '';
+    document.getElementById('memo-sheet-empty').classList.remove('hidden');
+    return;
+  }
+  document.getElementById('memo-sheet-empty').classList.add('hidden');
+  document.getElementById('memo-sheet-history').innerHTML = memos.map(m => `
+    <div class="card mb-2">
+      <p class="text-xs font-bold text-gray-500 mb-1">${fmtDate(m.lesson_date)}</p>
+      ${m.memo ? `<p class="text-sm text-gray-700 leading-relaxed mb-1">${escapeHtml(m.memo)}</p>` : ''}
+      ${m.goal ? `<p class="text-xs text-indigo-600 bg-indigo-50 rounded-lg px-2 py-1">🎯 ${escapeHtml(m.goal)}</p>` : ''}
+    </div>`).join('');
+}
+
+async function submitAddMemo() {
+  const date = document.getElementById('memo-add-date').value;
+  const memo = document.getElementById('memo-add-text').value.trim();
+  const goal = document.getElementById('memo-add-goal').value.trim();
+
+  if (!date) { showToast('日付を入力してください'); return; }
+  if (!memo && !goal) { showToast('メモまたは目標を入力してください'); return; }
+
+  try {
+    await apiPost('lesson_memo_add', {
+      student_id:  state.editingMemoStudentId,
+      lesson_date: date,
+      memo, goal,
+    });
+    showToast('メモを保存しました');
+    // ローカルに追加してすぐ反映
+    const newMemo = { student_id: state.editingMemoStudentId, lesson_date: date, memo, goal };
+    state.allMemos.push(newMemo);
+    renderMemoHistory(state.editingMemoStudentId);
+    renderMemos();
+    document.getElementById('memo-add-text').value = '';
+    document.getElementById('memo-add-goal').value = '';
+  } catch(e) {
+    showToast('保存失敗: ' + e.message);
   }
 }
 
-/** 承認 or 却下完了後にカードを完了状態に切り替える */
-function showCardResult(requestId, type, msg) {
-  const card       = document.getElementById('req-card-' + requestId);
-  const approveBtn = document.getElementById('btn-approve-' + requestId);
-  const rejectBtn  = document.getElementById('btn-reject-'  + requestId);
-  const msgEl      = document.getElementById('req-msg-'     + requestId);
+// ─── タスクタブ ───────────────────────────────────────────────────────────────
 
-  if (approveBtn) approveBtn.style.display = 'none';
-  if (rejectBtn)  rejectBtn.style.display  = 'none';
+function renderTasks() {
+  const today = fmtDate(todayStr());
+  const cnt   = state.pendingTasks.length;
+  document.getElementById('task-date-label').textContent    = today;
+  document.getElementById('task-pending-count').textContent = cnt > 0 ? cnt + '件残り' : 'すべて完了 🎉';
 
-  if (msgEl) {
-    msgEl.style.whiteSpace = 'pre-line';
-    msgEl.textContent      = msg;
-    msgEl.style.display    = 'block';
-    msgEl.style.color      = type === 'approved' ? '#059669' : '#dc2626';
+  // 未完了タスク
+  const pending = state.pendingTasks;
+  if (pending.length === 0) {
+    document.getElementById('task-list').style.display = 'none';
+    document.getElementById('task-empty').classList.remove('hidden');
+  } else {
+    document.getElementById('task-empty').classList.add('hidden');
+    document.getElementById('task-list').style.display = 'block';
+    document.getElementById('task-list').innerHTML = pending.map(t => taskRowHtml(t, false)).join('');
   }
 
-  if (card) {
-    card.style.opacity = '0.6';
-    card.style.transition = 'opacity 0.3s ease';
-    // 2秒後にカードを削除してカウント更新
-    setTimeout(function() {
-      card.style.opacity = '0';
-      setTimeout(function() {
-        card.remove();
-        updateCount();
-      }, 300);
-    }, 2000);
-  }
-}
-
-/** エラーメッセージをカードに表示する */
-function showCardError(requestId, msg) {
-  const msgEl = document.getElementById('req-msg-' + requestId);
-  if (!msgEl) return;
-  msgEl.textContent   = msg;
-  msgEl.style.display = 'block';
-  msgEl.style.color   = '#dc2626';
-}
-
-/** 残リクエスト数を更新する */
-function updateCount() {
-  const cards = document.querySelectorAll('[id^="req-card-"]');
-  const count = cards.length;
-  document.getElementById('req-count').textContent =
-    count > 0 ? count + ' 件の承認待ちリクエスト' : '';
-  if (count === 0) {
-    document.getElementById('req-list').style.display  = 'none';
-    document.getElementById('req-empty').style.display = 'block';
+  // 完了済みタスク
+  const done = state.doneTasks;
+  const doneSection = document.getElementById('done-section');
+  doneSection.classList.toggle('hidden', done.length === 0);
+  if (done.length > 0) {
+    document.getElementById('done-count-label').textContent = '(' + done.length + ')';
+    if (state.doneOpen) {
+      document.getElementById('done-list').innerHTML = done.map(t => taskRowHtml(t, true)).join('');
+    }
   }
 }
 
-// ─── 通知ステータスラベル ─────────────────────────────────────────────────────
-
-/**
- * API レスポンスの notify_status / notify_error から表示用文字列を作る。
- * @param {{ notify_status: string, notify_error: string }} result
- * @returns {string}
- */
-function buildNotifyLabel(result) {
-  const status = result.notify_status || '';
-  const err    = result.notify_error  || '';
-
-  if (status === 'sent')    return '✉ LINE通知を送信しました';
-  if (status === 'skipped') return '（LINE IDが未設定のため通知なし）';
-
-  // failed / error の場合はエラー詳細も表示する
-  const detail = err ? '\n' + err : '';
-  if (status === 'failed')  return '⚠ LINE通知の送信に失敗しました' + detail;
-  if (status === 'error')   return '⚠ 通知処理でエラーが発生しました' + detail;
-  return '';
+function taskRowHtml(task, isDone) {
+  const isUrgent = isBool(task.is_urgent);
+  return `
+  <div class="task-row" id="task-row-${task.task_id}">
+    ${!isDone ? `
+    <button onclick="completeTaskAction(${task.task_id})"
+      class="w-5 h-5 rounded-full border-2 border-gray-300 flex-shrink-0
+             hover:border-green-500 hover:bg-green-50 transition-colors">
+    </button>` : `
+    <div class="w-5 h-5 rounded-full bg-green-100 flex items-center justify-center flex-shrink-0">
+      <svg width="10" height="10" viewBox="0 0 24 24" fill="none"
+           stroke="#059669" stroke-width="3" stroke-linecap="round">
+        <path d="M20 6L9 17l-5-5"/>
+      </svg>
+    </div>`}
+    <div class="flex-1 min-w-0">
+      <p class="text-sm ${isDone ? 'text-gray-400 line-through' : 'text-gray-800'} leading-snug">
+        ${isUrgent && !isDone ? '<span class="text-orange-500 mr-1">⚡</span>' : ''}${escapeHtml(task.text)}
+      </p>
+    </div>
+    ${!isDone ? `
+    <button onclick="openTaskEditDialog(${task.task_id})"
+      class="text-gray-300 hover:text-indigo-500 transition-colors p-1">
+      <svg width="14" height="14" viewBox="0 0 24 24" fill="none"
+           stroke="currentColor" stroke-width="2" stroke-linecap="round">
+        <path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/>
+        <path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/>
+      </svg>
+    </button>` : ''}
+    <button onclick="deleteTaskAction(${task.task_id})"
+      class="text-gray-300 hover:text-red-400 transition-colors p-1">
+      <svg width="14" height="14" viewBox="0 0 24 24" fill="none"
+           stroke="currentColor" stroke-width="2.5" stroke-linecap="round">
+        <path d="M18 6L6 18M6 6l12 12"/>
+      </svg>
+    </button>
+  </div>`;
 }
 
-// ─── ユーティリティ ────────────────────────────────────────────────────────────
-
-/** 'YYYY-MM-DD' → '○月○日（曜日）' に変換する */
-function formatDate(dateStr) {
-  if (!dateStr) return '';
-  const [, m, d] = dateStr.split('-');
-  const date = new Date(dateStr + 'T00:00:00');
-  const dayNames = ['日', '月', '火', '水', '木', '金', '土'];
-  return parseInt(m) + '月' + parseInt(d) + '日（' + dayNames[date.getDay()] + '）';
+function toggleTaskForm() {
+  state.taskFormOpen = !state.taskFormOpen;
+  document.getElementById('task-form').classList.toggle('hidden', !state.taskFormOpen);
+  if (state.taskFormOpen) document.getElementById('new-task-text').focus();
 }
 
-/** XSS 対策: HTML 特殊文字をエスケープする */
-function escapeHtml(str) {
-  return String(str)
-    .replace(/&/g, '&amp;')
-    .replace(/</g, '&lt;')
-    .replace(/>/g, '&gt;')
-    .replace(/"/g, '&quot;')
-    .replace(/'/g, '&#39;');
+async function submitAddTask() {
+  const text     = document.getElementById('new-task-text').value.trim();
+  const isUrgent = document.getElementById('new-task-urgent').checked;
+  if (!text) { showToast('タスクを入力してください'); return; }
+
+  try {
+    const result = await apiPost('task_add', { text, is_urgent: isUrgent });
+    const newTask = { task_id: result.task_id, text, is_urgent: isUrgent, is_done: false };
+    state.pendingTasks.unshift(newTask);
+    if (isUrgent) state.pendingTasks.sort((a,b) => isBool(b.is_urgent) - isBool(a.is_urgent));
+    showToast('タスクを追加しました');
+    document.getElementById('new-task-text').value = '';
+    document.getElementById('new-task-urgent').checked = false;
+    toggleTaskForm();
+    renderTasks();
+  } catch(e) {
+    showToast('追加失敗: ' + e.message);
+  }
 }
+
+async function completeTaskAction(taskId) {
+  const row = document.getElementById('task-row-' + taskId);
+  if (row) row.style.opacity = '0.4';
+  try {
+    await apiPost('task_complete', { taskId });
+    const idx = state.pendingTasks.findIndex(t => String(t.task_id) === String(taskId));
+    if (idx !== -1) {
+      const [done] = state.pendingTasks.splice(idx, 1);
+      done.is_done = true;
+      state.doneTasks.unshift(done);
+    }
+    showToast('完了しました ✅');
+    renderTasks();
+  } catch(e) {
+    if (row) row.style.opacity = '1';
+    showToast('更新失敗: ' + e.message);
+  }
+}
+
+async function deleteTaskAction(taskId) {
+  if (!confirm('このタスクを削除しますか？')) return;
+  try {
+    await apiPost('task_delete', { taskId });
+    state.pendingTasks = state.pendingTasks.filter(t => String(t.task_id) !== String(taskId));
+    state.doneTasks    = state.doneTasks.filter(t => String(t.task_id) !== String(taskId));
+    showToast('削除しました');
+    renderTasks();
+  } catch(e) {
+    showToast('削除失敗: ' + e.message);
+  }
+}
+
+function openTaskEditDialog(taskId) {
+  const task = state.pendingTasks.find(t => String(t.task_id) === String(taskId));
+  if (!task) return;
+  state.editingTaskId = taskId;
+  document.getElementById('edit-task-text').value     = task.text || '';
+  document.getElementById('edit-task-urgent').checked = isBool(task.is_urgent);
+  document.getElementById('task-edit-dialog-backdrop').classList.add('open');
+}
+
+function closeTaskEditDialog() {
+  state.editingTaskId = null;
+  document.getElementById('task-edit-dialog-backdrop').classList.remove('open');
+}
+
+async function confirmEditTask() {
+  const text     = document.getElementById('edit-task-text').value.trim();
+  const isUrgent = document.getElementById('edit-task-urgent').checked;
+  if (!text) { showToast('タスクを入力してください'); return; }
+
+  // タスク更新はAPIになし（task_addとdeleteで代用） → フロント側のみ更新
+  // 実際はtask_updateエンドポイントが必要だが、今回は再作成で対応
+  try {
+    await apiPost('task_delete', { taskId: state.editingTaskId });
+    const result = await apiPost('task_add', { text, is_urgent: isUrgent });
+    state.pendingTasks = state.pendingTasks.filter(t => String(t.task_id) !== String(state.editingTaskId));
+    state.pendingTasks.unshift({ task_id: result.task_id, text, is_urgent: isUrgent, is_done: false });
+    showToast('更新しました');
+    closeTaskEditDialog();
+    renderTasks();
+  } catch(e) {
+    showToast('更新失敗: ' + e.message);
+  }
+}
+
+function toggleDoneSection() {
+  state.doneOpen = !state.doneOpen;
+  const list  = document.getElementById('done-list');
+  const arrow = document.getElementById('done-arrow');
+  list.classList.toggle('hidden', !state.doneOpen);
+  arrow.classList.toggle('open', state.doneOpen);
+  if (state.doneOpen) {
+    list.innerHTML = state.doneTasks.map(t => taskRowHtml(t, true)).join('');
+  }
+}
+
+// ─── 売上タブ ─────────────────────────────────────────────────────────────────
+
+function setSalesPeriod(period) {
+  state.salesPeriod = period;
+  document.getElementById('sp-month').classList.toggle('active', period === 'month');
+  document.getElementById('sp-all').classList.toggle('active',   period === 'all');
+  renderSales();
+}
+
+function renderSales() {
+  const today = new Date();
+  const thisMonth = today.getFullYear() + '-' + String(today.getMonth()+1).padStart(2,'0');
+
+  const sales = (state.allSales || []).filter(s => {
+    if (state.salesPeriod === 'month') {
+      return (s.sale_date || '').startsWith(thisMonth);
+    }
+    return true;
+  }).sort((a,b) => b.sale_date > a.sale_date ? 1 : -1);
+
+  // サマリー計算
+  const total       = sales.reduce((sum,s) => sum + (Number(s.amount)||0), 0);
+  const paidCount   = sales.filter(s => s.payment_status === 'paid').length;
+  const unpaidTotal = sales.filter(s => s.payment_status === 'unpaid')
+                           .reduce((sum,s) => sum + (Number(s.amount)||0), 0);
+
+  document.getElementById('sales-summary').classList.toggle('hidden', sales.length === 0);
+  document.getElementById('sales-total').textContent       = '¥' + total.toLocaleString();
+  document.getElementById('sales-paid-count').textContent  = paidCount;
+  document.getElementById('sales-unpaid-total').textContent = '¥' + unpaidTotal.toLocaleString();
+
+  if (sales.length === 0) {
+    document.getElementById('sales-list').innerHTML = '';
+    document.getElementById('sales-empty').classList.remove('hidden');
+    return;
+  }
+  document.getElementById('sales-empty').classList.add('hidden');
+
+  document.getElementById('sales-list').innerHTML = sales.map(s => {
+    const student = state.studentMap[String(s.student_id)];
+    const name = student ? student.name : (s.student_name || '（未設定）');
+    const typeLabel = SALE_TYPE_LABELS[s.type] || s.type;
+    const isPaid = s.payment_status === 'paid';
+
+    return `
+    <div class="card flex items-center gap-3">
+      <div class="flex-1 min-w-0">
+        <div class="flex items-center gap-2 flex-wrap mb-0.5">
+          <span class="text-sm font-bold text-gray-900">¥${Number(s.amount||0).toLocaleString()}</span>
+          <span class="badge ${isPaid ? 'badge-paid' : 'badge-unpaid'}">${isPaid ? '支払済' : '未払い'}</span>
+          <span class="badge" style="background:#f3f4f6;color:#374151;">${escapeHtml(typeLabel)}</span>
+        </div>
+        <p class="text-xs text-gray-500">${escapeHtml(name)} · ${fmtDate(s.sale_date)}</p>
+        ${s.memo ? `<p class="text-xs text-gray-400 mt-0.5">${escapeHtml(s.memo)}</p>` : ''}
+      </div>
+    </div>`;
+  }).join('');
+}
+
+// ─── レッスンキャンセル ────────────────────────────────────────────────────────
+
+function openCancelDialog(lessonId, studentName) {
+  state.cancelLessonId = lessonId;
+  document.getElementById('cancel-dialog-body').textContent =
+    studentName + ' さんのレッスンをキャンセルします。この操作は取り消せません。';
+  document.getElementById('cancel-dialog-backdrop').classList.add('open');
+}
+
+function closeCancelDialog() {
+  state.cancelLessonId = null;
+  document.getElementById('cancel-dialog-backdrop').classList.remove('open');
+}
+
+async function confirmCancelLesson() {
+  const btn = document.getElementById('cancel-confirm-btn');
+  btn.disabled = true; btn.textContent = '処理中...';
+  try {
+    await apiPost('cancel_lesson', { lessonId: state.cancelLessonId });
+    const id = state.cancelLessonId;
+    closeCancelDialog();
+    state.calLessons = state.calLessons.filter(l => String(l.lesson_id) !== String(id));
+    updateHeaderSub();
+    renderLessonList();
+    showToast('レッスンをキャンセルしました');
+  } catch(e) {
+    showToast('失敗: ' + e.message);
+  } finally {
+    btn.disabled = false; btn.textContent = 'キャンセルする';
+  }
+}
+
+// ─── Escキーでモーダルを閉じる ────────────────────────────────────────────────
+
+document.addEventListener('keydown', e => {
+  if (e.key !== 'Escape') return;
+  document.querySelectorAll('.sheet-backdrop.open, .dialog-backdrop.open').forEach(el => {
+    el.classList.remove('open');
+  });
+});
 </script>
+
 </body>
 </html>
