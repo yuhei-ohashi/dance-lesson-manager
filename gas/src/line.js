@@ -148,9 +148,9 @@ function sendBookingRejectedMessage(lineUserId, note) {
  */
 function _studioLabel(studioId) {
   var map = {
-    saito:  '齊藤DG（lime）',
-    sendai: '仙台SS（orange）',
-    izumi:  '泉中央（blue）',
+    saito:  '齊藤ダンスガーデン',
+    sendai: '仙台サテライトスタジオ',
+    izumi:  '西塚ダンスアートアカデミー',
   };
   return map[studioId] || studioId;
 }
