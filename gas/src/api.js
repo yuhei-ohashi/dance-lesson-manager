@@ -13,8 +13,9 @@
  *   UNAUTHORIZED     — 管理者シークレットが不正・未指定
  *
  * 認証:
- *   Phase 3: student_id をリクエストパラメータから直接受け取る
- *   Phase 4: LINE idToken 検証に切り替え予定
+ *   生徒向け（認証なし）: availability, availability_week, booking_request
+ *   管理者専用（ADMIN_SECRET 必須）: students, booking_requests, approve, reject, lessons
+ *   doPost の書き込み系（approve / reject / cancel_lesson）も ADMIN_SECRET を必須とする
  */
 
 // ─── レスポンスヘルパー ────────────────────────────────────────────────────────
@@ -55,12 +56,13 @@ function _err(code, message) {
  * 管理者シークレットを検証する。
  *
  * GAS スクリプトプロパティ（Script Properties）に
- * キー名「ADMIN_SECRET」で設定した値と、クエリパラメータ secret が一致しなければ
+ * キー名「ADMIN_SECRET」で設定した値と、params.secret が一致しなければ
  * エラーレスポンスを例外としてスローする。
  *
- * 呼び出し側は try/catch の中で使うこと（doGet の catch で自動的に捕捉される）。
+ * doGet（e.parameter）・doPost（JSON body）の両方で使えるよう
+ * オブジェクトの secret プロパティを参照する。
  *
- * @param {Object} params  e.parameter
+ * @param {Object} params  e.parameter または JSON body
  */
 function _requireAdminSecret(params) {
   var props  = PropertiesService.getScriptProperties();
@@ -179,9 +181,11 @@ function doGet(e) {
         return _ok(result);
       }
 
-      // ── レッスン一覧 ────────────────────────────────────────────────────────
+      // ── レッスン一覧（管理者専用） ──────────────────────────────────────────
+      // レッスン情報には生徒氏名・予約日時が含まれるため管理者のみ取得可能
       // date または studentId のどちらか一方が必要
       case 'lessons': {
+        _requireAdminSecret(params);
         if (params.date) {
           var result = getLessonsByDate(params.date);
           return _ok(result);
@@ -365,8 +369,9 @@ function doPost(e) {
         return _ok({ request_id: requestId });
       }
 
-      // ── 予約リクエスト承認 ──────────────────────────────────────────────────
+      // ── 予約リクエスト承認（管理者専用）────────────────────────────────────
       case 'approve': {
+        _requireAdminSecret(body);
         _requireParams(body, ['requestId']);
 
         var lessonOptions = {};
@@ -385,8 +390,9 @@ function doPost(e) {
         return _ok({ lesson_id: result.lessonId });
       }
 
-      // ── 予約リクエスト却下 ──────────────────────────────────────────────────
+      // ── 予約リクエスト却下（管理者専用）────────────────────────────────────
       case 'reject': {
+        _requireAdminSecret(body);
         _requireParams(body, ['requestId']);
 
         var result = rejectBookingRequest(body.requestId, body.note || '');
@@ -399,8 +405,9 @@ function doPost(e) {
         return _ok({ request_id: body.requestId });
       }
 
-      // ── レッスンキャンセル ──────────────────────────────────────────────────
+      // ── レッスンキャンセル（管理者専用）────────────────────────────────────
       case 'cancel_lesson': {
+        _requireAdminSecret(body);
         _requireParams(body, ['lessonId']);
 
         var lesson = getLesson(body.lessonId);
