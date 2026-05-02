@@ -250,7 +250,21 @@ function doGet(e) {
           line_user_id:       params.line_user_id  || '',
         });
 
-        return _ok({ request_id: requestId });
+        // 管理者へ着信通知（失敗しても予約リクエスト自体は成功扱い）
+        var notifyResult = sendNewBookingRequestMessage({
+          student_name_input: params.student_name_input,
+          requested_date:     params.requested_date,
+          requested_start:    params.requested_start,
+          requested_end:      params.requested_end,
+          studio_id:          params.studio_id,
+          note:               params.note || '',
+        });
+
+        return _ok({
+          request_id:     requestId,
+          notify_status:  notifyResult.skipped ? 'skipped' : (notifyResult.success ? 'sent' : 'failed'),
+          notify_error:   notifyResult.error || '',
+        });
       }
 
       // ── 予約リクエスト承認（管理者専用・GET 版）────────────────────────────
@@ -366,7 +380,21 @@ function doPost(e) {
           line_user_id:       body.line_user_id        || '',
         });
 
-        return _ok({ request_id: requestId });
+        // 管理者へ着信通知（失敗しても予約リクエスト自体は成功扱い）
+        var notifyResult = sendNewBookingRequestMessage({
+          student_name_input: body.student_name_input,
+          requested_date:     body.requested_date,
+          requested_start:    body.requested_start,
+          requested_end:      body.requested_end,
+          studio_id:          body.studio_id,
+          note:               body.note || '',
+        });
+
+        return _ok({
+          request_id:    requestId,
+          notify_status: notifyResult.skipped ? 'skipped' : (notifyResult.success ? 'sent' : 'failed'),
+          notify_error:  notifyResult.error || '',
+        });
       }
 
       // ── 予約リクエスト承認（管理者専用）────────────────────────────────────
