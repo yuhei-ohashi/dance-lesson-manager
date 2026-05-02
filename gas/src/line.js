@@ -81,9 +81,13 @@ function sendLinePushMessage(lineUserId, messages) {
       return { success: true };
     }
 
+    // レスポンスボディに LINE API のエラー詳細が含まれる
+    var body = '';
+    try { body = response.getContentText(); } catch (_) {}
+
     return {
       success: false,
-      error:   'LINE API エラー (HTTP ' + statusCode + ')',
+      error:   'LINE API エラー (HTTP ' + statusCode + '): ' + body,
     };
   } catch (e) {
     return { success: false, error: 'LINE API 呼び出し失敗: ' + e.message };

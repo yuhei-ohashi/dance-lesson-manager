@@ -397,12 +397,7 @@ async function approveRequest(requestId) {
       requestId: requestId,
       secret:    adminSecret,
     });
-    const notifyLabel = {
-      sent:    '✉ LINE通知を送信しました',
-      failed:  '⚠ LINE通知の送信に失敗しました（LINEトークンを確認してください）',
-      skipped: '（LINE IDが未設定のため通知なし）',
-      error:   '⚠ 通知処理でエラーが発生しました',
-    }[result.notify_status] || '';
+    const notifyLabel = buildNotifyLabel(result);
     showCardResult(requestId, 'approved', '✓ 承認しました（レッスンID: ' + result.lesson_id + '）\n' + notifyLabel);
   } catch (err) {
     setCardBusy(requestId, false);
@@ -444,12 +439,7 @@ async function confirmReject() {
       secret:    adminSecret,
       note:      note,
     });
-    const notifyLabel = {
-      sent:    '✉ LINE通知を送信しました',
-      failed:  '⚠ LINE通知の送信に失敗しました',
-      skipped: '（LINE IDが未設定のため通知なし）',
-      error:   '⚠ 通知処理でエラーが発生しました',
-    }[result.notify_status] || '';
+    const notifyLabel = buildNotifyLabel(result);
     const savedId = rejectTargetId;
     closeRejectModal();
     showCardResult(savedId, 'rejected', '✕ 却下しました\n' + notifyLabel);
@@ -532,6 +522,27 @@ function updateCount() {
     document.getElementById('req-list').style.display  = 'none';
     document.getElementById('req-empty').style.display = 'block';
   }
+}
+
+// ─── 通知ステータスラベル ─────────────────────────────────────────────────────
+
+/**
+ * API レスポンスの notify_status / notify_error から表示用文字列を作る。
+ * @param {{ notify_status: string, notify_error: string }} result
+ * @returns {string}
+ */
+function buildNotifyLabel(result) {
+  const status = result.notify_status || '';
+  const err    = result.notify_error  || '';
+
+  if (status === 'sent')    return '✉ LINE通知を送信しました';
+  if (status === 'skipped') return '（LINE IDが未設定のため通知なし）';
+
+  // failed / error の場合はエラー詳細も表示する
+  const detail = err ? '\n' + err : '';
+  if (status === 'failed')  return '⚠ LINE通知の送信に失敗しました' + detail;
+  if (status === 'error')   return '⚠ 通知処理でエラーが発生しました' + detail;
+  return '';
 }
 
 // ─── ユーティリティ ────────────────────────────────────────────────────────────

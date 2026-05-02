@@ -263,6 +263,7 @@ function approveBookingRequest(requestId, lessonOptions) {
       });
       if (!notifyResult.success) {
         Logger.log('承認通知の送信に失敗: ' + (notifyResult.error || '不明なエラー'));
+        result.notifyError = notifyResult.error || '不明なエラー';
       }
       addNotification({
         student_id:   notifyInfo.student_id,
@@ -275,6 +276,7 @@ function approveBookingRequest(requestId, lessonOptions) {
     } catch (notifyErr) {
       Logger.log('承認通知処理で例外: ' + notifyErr.message);
       result.notifyStatus = 'error';
+      result.notifyError  = notifyErr.message;
     }
   } else if (result.success) {
     result.notifyStatus = 'skipped';
@@ -331,6 +333,7 @@ function rejectBookingRequest(requestId, note) {
       var notifyResult = sendBookingRejectedMessage(notifyInfo.line_user_id, note || '');
       if (!notifyResult.success) {
         Logger.log('却下通知の送信に失敗: ' + (notifyResult.error || '不明なエラー'));
+        result.notifyError = notifyResult.error || '不明なエラー';
       }
       addNotification({
         student_id:   notifyInfo.student_id,
@@ -343,6 +346,7 @@ function rejectBookingRequest(requestId, note) {
     } catch (notifyErr) {
       Logger.log('却下通知処理で例外: ' + notifyErr.message);
       result.notifyStatus = 'error';
+      result.notifyError  = notifyErr.message;
     }
   } else if (result.success) {
     result.notifyStatus = 'skipped';

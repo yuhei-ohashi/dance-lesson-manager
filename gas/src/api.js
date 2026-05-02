@@ -268,7 +268,7 @@ function doGet(e) {
             : 'SLOT_UNAVAILABLE';
           return _err(code, result.reason);
         }
-        return _ok({ lesson_id: result.lessonId, notify_status: result.notifyStatus || 'skipped' });
+        return _ok({ lesson_id: result.lessonId, notify_status: result.notifyStatus || 'skipped', notify_error: result.notifyError || '' });
       }
 
       // ── 予約リクエスト却下（管理者専用・GET 版）────────────────────────────
@@ -283,7 +283,7 @@ function doGet(e) {
             : 'INVALID_PARAM';
           return _err(code, result.reason);
         }
-        return _ok({ request_id: params.requestId, notify_status: result.notifyStatus || 'skipped' });
+        return _ok({ request_id: params.requestId, notify_status: result.notifyStatus || 'skipped', notify_error: result.notifyError || '' });
       }
 
       default:
