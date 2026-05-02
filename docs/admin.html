@@ -133,7 +133,7 @@
      モーダル: 却下理由入力
 ════════════════════════════════════════════ -->
 <div id="reject-modal" class="fixed inset-0 z-50 flex items-center justify-center px-4"
-     style="display:none !important; background:rgba(0,0,0,0.5);">
+     style="display:none; background:rgba(0,0,0,0.5);">
   <div class="bg-white rounded-2xl p-6 w-full max-w-sm shadow-2xl">
     <h3 class="text-base font-bold text-gray-800 mb-3">却下理由（任意）</h3>
     <textarea id="reject-note" rows="3" placeholder="理由を入力（省略可）"
@@ -397,7 +397,13 @@ async function approveRequest(requestId) {
       requestId: requestId,
       secret:    adminSecret,
     });
-    showCardResult(requestId, 'approved', '✓ 承認しました（レッスン ID: ' + result.lesson_id + '）');
+    const notifyLabel = {
+      sent:    '✉ LINE通知を送信しました',
+      failed:  '⚠ LINE通知の送信に失敗しました（LINEトークンを確認してください）',
+      skipped: '（LINE IDが未設定のため通知なし）',
+      error:   '⚠ 通知処理でエラーが発生しました',
+    }[result.notify_status] || '';
+    showCardResult(requestId, 'approved', '✓ 承認しました（レッスンID: ' + result.lesson_id + '）\n' + notifyLabel);
   } catch (err) {
     setCardBusy(requestId, false);
     showCardError(requestId, '承認に失敗しました: ' + err.message);
@@ -432,14 +438,21 @@ async function confirmReject() {
   btn.textContent = '処理中...';
 
   try {
-    await apiFetch({
+    const result = await apiFetch({
       action:    'reject',
       requestId: rejectTargetId,
       secret:    adminSecret,
       note:      note,
     });
+    const notifyLabel = {
+      sent:    '✉ LINE通知を送信しました',
+      failed:  '⚠ LINE通知の送信に失敗しました',
+      skipped: '（LINE IDが未設定のため通知なし）',
+      error:   '⚠ 通知処理でエラーが発生しました',
+    }[result.notify_status] || '';
+    const savedId = rejectTargetId;
     closeRejectModal();
-    showCardResult(rejectTargetId, 'rejected', '✕ 却下しました');
+    showCardResult(savedId, 'rejected', '✕ 却下しました\n' + notifyLabel);
   } catch (err) {
     document.getElementById('reject-error').textContent   = '却下に失敗しました: ' + err.message;
     document.getElementById('reject-error').style.display = 'block';
@@ -480,9 +493,10 @@ function showCardResult(requestId, type, msg) {
   if (rejectBtn)  rejectBtn.style.display  = 'none';
 
   if (msgEl) {
-    msgEl.textContent   = msg;
-    msgEl.style.display = 'block';
-    msgEl.style.color   = type === 'approved' ? '#059669' : '#dc2626';
+    msgEl.style.whiteSpace = 'pre-line';
+    msgEl.textContent      = msg;
+    msgEl.style.display    = 'block';
+    msgEl.style.color      = type === 'approved' ? '#059669' : '#dc2626';
   }
 
   if (card) {

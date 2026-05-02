@@ -251,21 +251,33 @@ function approveBookingRequest(requestId, lessonOptions) {
   });
 
   // ─ フェーズ2: LINE 通知（ロック解放後）─────────────────────────────────────
-  // シート操作と切り離すことで、通信遅延がロックに影響しないようにする
+  // シート操作と切り離すことで、通信遅延がロックに影響しないようにする。
+  // 通知の失敗はログに記録するが、承認結果（result）には影響させない。
   if (result.success && notifyInfo) {
-    var notifyResult = sendBookingApprovedMessage(notifyInfo.line_user_id, {
-      requested_date:  notifyInfo.requested_date,
-      requested_start: notifyInfo.requested_start,
-      requested_end:   notifyInfo.requested_end,
-      studio_id:       notifyInfo.studio_id,
-    });
-    addNotification({
-      student_id:   notifyInfo.student_id,
-      line_user_id: notifyInfo.line_user_id,
-      type:         'booking_approved',
-      related_id:   requestId,
-      status:       notifyResult.success ? 'sent' : 'failed',
-    });
+    try {
+      var notifyResult = sendBookingApprovedMessage(notifyInfo.line_user_id, {
+        requested_date:  notifyInfo.requested_date,
+        requested_start: notifyInfo.requested_start,
+        requested_end:   notifyInfo.requested_end,
+        studio_id:       notifyInfo.studio_id,
+      });
+      if (!notifyResult.success) {
+        Logger.log('承認通知の送信に失敗: ' + (notifyResult.error || '不明なエラー'));
+      }
+      addNotification({
+        student_id:   notifyInfo.student_id,
+        line_user_id: notifyInfo.line_user_id,
+        type:         'booking_approved',
+        related_id:   requestId,
+        status:       notifyResult.success ? 'sent' : 'failed',
+      });
+      result.notifyStatus = notifyResult.success ? 'sent' : 'failed';
+    } catch (notifyErr) {
+      Logger.log('承認通知処理で例外: ' + notifyErr.message);
+      result.notifyStatus = 'error';
+    }
+  } else if (result.success) {
+    result.notifyStatus = 'skipped';
   }
 
   return result;
@@ -313,15 +325,27 @@ function rejectBookingRequest(requestId, note) {
   });
 
   // ─ フェーズ2: LINE 通知（ロック解放後）─────────────────────────────────────
+  // 通知の失敗はログに記録するが、却下結果（result）には影響させない。
   if (result.success && notifyInfo) {
-    var notifyResult = sendBookingRejectedMessage(notifyInfo.line_user_id, note || '');
-    addNotification({
-      student_id:   notifyInfo.student_id,
-      line_user_id: notifyInfo.line_user_id,
-      type:         'booking_rejected',
-      related_id:   requestId,
-      status:       notifyResult.success ? 'sent' : 'failed',
-    });
+    try {
+      var notifyResult = sendBookingRejectedMessage(notifyInfo.line_user_id, note || '');
+      if (!notifyResult.success) {
+        Logger.log('却下通知の送信に失敗: ' + (notifyResult.error || '不明なエラー'));
+      }
+      addNotification({
+        student_id:   notifyInfo.student_id,
+        line_user_id: notifyInfo.line_user_id,
+        type:         'booking_rejected',
+        related_id:   requestId,
+        status:       notifyResult.success ? 'sent' : 'failed',
+      });
+      result.notifyStatus = notifyResult.success ? 'sent' : 'failed';
+    } catch (notifyErr) {
+      Logger.log('却下通知処理で例外: ' + notifyErr.message);
+      result.notifyStatus = 'error';
+    }
+  } else if (result.success) {
+    result.notifyStatus = 'skipped';
   }
 
   return result;
