@@ -139,6 +139,45 @@ function sendBookingRejectedMessage(lineUserId, note) {
   return sendLinePushMessage(lineUserId, [{ type: 'text', text: text }]);
 }
 
+/**
+ * 新しい予約リクエスト着信を管理者へ通知する。
+ *
+ * GAS スクリプトプロパティ「ADMIN_LINE_USER_ID」に設定した
+ * 管理者個人の LINE ユーザー ID へ Push 通知を送信する。
+ * ID が未設定の場合はスキップ扱い（エラーにはしない）。
+ *
+ * @param {Object} info
+ * @param {string} info.student_name_input  生徒の表示名
+ * @param {string} info.requested_date      YYYY-MM-DD
+ * @param {string} info.requested_start     HH:MM
+ * @param {string} info.requested_end       HH:MM
+ * @param {string} info.studio_id           スタジオID
+ * @param {string} [info.note]              備考
+ * @returns {{ success: boolean, skipped?: boolean, error?: string }}
+ */
+function sendNewBookingRequestMessage(info) {
+  var adminUserId = PropertiesService
+    .getScriptProperties()
+    .getProperty('ADMIN_LINE_USER_ID');
+
+  if (!adminUserId) {
+    return { success: true, skipped: true };
+  }
+
+  var studioLabel = _studioLabel(info.studio_id);
+  var noteText = info.note ? '\n📝 備考：' + info.note : '';
+  var text =
+    '📩 新しい予約リクエストが届きました！\n\n' +
+    '👤 生徒：' + info.student_name_input + '\n' +
+    '📅 日付：' + info.requested_date + '\n' +
+    '⏰ 時間：' + info.requested_start + '〜' + info.requested_end + '\n' +
+    '🏢 スタジオ：' + studioLabel +
+    noteText + '\n\n' +
+    '管理画面から承認・却下してください。';
+
+  return sendLinePushMessage(adminUserId, [{ type: 'text', text: text }]);
+}
+
 // ─── スタジオ名変換（内部用）──────────────────────────────────────────────────
 
 /**
