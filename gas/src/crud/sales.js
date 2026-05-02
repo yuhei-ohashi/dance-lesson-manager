@@ -137,6 +137,21 @@ function updateSalePaymentStatus(saleId, paymentStatus) {
 }
 
 /**
+ * 売上を削除する（行ごと物理削除）。
+ * @param {number} saleId
+ * @returns {boolean}
+ */
+function deleteSale(saleId) {
+  return withLock(function() {
+    var sheet = getSheet(SALES_SHEET);
+    var rowNumber = findRowById(sheet, saleId);
+    if (rowNumber === -1) return false;
+    sheet.deleteRow(rowNumber);
+    return true;
+  });
+}
+
+/**
  * 売上情報を更新する（任意フィールド）。
  *
  * @param {number} saleId
