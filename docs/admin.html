@@ -297,7 +297,18 @@
     <!-- 日付ヘッダー -->
     <div id="cal-date-header" class="flex items-center justify-between mb-3">
       <span id="cal-date-label" class="text-base font-bold text-gray-800"></span>
-      <span id="cal-lesson-count" class="text-sm text-gray-500"></span>
+      <div class="flex items-center gap-2">
+        <span id="cal-lesson-count" class="text-sm text-gray-500"></span>
+        <button onclick="openAddLessonDialog()"
+          class="flex items-center gap-1 px-3 py-1.5 grad text-white
+                 text-xs font-bold rounded-xl hover:opacity-90 transition-opacity">
+          <svg width="12" height="12" viewBox="0 0 24 24" fill="none"
+               stroke="white" stroke-width="3" stroke-linecap="round">
+            <path d="M12 5v14M5 12h14"/>
+          </svg>
+          追加
+        </button>
+      </div>
     </div>
 
     <!-- ローディング -->
@@ -415,10 +426,34 @@
   <!-- ══ タブ: 売上 ════════════════════════════════════════ -->
   <div id="tab-sales" class="tab-content content-area px-4 py-4">
 
-    <!-- 期間フィルター -->
-    <div class="flex gap-2 mb-4">
-      <button onclick="setSalesPeriod('month')" id="sp-month" class="filter-tab active">今月</button>
-      <button onclick="setSalesPeriod('all')" id="sp-all" class="filter-tab">全期間</button>
+    <!-- ヘッダー（期間フィルター + ボタン群） -->
+    <div class="flex items-center justify-between mb-4">
+      <div class="flex gap-2">
+        <button onclick="setSalesPeriod('month')" id="sp-month" class="filter-tab active">今月</button>
+        <button onclick="setSalesPeriod('all')" id="sp-all" class="filter-tab">全期間</button>
+      </div>
+      <div class="flex gap-2">
+        <button onclick="exportSalesCSV()"
+          class="flex items-center gap-1 px-3 py-1.5 border-2 border-indigo-200 text-indigo-600
+                 text-xs font-bold rounded-xl hover:bg-indigo-50 transition-colors">
+          <svg width="12" height="12" viewBox="0 0 24 24" fill="none"
+               stroke="currentColor" stroke-width="2.5" stroke-linecap="round">
+            <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/>
+            <polyline points="7 10 12 15 17 10"/>
+            <line x1="12" y1="15" x2="12" y2="3"/>
+          </svg>
+          CSV
+        </button>
+        <button onclick="openAddSaleDialog()"
+          class="flex items-center gap-1 px-3 py-1.5 grad text-white
+                 text-xs font-bold rounded-xl hover:opacity-90 transition-opacity">
+          <svg width="12" height="12" viewBox="0 0 24 24" fill="none"
+               stroke="white" stroke-width="3" stroke-linecap="round">
+            <path d="M12 5v14M5 12h14"/>
+          </svg>
+          追加
+        </button>
+      </div>
     </div>
 
     <!-- サマリー -->
@@ -653,6 +688,163 @@
   </div>
 </div>
 
+<!-- ════════════════════════════════════════════════════════
+     ダイアログ: レッスン追加
+════════════════════════════════════════════════════════ -->
+<div id="add-lesson-dialog-backdrop" class="dialog-backdrop">
+  <div class="dialog" style="max-width:400px;">
+    <h3 class="text-base font-bold text-gray-800 mb-4">レッスンを追加</h3>
+
+    <div class="space-y-3">
+      <div>
+        <label class="block text-xs font-bold text-gray-600 mb-1">日付 <span class="text-red-500">*</span></label>
+        <input id="al-date" type="date"
+          class="w-full border-2 border-gray-200 rounded-xl px-3 py-2 text-sm
+                 focus:outline-none focus:border-indigo-500 transition-colors">
+      </div>
+      <div class="flex gap-2">
+        <div class="flex-1">
+          <label class="block text-xs font-bold text-gray-600 mb-1">開始 <span class="text-red-500">*</span></label>
+          <input id="al-start" type="time" step="1800"
+            class="w-full border-2 border-gray-200 rounded-xl px-3 py-2 text-sm
+                   focus:outline-none focus:border-indigo-500 transition-colors">
+        </div>
+        <div class="flex-1">
+          <label class="block text-xs font-bold text-gray-600 mb-1">終了 <span class="text-red-500">*</span></label>
+          <input id="al-end" type="time" step="1800"
+            class="w-full border-2 border-gray-200 rounded-xl px-3 py-2 text-sm
+                   focus:outline-none focus:border-indigo-500 transition-colors">
+        </div>
+      </div>
+      <div>
+        <label class="block text-xs font-bold text-gray-600 mb-1">生徒 <span class="text-red-500">*</span></label>
+        <input id="al-student-name" type="text" placeholder="生徒名を入力" list="al-student-datalist"
+          oninput="onAlStudentInput(this.value)"
+          class="w-full border-2 border-gray-200 rounded-xl px-3 py-2 text-sm
+                 focus:outline-none focus:border-indigo-500 transition-colors">
+        <datalist id="al-student-datalist"></datalist>
+        <input type="hidden" id="al-student-id">
+      </div>
+      <div>
+        <label class="block text-xs font-bold text-gray-600 mb-1">スタジオ <span class="text-red-500">*</span></label>
+        <select id="al-studio"
+          class="w-full border-2 border-gray-200 rounded-xl px-3 py-2 text-sm
+                 focus:outline-none focus:border-indigo-500 transition-colors bg-white">
+          <option value="saito">齊藤DG</option>
+          <option value="sendai">仙台SS</option>
+          <option value="izumi">泉中央</option>
+        </select>
+      </div>
+      <div class="flex gap-2">
+        <div class="flex-1">
+          <label class="block text-xs font-bold text-gray-600 mb-1">レベル</label>
+          <input id="al-level" type="text" placeholder="初級・中級…"
+            class="w-full border-2 border-gray-200 rounded-xl px-3 py-2 text-sm
+                   focus:outline-none focus:border-indigo-500 transition-colors">
+        </div>
+        <div style="width:90px;">
+          <label class="block text-xs font-bold text-gray-600 mb-1">回数</label>
+          <input id="al-count" type="number" min="1" value="1"
+            class="w-full border-2 border-gray-200 rounded-xl px-3 py-2 text-sm
+                   focus:outline-none focus:border-indigo-500 transition-colors">
+        </div>
+      </div>
+      <div>
+        <label class="block text-xs font-bold text-gray-600 mb-1">メモ</label>
+        <input id="al-note" type="text" placeholder="備考（任意）"
+          class="w-full border-2 border-gray-200 rounded-xl px-3 py-2 text-sm
+                 focus:outline-none focus:border-indigo-500 transition-colors">
+      </div>
+    </div>
+
+    <p id="al-err" class="text-red-500 text-sm mt-3 hidden"></p>
+    <div class="flex gap-3 mt-4">
+      <button onclick="closeAddLessonDialog()"
+        class="flex-1 py-2.5 border-2 border-gray-200 rounded-xl text-gray-600
+               font-semibold text-sm hover:bg-gray-50 transition-colors">
+        キャンセル
+      </button>
+      <button id="al-submit-btn" onclick="submitAddLesson()"
+        class="flex-1 py-2.5 grad text-white text-sm font-bold rounded-xl
+               hover:opacity-90 transition-opacity">
+        追加する
+      </button>
+    </div>
+  </div>
+</div>
+
+<!-- ════════════════════════════════════════════════════════
+     ダイアログ: 売上追加
+════════════════════════════════════════════════════════ -->
+<div id="add-sale-dialog-backdrop" class="dialog-backdrop">
+  <div class="dialog" style="max-width:400px;">
+    <h3 class="text-base font-bold text-gray-800 mb-4">売上を追加</h3>
+
+    <div class="space-y-3">
+      <div>
+        <label class="block text-xs font-bold text-gray-600 mb-1">日付 <span class="text-red-500">*</span></label>
+        <input id="as-date" type="date"
+          class="w-full border-2 border-gray-200 rounded-xl px-3 py-2 text-sm
+                 focus:outline-none focus:border-indigo-500 transition-colors">
+      </div>
+      <div>
+        <label class="block text-xs font-bold text-gray-600 mb-1">生徒名</label>
+        <input id="as-student-name" type="text" placeholder="生徒名（任意）" list="as-student-datalist"
+          oninput="onAsStudentInput(this.value)"
+          class="w-full border-2 border-gray-200 rounded-xl px-3 py-2 text-sm
+                 focus:outline-none focus:border-indigo-500 transition-colors">
+        <datalist id="as-student-datalist"></datalist>
+        <input type="hidden" id="as-student-id">
+      </div>
+      <div>
+        <label class="block text-xs font-bold text-gray-600 mb-1">金額（円） <span class="text-red-500">*</span></label>
+        <input id="as-amount" type="number" min="0" placeholder="例: 5000"
+          class="w-full border-2 border-gray-200 rounded-xl px-3 py-2 text-sm
+                 focus:outline-none focus:border-indigo-500 transition-colors">
+      </div>
+      <div>
+        <label class="block text-xs font-bold text-gray-600 mb-1">種別 <span class="text-red-500">*</span></label>
+        <select id="as-type"
+          class="w-full border-2 border-gray-200 rounded-xl px-3 py-2 text-sm
+                 focus:outline-none focus:border-indigo-500 transition-colors bg-white">
+          <option value="lesson">レッスン</option>
+          <option value="ticket_purchase">チケット購入</option>
+          <option value="other">その他</option>
+        </select>
+      </div>
+      <div>
+        <label class="block text-xs font-bold text-gray-600 mb-1">支払状態</label>
+        <select id="as-payment"
+          class="w-full border-2 border-gray-200 rounded-xl px-3 py-2 text-sm
+                 focus:outline-none focus:border-indigo-500 transition-colors bg-white">
+          <option value="paid">支払済み</option>
+          <option value="unpaid">未払い</option>
+        </select>
+      </div>
+      <div>
+        <label class="block text-xs font-bold text-gray-600 mb-1">メモ</label>
+        <input id="as-memo" type="text" placeholder="備考（任意）"
+          class="w-full border-2 border-gray-200 rounded-xl px-3 py-2 text-sm
+                 focus:outline-none focus:border-indigo-500 transition-colors">
+      </div>
+    </div>
+
+    <p id="as-err" class="text-red-500 text-sm mt-3 hidden"></p>
+    <div class="flex gap-3 mt-4">
+      <button onclick="closeAddSaleDialog()"
+        class="flex-1 py-2.5 border-2 border-gray-200 rounded-xl text-gray-600
+               font-semibold text-sm hover:bg-gray-50 transition-colors">
+        キャンセル
+      </button>
+      <button id="as-submit-btn" onclick="submitAddSale()"
+        class="flex-1 py-2.5 grad text-white text-sm font-bold rounded-xl
+               hover:opacity-90 transition-opacity">
+        追加する
+      </button>
+    </div>
+  </div>
+</div>
+
 <!-- トースト -->
 <div id="toast"></div>
 
@@ -759,13 +951,14 @@ function avatarChar(name) {
   return (name||'？').charAt(0);
 }
 
-/** トーストを表示する */
+/** トーストを表示する（テキストのみ・UNDOなし） */
 let _toastTimer = null;
 function showToast(msg) {
   const el = document.getElementById('toast');
+  clearTimeout(_toastTimer);
+  _undoCallback = null;
   el.textContent = msg;
   el.classList.add('show');
-  clearTimeout(_toastTimer);
   _toastTimer = setTimeout(() => el.classList.remove('show'), 2500);
 }
 
@@ -1488,14 +1681,35 @@ async function completeTaskAction(taskId) {
 }
 
 async function deleteTaskAction(taskId) {
-  if (!confirm('このタスクを削除しますか？')) return;
+  const task = [...state.pendingTasks, ...state.doneTasks].find(t => String(t.task_id) === String(taskId));
+  if (!task) return;
+
+  // 楽観的削除（先にUIから消す）
+  state.pendingTasks = state.pendingTasks.filter(t => String(t.task_id) !== String(taskId));
+  state.doneTasks    = state.doneTasks.filter(t => String(t.task_id) !== String(taskId));
+  renderTasks();
+
+  showUndoToast('タスクを削除しました', async () => {
+    // 取り消し：ローカルに戻す（サーバー再追加はしない）
+    if (task.is_done || task.is_done === 'TRUE') {
+      state.doneTasks.unshift(task);
+    } else {
+      state.pendingTasks.unshift(task);
+    }
+    renderTasks();
+    showToast('削除を取り消しました');
+  });
+
   try {
     await apiPost('task_delete', { taskId });
-    state.pendingTasks = state.pendingTasks.filter(t => String(t.task_id) !== String(taskId));
-    state.doneTasks    = state.doneTasks.filter(t => String(t.task_id) !== String(taskId));
-    showToast('削除しました');
-    renderTasks();
   } catch(e) {
+    // サーバー削除失敗時はローカルに戻す
+    if (task.is_done || task.is_done === 'TRUE') {
+      state.doneTasks.unshift(task);
+    } else {
+      state.pendingTasks.unshift(task);
+    }
+    renderTasks();
     showToast('削除失敗: ' + e.message);
   }
 }
@@ -1590,7 +1804,7 @@ function renderSales() {
     const isPaid = s.payment_status === 'paid';
 
     return `
-    <div class="card flex items-center gap-3">
+    <div class="card flex items-center gap-3" id="sale-card-${s.sale_id}">
       <div class="flex-1 min-w-0">
         <div class="flex items-center gap-2 flex-wrap mb-0.5">
           <span class="text-sm font-bold text-gray-900">¥${Number(s.amount||0).toLocaleString()}</span>
@@ -1600,6 +1814,13 @@ function renderSales() {
         <p class="text-xs text-gray-500">${escapeHtml(name)} · ${fmtDate(s.sale_date)}</p>
         ${s.memo ? `<p class="text-xs text-gray-400 mt-0.5">${escapeHtml(s.memo)}</p>` : ''}
       </div>
+      <button onclick="deleteSaleAction(${s.sale_id})"
+        class="text-gray-300 hover:text-red-400 transition-colors flex-shrink-0 p-1">
+        <svg width="14" height="14" viewBox="0 0 24 24" fill="none"
+             stroke="currentColor" stroke-width="2.5" stroke-linecap="round">
+          <path d="M18 6L6 18M6 6l12 12"/>
+        </svg>
+      </button>
     </div>`;
   }).join('');
 }
@@ -1634,6 +1855,270 @@ async function confirmCancelLesson() {
   } finally {
     btn.disabled = false; btn.textContent = 'キャンセルする';
   }
+}
+
+// ─── UNDOトースト ─────────────────────────────────────────────────────────────
+
+let _undoTimer    = null;
+let _undoCallback = null;
+
+function showUndoToast(msg, undoFn) {
+  const el = document.getElementById('toast');
+  _undoCallback = undoFn;
+  el.innerHTML = escapeHtml(msg) +
+    ' <button onclick="triggerUndo()" style="margin-left:8px;font-weight:700;' +
+    'text-decoration:underline;background:none;border:none;color:white;cursor:pointer;' +
+    'font-size:13px;">取り消す</button>';
+  el.classList.add('show');
+  clearTimeout(_undoTimer);
+  _undoTimer = setTimeout(() => {
+    el.classList.remove('show');
+    _undoCallback = null;
+  }, 4000);
+}
+
+function triggerUndo() {
+  clearTimeout(_undoTimer);
+  document.getElementById('toast').classList.remove('show');
+  if (_undoCallback) {
+    const fn = _undoCallback;
+    _undoCallback = null;
+    fn();
+  }
+}
+
+// ─── レッスン追加ダイアログ ────────────────────────────────────────────────────
+
+function openAddLessonDialog() {
+  // datalist に生徒名を設定
+  const dl = document.getElementById('al-student-datalist');
+  dl.innerHTML = state.students.map(s =>
+    `<option value="${escapeHtml(s.name)}" data-id="${s.student_id}">`
+  ).join('');
+
+  document.getElementById('al-date').value  = state.calDate;
+  document.getElementById('al-start').value = '';
+  document.getElementById('al-end').value   = '';
+  document.getElementById('al-student-name').value = '';
+  document.getElementById('al-student-id').value   = '';
+  document.getElementById('al-level').value  = '';
+  document.getElementById('al-count').value  = '1';
+  document.getElementById('al-note').value   = '';
+  document.getElementById('al-err').classList.add('hidden');
+  document.getElementById('add-lesson-dialog-backdrop').classList.add('open');
+}
+
+function closeAddLessonDialog() {
+  document.getElementById('add-lesson-dialog-backdrop').classList.remove('open');
+}
+
+function onAlStudentInput(val) {
+  const matched = state.students.find(s => s.name === val);
+  document.getElementById('al-student-id').value = matched ? matched.student_id : '';
+}
+
+async function submitAddLesson() {
+  const date    = document.getElementById('al-date').value;
+  const start   = document.getElementById('al-start').value;
+  const end     = document.getElementById('al-end').value;
+  const stuName = document.getElementById('al-student-name').value.trim();
+  const stuId   = document.getElementById('al-student-id').value;
+  const studio  = document.getElementById('al-studio').value;
+  const level   = document.getElementById('al-level').value.trim();
+  const count   = document.getElementById('al-count').value;
+  const note    = document.getElementById('al-note').value.trim();
+  const errEl   = document.getElementById('al-err');
+  const btn     = document.getElementById('al-submit-btn');
+
+  errEl.classList.add('hidden');
+
+  if (!date)    { errEl.textContent = '日付を入力してください'; errEl.classList.remove('hidden'); return; }
+  if (!start)   { errEl.textContent = '開始時刻を入力してください'; errEl.classList.remove('hidden'); return; }
+  if (!end)     { errEl.textContent = '終了時刻を入力してください'; errEl.classList.remove('hidden'); return; }
+  if (!stuName) { errEl.textContent = '生徒名を入力してください'; errEl.classList.remove('hidden'); return; }
+  if (!stuId)   { errEl.textContent = '生徒を選択してください（候補から選んでください）'; errEl.classList.remove('hidden'); return; }
+
+  btn.disabled = true; btn.textContent = '追加中...';
+  try {
+    const result = await apiPost('add_lesson', {
+      lesson_date:  date,
+      start_time:   start,
+      end_time:     end,
+      student_id:   stuId,
+      studio_id:    studio,
+      level,
+      lesson_count: Number(count) || 1,
+      note,
+    });
+
+    // ローカル state に追加してすぐ反映
+    const student = state.studentMap[String(stuId)] || {};
+    const newLesson = {
+      lesson_id:    result.lesson_id,
+      lesson_date:  date,
+      start_time:   start,
+      end_time:     end,
+      student_id:   stuId,
+      student_name_input: stuName,
+      studio_id:    studio,
+      level,
+      lesson_count: count,
+      note,
+      status: 'confirmed',
+    };
+    if (date === state.calDate) {
+      state.calLessons.push(newLesson);
+      updateHeaderSub();
+      renderLessonList();
+    }
+
+    closeAddLessonDialog();
+    showToast('レッスンを追加しました ✅');
+  } catch(e) {
+    errEl.textContent = e.message || '追加に失敗しました';
+    errEl.classList.remove('hidden');
+  } finally {
+    btn.disabled = false; btn.textContent = '追加する';
+  }
+}
+
+// ─── 売上追加ダイアログ ────────────────────────────────────────────────────────
+
+function openAddSaleDialog() {
+  const dl = document.getElementById('as-student-datalist');
+  dl.innerHTML = state.students.map(s =>
+    `<option value="${escapeHtml(s.name)}" data-id="${s.student_id}">`
+  ).join('');
+
+  document.getElementById('as-date').value         = todayStr();
+  document.getElementById('as-student-name').value = '';
+  document.getElementById('as-student-id').value   = '';
+  document.getElementById('as-amount').value        = '';
+  document.getElementById('as-type').value          = 'lesson';
+  document.getElementById('as-payment').value       = 'paid';
+  document.getElementById('as-memo').value          = '';
+  document.getElementById('as-err').classList.add('hidden');
+  document.getElementById('add-sale-dialog-backdrop').classList.add('open');
+}
+
+function closeAddSaleDialog() {
+  document.getElementById('add-sale-dialog-backdrop').classList.remove('open');
+}
+
+function onAsStudentInput(val) {
+  const matched = state.students.find(s => s.name === val);
+  document.getElementById('as-student-id').value = matched ? matched.student_id : '';
+}
+
+async function submitAddSale() {
+  const date        = document.getElementById('as-date').value;
+  const stuName     = document.getElementById('as-student-name').value.trim();
+  const stuId       = document.getElementById('as-student-id').value;
+  const amount      = document.getElementById('as-amount').value;
+  const type        = document.getElementById('as-type').value;
+  const payment     = document.getElementById('as-payment').value;
+  const memo        = document.getElementById('as-memo').value.trim();
+  const errEl       = document.getElementById('as-err');
+  const btn         = document.getElementById('as-submit-btn');
+
+  errEl.classList.add('hidden');
+
+  if (!date)   { errEl.textContent = '日付を入力してください'; errEl.classList.remove('hidden'); return; }
+  if (!amount || Number(amount) <= 0) {
+    errEl.textContent = '金額を入力してください'; errEl.classList.remove('hidden'); return;
+  }
+
+  btn.disabled = true; btn.textContent = '追加中...';
+  try {
+    const result = await apiPost('sale_add', {
+      sale_date:      date,
+      student_id:     stuId   || '',
+      student_name:   stuName || '',
+      amount:         Number(amount),
+      type,
+      payment_status: payment,
+      memo,
+    });
+
+    const newSale = {
+      sale_id:        result.sale_id,
+      sale_date:      date,
+      student_id:     stuId,
+      student_name:   stuName,
+      amount:         Number(amount),
+      type,
+      payment_status: payment,
+      memo,
+    };
+    state.allSales.push(newSale);
+    closeAddSaleDialog();
+    renderSales();
+    showToast('売上を追加しました ✅');
+  } catch(e) {
+    errEl.textContent = e.message || '追加に失敗しました';
+    errEl.classList.remove('hidden');
+  } finally {
+    btn.disabled = false; btn.textContent = '追加する';
+  }
+}
+
+// ─── 売上削除 ─────────────────────────────────────────────────────────────────
+
+async function deleteSaleAction(saleId) {
+  const sale = state.allSales.find(s => String(s.sale_id) === String(saleId));
+  if (!sale) return;
+
+  // 楽観的削除
+  state.allSales = state.allSales.filter(s => String(s.sale_id) !== String(saleId));
+  renderSales();
+
+  showUndoToast('売上を削除しました', () => {
+    state.allSales.push(sale);
+    state.allSales.sort((a, b) => b.sale_date > a.sale_date ? 1 : -1);
+    renderSales();
+    showToast('削除を取り消しました');
+  });
+
+  try {
+    await apiPost('sale_delete', { saleId });
+  } catch(e) {
+    state.allSales.push(sale);
+    renderSales();
+    showToast('削除失敗: ' + e.message);
+  }
+}
+
+// ─── 売上 CSV 出力 ────────────────────────────────────────────────────────────
+
+function exportSalesCSV() {
+  const today = new Date();
+  const thisMonth = today.getFullYear() + '-' + String(today.getMonth()+1).padStart(2,'0');
+
+  const sales = (state.allSales || []).filter(s => {
+    if (state.salesPeriod === 'month') return (s.sale_date || '').startsWith(thisMonth);
+    return true;
+  }).sort((a,b) => b.sale_date > a.sale_date ? 1 : -1);
+
+  const csv = [
+    ['日付', '生徒名', '金額', '種別', '支払状態', 'メモ'],
+    ...sales.map(s => {
+      const student = state.studentMap[String(s.student_id)];
+      const name = student ? student.name : (s.student_name || '');
+      const typeLabel = SALE_TYPE_LABELS[s.type] || s.type;
+      const payLabel  = s.payment_status === 'paid' ? '支払済み' : '未払い';
+      return [s.sale_date, name, s.amount, typeLabel, payLabel, s.memo || ''];
+    }),
+  ].map(row => row.map(v => '"' + String(v).replace(/"/g, '""') + '"').join(',')).join('\n');
+
+  const bom  = '\uFEFF';
+  const blob = new Blob([bom + csv], { type: 'text/csv;charset=utf-8;' });
+  const url  = URL.createObjectURL(blob);
+  const a    = document.createElement('a');
+  a.href     = url;
+  a.download = '売上_' + (state.salesPeriod === 'month' ? thisMonth : '全期間') + '.csv';
+  a.click();
+  URL.revokeObjectURL(url);
+  showToast('CSVをダウンロードしました');
 }
 
 // ─── Escキーでモーダルを閉じる ────────────────────────────────────────────────

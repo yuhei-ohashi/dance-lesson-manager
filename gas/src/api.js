@@ -17,7 +17,8 @@
  *   管理者専用（ADMIN_SECRET 必須）: students, booking_requests, approve, reject, lessons,
  *                                    tasks, lesson_memos, sales
  *   doPost の書き込み系（approve / reject / cancel_lesson / task_add / task_complete /
- *                        task_delete / lesson_memo_add / lesson_memo_update）も ADMIN_SECRET を必須とする
+ *                        task_delete / lesson_memo_add / lesson_memo_update /
+ *                        add_lesson / sale_add / sale_delete）も ADMIN_SECRET を必須とする
  */
 
 // ─── レスポンスヘルパー ────────────────────────────────────────────────────────
@@ -516,6 +517,63 @@ function doPost(e) {
         });
         if (!ok) return _err('NOT_FOUND', 'メモが見つかりません: ' + body.memoId);
         return _ok({ memo_id: body.memoId });
+      }
+
+      // ── レッスン直接追加（管理者専用）──────────────────────────────────────
+      // 管理者が生徒のリクエストを通さずに直接レッスンを登録する。
+      // 同日時・同スタジオで confirmed なレッスンが既に存在する場合は SLOT_UNAVAILABLE を返す。
+      case 'add_lesson': {
+        _requireAdminSecret(body);
+        _requireParams(body, [
+          'lesson_date', 'start_time', 'end_time', 'student_id', 'studio_id',
+        ]);
+
+        var lessonId = withLock(function() {
+          if (hasDuplicateConfirmedLesson(
+            body.lesson_date, body.start_time, body.studio_id
+          )) {
+            throw { _errResponse: _err('SLOT_UNAVAILABLE',
+              '同日時・同スタジオに既に確定済みのレッスンがあります。') };
+          }
+          return addLesson({
+            lesson_date:        body.lesson_date,
+            start_time:         body.start_time,
+            end_time:           body.end_time,
+            student_id:         body.student_id,
+            studio_id:          body.studio_id,
+            level:              body.level        || '',
+            lesson_count:       body.lesson_count != null ? body.lesson_count : 1,
+            note:               body.note         || '',
+            status:             'confirmed',
+          });
+        });
+        return _ok({ lesson_id: lessonId });
+      }
+
+      // ── 売上追加（管理者専用）───────────────────────────────────────────────
+      case 'sale_add': {
+        _requireAdminSecret(body);
+        _requireParams(body, ['sale_date', 'amount', 'type']);
+        var saleId = addSale({
+          sale_date:      body.sale_date,
+          student_id:     body.student_id     || '',
+          student_name:   body.student_name   || '',
+          amount:         Number(body.amount),
+          type:           body.type,
+          payment_status: body.payment_status || 'paid',
+          memo:           body.memo           || '',
+          lesson_id:      body.lesson_id      || '',
+        });
+        return _ok({ sale_id: saleId });
+      }
+
+      // ── 売上削除（管理者専用）───────────────────────────────────────────────
+      case 'sale_delete': {
+        _requireAdminSecret(body);
+        _requireParams(body, ['saleId']);
+        var ok = deleteSale(body.saleId);
+        if (!ok) return _err('NOT_FOUND', '売上が見つかりません: ' + body.saleId);
+        return _ok({ sale_id: body.saleId });
       }
 
       // ── レッスンキャンセル（管理者専用）────────────────────────────────────
