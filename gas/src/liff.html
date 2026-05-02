@@ -1,0 +1,739 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+  <title>レッスン予約</title>
+  <!-- LIFF SDK: LINE のログイン情報・プロフィールを取得するためのライブラリ -->
+  <script src="https://static.line-scdn.net/liff/edge/2/sdk.js"></script>
+  <!-- Tailwind CSS: ユーティリティ CSS -->
+  <script src="https://cdn.tailwindcss.com"></script>
+  <style>
+    /* ─── 基本リセット ──────────────────────────────────────────────── */
+    *, *::before, *::after {
+      -webkit-tap-highlight-color: transparent;
+      box-sizing: border-box;
+    }
+    html, body { height: 100%; margin: 0; }
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, 'Hiragino Sans',
+                   'Noto Sans JP', 'Yu Gothic', sans-serif;
+      overscroll-behavior: none;
+      background: #f3f4f6;
+    }
+    ::-webkit-scrollbar { display: none; }
+    * { scrollbar-width: none; }
+
+    /* ─── iOS セーフエリア（ノッチ対応） ─────────────────────────────── */
+    .safe-top    { padding-top:    max(20px, env(safe-area-inset-top)); }
+    .safe-bottom { padding-bottom: max(24px, env(safe-area-inset-bottom)); }
+
+    /* ─── 画面管理 ───────────────────────────────────────────────────── */
+    .screen { display: none; min-height: 100dvh; flex-direction: column; }
+    .screen.active { display: flex; }
+
+    /* ─── タップエフェクト ───────────────────────────────────────────── */
+    .tappable { transition: transform 0.1s ease, opacity 0.1s ease; cursor: pointer; }
+    .tappable:active { transform: scale(0.94); opacity: 0.72; }
+
+    /* ─── スピナー ───────────────────────────────────────────────────── */
+    @keyframes spin { to { transform: rotate(360deg); } }
+    .spinner { animation: spin 0.75s linear infinite; }
+
+    /* ─── ヘッダーグラデーション ─────────────────────────────────────── */
+    .grad { background: linear-gradient(135deg, #6366f1 0%, #8b5cf6 100%); }
+
+    /* ─── 週カレンダーの日ボタン ─────────────────────────────────────── */
+    .day-card {
+      display: flex; flex-direction: column;
+      align-items: center; justify-content: center;
+      padding: 10px 2px; border-radius: 18px;
+      transition: transform 0.1s ease;
+    }
+    .day-card.can-book { cursor: pointer; }
+    .day-card.can-book:active { transform: scale(0.90); }
+
+    /* ─── スロットカード ─────────────────────────────────────────────── */
+    .slot-card {
+      display: flex; align-items: center;
+      justify-content: space-between;
+      padding: 14px 16px; border-radius: 16px;
+      border: 1px solid #e5e7eb; background: white;
+      transition: transform 0.1s ease;
+    }
+    .slot-card.open { cursor: pointer; }
+    .slot-card.open:active { transform: scale(0.98); }
+
+    /* ─── 予約確認ボトムシート ────────────────────────────────────────── */
+    .overlay {
+      position: fixed; inset: 0; z-index: 200;
+      background: rgba(0,0,0,0.55);
+      backdrop-filter: blur(4px);
+      display: none; align-items: flex-end;
+    }
+    .overlay.open { display: flex; }
+    .sheet {
+      width: 100%; background: white;
+      border-radius: 28px 28px 0 0;
+      padding: 20px 20px 0;
+      padding-bottom: max(32px, env(safe-area-inset-bottom));
+      max-height: 92dvh; overflow-y: auto;
+    }
+
+    /* ─── 時間選択ボタン ─────────────────────────────────────────────── */
+    .dur-btn {
+      flex: 1; padding: 10px 4px;
+      border-radius: 12px;
+      border: 2px solid #e5e7eb; background: white;
+      font-size: 13px; font-weight: 700; color: #6b7280;
+      transition: all 0.12s ease; cursor: pointer;
+    }
+    .dur-btn.selected {
+      border-color: #6366f1; background: #eef2ff; color: #4f46e5;
+    }
+    .dur-btn:disabled { opacity: 0.28; cursor: not-allowed; }
+
+    /* ─── テキスト入力 ───────────────────────────────────────────────── */
+    .field {
+      width: 100%; border: 1.5px solid #e5e7eb; border-radius: 14px;
+      padding: 13px 16px; font-size: 16px; color: #1f2937;
+      background: white;
+      transition: border-color 0.15s;
+    }
+    .field::placeholder { color: #d1d5db; }
+    .field:focus { outline: none; border-color: #6366f1; }
+  </style>
+</head>
+<body>
+
+<!-- ════════════════════════════════════════════════════════════
+     画面①: 読み込み中
+════════════════════════════════════════════════════════════════ -->
+<div id="screen-loading" class="screen active grad items-center justify-center">
+  <div class="text-center text-white">
+    <div class="w-14 h-14 border-4 border-white border-t-transparent rounded-full spinner mx-auto mb-5"></div>
+    <p id="loading-text" class="text-base font-medium opacity-80">読み込み中...</p>
+  </div>
+</div>
+
+<!-- ════════════════════════════════════════════════════════════
+     画面②: エラー
+════════════════════════════════════════════════════════════════ -->
+<div id="screen-error" class="screen items-center justify-center px-8">
+  <div class="text-center">
+    <div class="text-6xl mb-5">⚠️</div>
+    <p id="error-msg" class="text-gray-600 text-sm leading-relaxed mb-6 whitespace-pre-line"></p>
+    <button onclick="location.reload()"
+      class="px-8 py-3 grad text-white rounded-2xl font-semibold tappable text-sm">
+      再試行
+    </button>
+  </div>
+</div>
+
+<!-- ════════════════════════════════════════════════════════════
+     画面③: 週間カレンダー
+════════════════════════════════════════════════════════════════ -->
+<div id="screen-calendar" class="screen">
+
+  <!-- ヘッダー -->
+  <div class="grad text-white flex-shrink-0 safe-top px-5 pb-5">
+    <div class="flex items-center justify-between mb-4">
+      <h1 class="text-xl font-bold tracking-tight">レッスン予約</h1>
+      <span id="cal-username" class="text-sm opacity-70 max-w-[120px] truncate"></span>
+    </div>
+    <!-- 週ナビゲーション -->
+    <div class="flex items-center gap-2">
+      <button id="btn-prev" onclick="prevWeek()"
+        class="w-9 h-9 rounded-full flex items-center justify-center tappable flex-shrink-0"
+        style="background:rgba(255,255,255,0.18);" aria-label="前の週">
+        <svg width="18" height="18" viewBox="0 0 24 24" fill="none"
+             stroke="white" stroke-width="2.5" stroke-linecap="round">
+          <path d="M15 18l-6-6 6-6"/>
+        </svg>
+      </button>
+      <p id="cal-week-label" class="flex-1 text-center text-sm font-semibold"></p>
+      <button id="btn-next" onclick="nextWeek()"
+        class="w-9 h-9 rounded-full flex items-center justify-center tappable flex-shrink-0"
+        style="background:rgba(255,255,255,0.18);" aria-label="次の週">
+        <svg width="18" height="18" viewBox="0 0 24 24" fill="none"
+             stroke="white" stroke-width="2.5" stroke-linecap="round">
+          <path d="M9 18l6-6-6-6"/>
+        </svg>
+      </button>
+    </div>
+  </div>
+
+  <!-- カレンダーグリッド -->
+  <div class="flex-1 overflow-y-auto">
+    <div id="cal-spinner" class="flex justify-center py-16">
+      <div class="w-9 h-9 border-4 border-indigo-500 border-t-transparent rounded-full spinner"></div>
+    </div>
+    <div id="cal-grid" class="hidden px-4 pt-5 pb-2"
+         style="display:none; grid-template-columns:repeat(7,1fr); gap:6px;"></div>
+    <p class="text-center text-xs text-gray-400 px-4 pb-5 mt-1">
+      空き枠のある日をタップしてください
+    </p>
+  </div>
+</div>
+
+<!-- ════════════════════════════════════════════════════════════
+     画面④: 日次スロット一覧
+════════════════════════════════════════════════════════════════ -->
+<div id="screen-slots" class="screen">
+
+  <!-- ヘッダー -->
+  <div class="grad text-white flex-shrink-0 safe-top px-5 pb-5">
+    <div class="flex items-center gap-3">
+      <button onclick="showCalendar()"
+        class="w-9 h-9 rounded-full flex items-center justify-center tappable flex-shrink-0"
+        style="background:rgba(255,255,255,0.18);" aria-label="戻る">
+        <svg width="20" height="20" viewBox="0 0 24 24" fill="none"
+             stroke="white" stroke-width="2.5" stroke-linecap="round">
+          <path d="M19 12H5M12 5l-7 7 7 7"/>
+        </svg>
+      </button>
+      <div>
+        <h2 id="slots-heading" class="text-lg font-bold"></h2>
+        <p class="text-sm opacity-75">時間帯を選んでください</p>
+      </div>
+    </div>
+  </div>
+
+  <!-- スロット一覧 -->
+  <div class="flex-1 overflow-y-auto px-4 pt-4 pb-8">
+    <div id="slots-spinner" class="flex justify-center py-16">
+      <div class="w-9 h-9 border-4 border-indigo-500 border-t-transparent rounded-full spinner"></div>
+    </div>
+    <div id="slots-list" class="space-y-2" style="display:none;"></div>
+    <p id="slots-empty" class="text-center text-gray-400 text-sm py-16" style="display:none;">
+      この日は空き枠がありません
+    </p>
+  </div>
+</div>
+
+<!-- ════════════════════════════════════════════════════════════
+     ボトムシート: 予約確認
+════════════════════════════════════════════════════════════════ -->
+<div id="booking-overlay" class="overlay" onclick="onOverlayTap(event)">
+  <div class="sheet">
+
+    <!-- ハンドルバー -->
+    <div class="w-10 h-1 bg-gray-200 rounded-full mx-auto mb-5"></div>
+
+    <h3 class="text-lg font-bold text-gray-800 mb-4">予約リクエスト</h3>
+
+    <!-- 選択日時（ハイライトカード） -->
+    <div class="rounded-2xl p-4 mb-5"
+         style="background:linear-gradient(135deg,#eef2ff,#f5f3ff);">
+      <p id="bk-date-label" class="text-indigo-800 font-bold text-center text-sm"></p>
+      <p id="bk-time-label" class="text-indigo-600 font-semibold text-center text-base mt-0.5"></p>
+    </div>
+
+    <!-- レッスン時間（複数スロット選択） -->
+    <div class="mb-5">
+      <p class="text-sm font-bold text-gray-700 mb-2">レッスン時間</p>
+      <div id="dur-btns" class="flex gap-2"></div>
+    </div>
+
+    <!-- お名前 -->
+    <div class="mb-4">
+      <label class="block text-sm font-bold text-gray-700 mb-1.5">
+        お名前 <span class="text-red-500">*</span>
+      </label>
+      <input id="input-name" type="text" placeholder="山田 花子" autocomplete="name"
+             class="field">
+    </div>
+
+    <!-- メモ -->
+    <div class="mb-5">
+      <label class="block text-sm font-bold text-gray-700 mb-1.5">
+        ご要望・メモ
+        <span class="text-gray-400 font-normal">（任意）</span>
+      </label>
+      <textarea id="input-note" rows="2" placeholder="ご要望があればご記入ください"
+                class="field resize-none"></textarea>
+    </div>
+
+    <!-- エラーメッセージ -->
+    <p id="bk-error" class="text-red-500 text-sm text-center mb-3" style="display:none;"></p>
+
+    <!-- 送信ボタン -->
+    <button id="bk-submit" onclick="submitBooking()"
+      class="w-full py-4 grad text-white font-bold text-base rounded-2xl tappable mb-2
+             disabled:opacity-50 disabled:cursor-not-allowed">
+      予約リクエストを送る
+    </button>
+  </div>
+</div>
+
+<!-- ════════════════════════════════════════════════════════════
+     画面⑤: 送信完了
+════════════════════════════════════════════════════════════════ -->
+<div id="screen-done" class="screen items-center justify-center px-6 safe-bottom"
+     style="background:linear-gradient(135deg,#f0fdf4,#ecfdf5);">
+  <div class="text-center w-full max-w-xs">
+    <div class="w-24 h-24 rounded-full flex items-center justify-center mx-auto mb-6"
+         style="background:linear-gradient(135deg,#d1fae5,#a7f3d0);">
+      <svg width="48" height="48" viewBox="0 0 24 24" fill="none"
+           stroke="#059669" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+        <path d="M20 6L9 17l-5-5"/>
+      </svg>
+    </div>
+    <h2 class="text-2xl font-bold text-gray-800 mb-2">送信しました！</h2>
+    <p class="text-gray-500 text-sm leading-relaxed mb-8">
+      予約リクエストを受け付けました。<br>
+      確認後、LINE でご連絡いたします。
+    </p>
+    <button onclick="backToCalendar()"
+      class="w-full py-4 grad text-white font-bold rounded-2xl tappable mb-3">
+      別の日を予約する
+    </button>
+    <button onclick="closeLiff()"
+      class="w-full py-3 text-gray-400 font-medium text-sm tappable">
+      閉じる
+    </button>
+  </div>
+</div>
+
+
+<!-- ════════════════════════════════════════════════════════════
+     JavaScript
+════════════════════════════════════════════════════════════════ -->
+<script>
+// ─── 定数 ─────────────────────────────────────────────────────────────────────
+
+// GAS テンプレート変数（api.js の doGet で注入される）
+const LIFF_ID = '<?= LIFF_ID ?>';
+const API_URL = '<?= API_URL ?>';
+
+const DAY_NAMES = ['月', '火', '水', '木', '金', '土', '日'];
+
+// ─── アプリ状態変数 ────────────────────────────────────────────────────────────
+
+let lineUserId       = '';   // LINE ユーザー ID（予約送信時に含める）
+let lineDisplayName  = '';   // LINE 表示名（名前欄の初期値）
+let currentWeekStart = null; // 現在表示中の週の月曜日（Date オブジェクト）
+let currentDayData   = null; // liffGetDayAvailability のレスポンス（スロット一覧）
+let selectedDate     = '';   // 選択中の日付（YYYY-MM-DD）
+let selectedSlotIdx  = -1;   // 選択中のスロット index（currentDayData.slots の何番目か）
+let selectedDuration = 30;   // 選択中のレッスン時間（分）
+
+// ─── ユーティリティ関数 ────────────────────────────────────────────────────────
+
+/** Date オブジェクト → 'YYYY-MM-DD' 文字列 */
+function fmtDate(d) {
+  const y  = d.getFullYear();
+  const mm = String(d.getMonth() + 1).padStart(2, '0');
+  const dd = String(d.getDate()).padStart(2, '0');
+  return `${y}-${mm}-${dd}`;
+}
+
+/**
+ * 指定した日付が属する週の月曜日を返す。
+ * JavaScript の getDay() は 0=日〜6=土 なので変換が必要。
+ */
+function getMonday(d) {
+  const date   = new Date(d);
+  date.setHours(0, 0, 0, 0);
+  const jsDay  = date.getDay(); // 0=日, 1=月, ..., 6=土
+  const diffToMon = (jsDay === 0) ? -6 : 1 - jsDay;
+  date.setDate(date.getDate() + diffToMon);
+  return date;
+}
+
+/**
+ * JS の曜日番号（0=日）→ システム定義の曜日番号（0=月）に変換する。
+ * 例: getDay()=2（火）→ (2+6)%7=1（システムの火）
+ */
+function jsDayToSys(jsDay) {
+  return (jsDay + 6) % 7;
+}
+
+/**
+ * GAS Web App API を fetch() で呼ぶヘルパー。
+ *
+ * 使い方:
+ *   const data = await apiFetch({ action: 'availability_week', weekStartDate: '2026-04-28' });
+ *
+ * GAS の doGet に対して GET リクエストを送り、
+ * { success: true, data: ... } のレスポンスを受け取る。
+ * GAS は 302 リダイレクトを返すことがあるが、
+ * fetch() はデフォルトでリダイレクトを自動的に追う。
+ */
+async function apiFetch(queryParams) {
+  const url = API_URL + '?' + new URLSearchParams(queryParams).toString();
+  const res = await fetch(url, { redirect: 'follow' });
+  if (!res.ok) {
+    throw new Error(`HTTP エラー: ${res.status}`);
+  }
+  const json = await res.json();
+  if (!json.success) {
+    throw new Error(
+      (json.error && json.error.message) ? json.error.message : 'APIエラー'
+    );
+  }
+  return json.data;
+}
+
+// ─── 画面切り替え ─────────────────────────────────────────────────────────────
+
+function showScreen(id) {
+  document.querySelectorAll('.screen').forEach(el => el.classList.remove('active'));
+  document.getElementById(id).classList.add('active');
+}
+
+function showCalendar() { showScreen('screen-calendar'); }
+
+function showError(msg) {
+  document.getElementById('error-msg').textContent = msg || 'エラーが発生しました';
+  showScreen('screen-error');
+}
+
+// ─── 初期化（アプリ起動時に1回だけ実行） ──────────────────────────────────────
+
+/** ローディング画面のテキストを更新するヘルパー */
+function setLoadingText(text) {
+  const el = document.getElementById('loading-text');
+  if (el) el.textContent = text;
+}
+
+async function init() {
+  try {
+    setLoadingText('LIFF 初期化中...');
+    await liff.init({ liffId: LIFF_ID });
+
+    setLoadingText('ログイン確認中...');
+    if (!liff.isLoggedIn()) {
+      liff.login();
+      return;
+    }
+
+    setLoadingText('プロフィール取得中...');
+    const profile    = await liff.getProfile();
+    lineUserId       = profile.userId;
+    lineDisplayName  = profile.displayName;
+
+    document.getElementById('cal-username').textContent = lineDisplayName;
+
+    setLoadingText('カレンダー読み込み中...');
+    currentWeekStart = getMonday(new Date());
+    await loadWeek(currentWeekStart);
+    showCalendar();
+
+  } catch (err) {
+    console.error('[LIFF init error]', err);
+    showError(
+      '初期化に失敗しました。\nLINE アプリから開き直してください。\n\n' +
+      (err.message || String(err))
+    );
+  }
+}
+
+// ─── 週間カレンダー ────────────────────────────────────────────────────────────
+
+async function loadWeek(mondayDate) {
+  const weekStartDate = fmtDate(mondayDate);
+
+  // 週ラベルを更新（例: 4/28（月）〜 5/4（日））
+  const sunDate = new Date(mondayDate);
+  sunDate.setDate(sunDate.getDate() + 6);
+  document.getElementById('cal-week-label').textContent =
+    `${mondayDate.getMonth()+1}/${mondayDate.getDate()}（月）`
+    + ` 〜 ${sunDate.getMonth()+1}/${sunDate.getDate()}（日）`;
+
+  // 「前の週へ」ボタン: 今週より前には戻れない
+  const thisWeek = getMonday(new Date());
+  const isThisWeek = mondayDate.getTime() <= thisWeek.getTime();
+  const prevBtn = document.getElementById('btn-prev');
+  prevBtn.style.opacity  = isThisWeek ? '0.3' : '1';
+  prevBtn.disabled       = isThisWeek;
+
+  // グリッドを非表示にしてスピナーを表示
+  document.getElementById('cal-spinner').style.display = 'flex';
+  document.getElementById('cal-grid').style.display    = 'none';
+
+  try {
+    const summary = await apiFetch({ action: 'availability_week', weekStartDate: weekStartDate });
+    renderCalendar(summary);
+  } catch (err) {
+    showError('カレンダーの読み込みに失敗しました。\n時間をおいて再試行してください。');
+  }
+}
+
+/** 週サマリーデータをカレンダーグリッドとして描画する */
+function renderCalendar(summary) {
+  const todayStr = fmtDate(new Date());
+  const grid     = document.getElementById('cal-grid');
+
+  grid.innerHTML = summary.map((day, i) => {
+    const isToday  = day.date === todayStr;
+    const isPast   = day.date < todayStr;
+    const canBook  = day.available_count > 0 && !isPast;
+    const dateNum  = parseInt(day.date.split('-')[2], 10);
+
+    // 曜日の文字色: 土=青, 日=赤, それ以外=グレー系
+    const dayColor = i === 5 ? '#3b82f6'
+                   : i === 6 ? '#ef4444'
+                   : (isToday || canBook) ? (isToday ? 'rgba(255,255,255,0.75)' : '#6b7280')
+                   : '#c4c9d1';
+
+    if (canBook) {
+      // 空き枠あり → タップ可能
+      const bg = isToday
+        ? 'background:linear-gradient(135deg,#6366f1,#8b5cf6);box-shadow:0 4px 14px rgba(99,102,241,0.45);'
+        : 'background:white;box-shadow:0 1px 6px rgba(0,0,0,0.08);border:1px solid rgba(0,0,0,0.06);';
+      const numColor  = isToday ? 'white' : '#111827';
+      const cntColor  = isToday ? 'rgba(255,255,255,0.9)' : '#6366f1';
+
+      return `<button class="day-card can-book" style="${bg}" onclick="selectDate('${day.date}')">
+        <span style="font-size:11px;font-weight:700;color:${dayColor};margin-bottom:3px;">${DAY_NAMES[i]}</span>
+        <span style="font-size:18px;font-weight:800;color:${numColor};line-height:1;">${dateNum}</span>
+        <span style="font-size:11px;font-weight:800;color:${cntColor};margin-top:4px;">${day.available_count}枠</span>
+      </button>`;
+    } else {
+      // 空き枠なし / 過去 → 非活性
+      return `<div class="day-card" style="background:#f9fafb;">
+        <span style="font-size:11px;font-weight:700;color:#d1d5db;margin-bottom:3px;">${DAY_NAMES[i]}</span>
+        <span style="font-size:18px;font-weight:800;color:#d1d5db;line-height:1;">${dateNum}</span>
+        <span style="font-size:16px;color:#e5e7eb;margin-top:4px;">×</span>
+      </div>`;
+    }
+  }).join('');
+
+  document.getElementById('cal-spinner').style.display = 'none';
+  document.getElementById('cal-grid').style.display    = 'grid';
+}
+
+/** 前の週へ */
+async function prevWeek() {
+  const prev = new Date(currentWeekStart);
+  prev.setDate(prev.getDate() - 7);
+  const thisWeek = getMonday(new Date());
+  if (prev.getTime() < thisWeek.getTime()) return; // 今週より前には行けない
+  currentWeekStart = prev;
+  await loadWeek(currentWeekStart);
+}
+
+/** 次の週へ */
+async function nextWeek() {
+  const next = new Date(currentWeekStart);
+  next.setDate(next.getDate() + 7);
+  currentWeekStart = next;
+  await loadWeek(currentWeekStart);
+}
+
+// ─── 日次スロット一覧 ─────────────────────────────────────────────────────────
+
+/** 日付をタップしたとき: スロット一覧を取得して表示する */
+async function selectDate(dateStr) {
+  selectedDate = dateStr;
+
+  // ヘッダーに「○月○日（曜）」を表示
+  const [, m, d] = dateStr.split('-');
+  const sysDay = jsDayToSys(new Date(dateStr + 'T00:00:00').getDay());
+  document.getElementById('slots-heading').textContent =
+    `${parseInt(m)}月${parseInt(d)}日（${DAY_NAMES[sysDay]}）`;
+
+  showScreen('screen-slots');
+
+  // ローディング表示
+  document.getElementById('slots-spinner').style.display = 'flex';
+  document.getElementById('slots-list').style.display    = 'none';
+  document.getElementById('slots-empty').style.display   = 'none';
+
+  try {
+    currentDayData = await apiFetch({ action: 'availability', date: dateStr });
+    renderSlots(currentDayData);
+  } catch (err) {
+    showError('スロットの読み込みに失敗しました。\n時間をおいて再試行してください。');
+  }
+}
+
+/** スロット一覧を HTML に描画する */
+function renderSlots(data) {
+  const slots     = data.slots || [];
+  const hasOpen   = slots.some(s => s.available);
+
+  document.getElementById('slots-spinner').style.display = 'none';
+
+  if (!hasOpen) {
+    document.getElementById('slots-empty').style.display = 'block';
+    return;
+  }
+
+  const list = document.getElementById('slots-list');
+  list.innerHTML = slots.map((slot, i) => {
+    if (!slot.available) {
+      // 予約済み・ブロック中スロット
+      const label = slot.reason === 'lesson' ? '予約済' : 'ブロック中';
+      return `<div class="slot-card" style="background:#f9fafb;opacity:0.55;">
+        <span style="font-weight:600;color:#9ca3af;">${slot.start_time} 〜 ${slot.end_time}</span>
+        <span style="font-size:12px;background:#f3f4f6;color:#9ca3af;
+                     padding:4px 10px;border-radius:999px;">${label}</span>
+      </div>`;
+    }
+    // 空き枠スロット → タップで予約シートを開く
+    return `<button class="slot-card open w-full text-left" onclick="openBookingSheet(${i})">
+      <span style="font-weight:700;color:#111827;">${slot.start_time} 〜 ${slot.end_time}</span>
+      <span style="font-size:12px;font-weight:800;background:#eef2ff;color:#6366f1;
+                   padding:4px 14px;border-radius:999px;">空き</span>
+    </button>`;
+  }).join('');
+
+  list.style.display = 'block';
+}
+
+// ─── 予約確認シート ────────────────────────────────────────────────────────────
+
+/**
+ * スロットをタップしたとき: 予約確認シートを開く。
+ * @param {number} startIdx  currentDayData.slots の開始インデックス
+ */
+function openBookingSheet(startIdx) {
+  selectedSlotIdx  = startIdx;
+  selectedDuration = 30; // デフォルトは 30 分
+
+  // 日付ラベル
+  const [, m, d] = selectedDate.split('-');
+  const sysDay = jsDayToSys(new Date(selectedDate + 'T00:00:00').getDay());
+  document.getElementById('bk-date-label').textContent =
+    `${parseInt(m)}月${parseInt(d)}日（${DAY_NAMES[sysDay]}）`;
+
+  // 連続して予約できる最大スロット数を計算して時間ボタンを描画
+  const maxSlots = calcMaxConsecutive(startIdx);
+  renderDurationButtons(startIdx, maxSlots);
+  updateTimeLabel(startIdx, 30);
+
+  // フォームをリセット（LINE 表示名を名前欄に初期セット）
+  document.getElementById('input-name').value = lineDisplayName || '';
+  document.getElementById('input-note').value = '';
+  document.getElementById('bk-error').style.display = 'none';
+  const submitBtn = document.getElementById('bk-submit');
+  submitBtn.disabled    = false;
+  submitBtn.textContent = '予約リクエストを送る';
+
+  document.getElementById('booking-overlay').classList.add('open');
+}
+
+/**
+ * 指定インデックスから何スロット連続で空いているかを返す（最大 4 = 2時間）。
+ */
+function calcMaxConsecutive(startIdx) {
+  const slots = currentDayData.slots;
+  let count = 0;
+  for (let i = startIdx; i < slots.length && count < 4; i++) {
+    if (!slots[i].available) break;
+    count++;
+  }
+  return count;
+}
+
+/** 時間選択ボタン（30分 / 60分 / 90分 / 120分）を描画する */
+function renderDurationButtons(startIdx, maxSlots) {
+  const labels = ['30分', '60分', '90分', '120分'];
+  document.getElementById('dur-btns').innerHTML = labels.map((label, i) => {
+    const slots    = (i + 1);
+    const disabled = slots > maxSlots;
+    const selected = slots === 1;
+    return `<button class="dur-btn${selected ? ' selected' : ''}"
+      onclick="pickDuration(${startIdx}, ${slots * 30})"
+      ${disabled ? 'disabled' : ''}>${label}</button>`;
+  }).join('');
+}
+
+/** 時間ボタンを選択したとき */
+function pickDuration(startIdx, minutes) {
+  selectedDuration = minutes;
+  updateTimeLabel(startIdx, minutes);
+  // ボタンの selected スタイルを切り替える
+  document.querySelectorAll('.dur-btn').forEach((btn, i) => {
+    btn.classList.toggle('selected', (i + 1) * 30 === minutes);
+  });
+}
+
+/** シート上の「○○:○○ 〜 ○○:○○」ラベルを更新する */
+function updateTimeLabel(startIdx, durationMin) {
+  const slots    = currentDayData.slots;
+  const endIdx   = startIdx + (durationMin / 30) - 1;
+  const safeEnd  = Math.min(endIdx, slots.length - 1);
+  document.getElementById('bk-time-label').textContent =
+    `${slots[startIdx].start_time} 〜 ${slots[safeEnd].end_time}`;
+}
+
+/** オーバーレイ（シートの外側）をタップしたらシートを閉じる */
+function onOverlayTap(e) {
+  if (e.target === document.getElementById('booking-overlay')) {
+    document.getElementById('booking-overlay').classList.remove('open');
+  }
+}
+
+// ─── 予約送信 ─────────────────────────────────────────────────────────────────
+
+async function submitBooking() {
+  const name     = document.getElementById('input-name').value.trim();
+  const note     = document.getElementById('input-note').value.trim();
+  const errEl    = document.getElementById('bk-error');
+  const submitBtn = document.getElementById('bk-submit');
+
+  // バリデーション: 名前は必須
+  if (!name) {
+    errEl.textContent    = 'お名前を入力してください';
+    errEl.style.display  = 'block';
+    return;
+  }
+
+  errEl.style.display    = 'none';
+  submitBtn.disabled     = true;
+  submitBtn.textContent  = '送信中...';
+
+  // 送信するデータを組み立てる
+  const slots     = currentDayData.slots;
+  const startSlot = slots[selectedSlotIdx];
+  const endSlot   = slots[selectedSlotIdx + (selectedDuration / 30) - 1];
+
+  try {
+    const result = await apiFetch({
+      action:             'booking_request',
+      student_name_input: name,
+      requested_date:     selectedDate,
+      requested_start:    startSlot.start_time,
+      requested_end:      endSlot.end_time,
+      studio_id:          startSlot.studio_id,
+      note:               note        || '',
+      line_user_id:       lineUserId  || '',
+    });
+    // apiFetch は成功時に data を返すので、ここまで来たら成功
+
+    // apiFetch がエラーなく返ってきた = 予約成功
+    document.getElementById('booking-overlay').classList.remove('open');
+    showScreen('screen-done');
+
+  } catch (err) {
+    document.getElementById('booking-overlay').classList.remove('open');
+    showError(err.message || '通信エラーが発生しました。\n時間をおいて再試行してください。');
+  }
+}
+
+// ─── 完了後の操作 ─────────────────────────────────────────────────────────────
+
+/** 完了画面から「別の日を予約する」ボタン */
+function backToCalendar() {
+  showCalendar();
+  // カレンダーを再読み込みして最新の空き状況を反映
+  loadWeek(currentWeekStart);
+}
+
+/** LIFF ウィンドウを閉じる（LINE アプリ内の場合は LINE が前面に戻る） */
+function closeLiff() {
+  if (liff.isInClient()) {
+    liff.closeWindow();
+  } else {
+    window.close(); // ブラウザで開いた場合
+  }
+}
+
+// ─── 起動 ─────────────────────────────────────────────────────────────────────
+window.addEventListener('load', init);
+</script>
+</body>
+</html>

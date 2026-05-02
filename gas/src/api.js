@@ -10,6 +10,7 @@
  *   NOT_FOUND        — 指定 ID のリソースが存在しない
  *   SLOT_UNAVAILABLE — 予約枠が空いていない
  *   INTERNAL_ERROR   — 予期しない例外
+ *   UNAUTHORIZED     — 管理者シークレットが不正・未指定
  *
  * 認証:
  *   Phase 3: student_id をリクエストパラメータから直接受け取る
@@ -48,6 +49,27 @@ function _err(code, message) {
   return _jsonResponse({ success: false, error: { code: code, message: message } });
 }
 
+// ─── 管理者認証ヘルパー ────────────────────────────────────────────────────────
+
+/**
+ * 管理者シークレットを検証する。
+ *
+ * GAS スクリプトプロパティ（Script Properties）に
+ * キー名「ADMIN_SECRET」で設定した値と、クエリパラメータ secret が一致しなければ
+ * エラーレスポンスを例外としてスローする。
+ *
+ * 呼び出し側は try/catch の中で使うこと（doGet の catch で自動的に捕捉される）。
+ *
+ * @param {Object} params  e.parameter
+ */
+function _requireAdminSecret(params) {
+  var props  = PropertiesService.getScriptProperties();
+  var secret = props.getProperty('ADMIN_SECRET') || '';
+  if (!secret || params.secret !== secret) {
+    throw { _errResponse: _err('UNAUTHORIZED', '認証に失敗しました。管理者のみアクセスできます。') };
+  }
+}
+
 // ─── パラメータバリデーションヘルパー ─────────────────────────────────────────
 
 /**
@@ -71,6 +93,9 @@ function _requireParams(params, keys) {
 /**
  * GET リクエストを処理する（参照系）。
  *
+ * クエリパラメータなし（action 省略）:
+ *   → LIFF 予約ページ（liff.html）を HtmlService で返す
+ *
  * クエリパラメータ:
  *   action=availability         + date=YYYY-MM-DD
  *   action=availability_week    + weekStartDate=YYYY-MM-DD
@@ -79,13 +104,33 @@ function _requireParams(params, keys) {
  *   action=booking_requests
  *
  * @param {GoogleAppsScript.Events.DoGet} e
- * @returns {GoogleAppsScript.Content.TextOutput}
+ * @returns {GoogleAppsScript.Content.TextOutput|GoogleAppsScript.HTML.HtmlOutput}
  */
 function doGet(e) {
-  try {
-    var params = (e && e.parameter) ? e.parameter : {};
-    var action = params.action || '';
+  var params = (e && e.parameter) ? e.parameter : {};
+  var action = params.action || '';
 
+  // action なし → LIFF 予約ページを返す
+  //
+  // HtmlService.createTemplateFromFile('liff') は gas/src/liff.html を読み込み、
+  // <?= LIFF_ID ?> などのテンプレート変数を置き換えてから HTML として返す。
+  //
+  // LIFF_ID は GAS スクリプトプロパティ（Script Properties）に
+  // キー名「LIFF_ID」で設定しておくこと。
+  if (!action) {
+    var props  = PropertiesService.getScriptProperties();
+    var liffId = props.getProperty('LIFF_ID') || '';
+    var tmpl   = HtmlService.createTemplateFromFile('liff');
+    tmpl.LIFF_ID  = liffId;
+    // LIFF HTML から fetch() で API を呼ぶための URL を注入する
+    tmpl.API_URL  = ScriptApp.getService().getUrl();
+    return tmpl.evaluate()
+      .setTitle('レッスン予約 | ダンス手帳')
+      .addMetaTag('viewport', 'width=device-width, initial-scale=1.0, viewport-fit=cover')
+      .setXFrameOptionsMode(HtmlService.XFrameOptionsMode.ALLOWALL);
+  }
+
+  try {
     switch (action) {
 
       // ── 日次空き枠一覧 ──────────────────────────────────────────────────────
@@ -116,16 +161,54 @@ function doGet(e) {
         return _err('INVALID_PARAM', 'date または studentId のいずれかを指定してください。');
       }
 
-      // ── アクティブ生徒一覧 ──────────────────────────────────────────────────
+      // ── アクティブ生徒一覧（管理者専用） ────────────────────────────────────
       case 'students': {
+        _requireAdminSecret(params);
         var result = getActiveStudents();
         return _ok(result);
       }
 
-      // ── 承認待ち予約リクエスト一覧 ──────────────────────────────────────────
+      // ── 承認待ち予約リクエスト一覧（管理者専用） ────────────────────────────
       case 'booking_requests': {
+        _requireAdminSecret(params);
         var result = getPendingBookingRequests();
         return _ok(result);
+      }
+
+      // ── LIFF からの予約リクエスト作成（GET 版）─────────────────────────────
+      // fetch() の POST は GAS の 302 リダイレクト仕様で body が失われるため、
+      // LIFF クライアントからは GET クエリパラメータで送信する。
+      case 'booking_request': {
+        _requireParams(params, [
+          'student_name_input',
+          'requested_date',
+          'requested_start',
+          'requested_end',
+          'studio_id',
+        ]);
+
+        var validation = validateBookingRequest({
+          requested_date:  params.requested_date,
+          requested_start: params.requested_start,
+          requested_end:   params.requested_end,
+          studio_id:       params.studio_id,
+        });
+        if (!validation.valid) {
+          return _err('SLOT_UNAVAILABLE', validation.reason);
+        }
+
+        var requestId = addBookingRequest({
+          student_id:         '',
+          student_name_input: params.student_name_input,
+          requested_date:     params.requested_date,
+          requested_start:    params.requested_start,
+          requested_end:      params.requested_end,
+          studio_id:          params.studio_id,
+          note:               params.note          || '',
+          line_user_id:       params.line_user_id  || '',
+        });
+
+        return _ok({ request_id: requestId });
       }
 
       default:
