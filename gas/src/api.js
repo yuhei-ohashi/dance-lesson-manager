@@ -10,6 +10,7 @@
  *   NOT_FOUND        — 指定 ID のリソースが存在しない
  *   SLOT_UNAVAILABLE — 予約枠が空いていない
  *   INTERNAL_ERROR   — 予期しない例外
+ *   UNAUTHORIZED     — 管理者シークレットが不正・未指定
  *
  * 認証:
  *   Phase 3: student_id をリクエストパラメータから直接受け取る
@@ -46,6 +47,27 @@ function _ok(data) {
  */
 function _err(code, message) {
   return _jsonResponse({ success: false, error: { code: code, message: message } });
+}
+
+// ─── 管理者認証ヘルパー ────────────────────────────────────────────────────────
+
+/**
+ * 管理者シークレットを検証する。
+ *
+ * GAS スクリプトプロパティ（Script Properties）に
+ * キー名「ADMIN_SECRET」で設定した値と、クエリパラメータ secret が一致しなければ
+ * エラーレスポンスを例外としてスローする。
+ *
+ * 呼び出し側は try/catch の中で使うこと（doGet の catch で自動的に捕捉される）。
+ *
+ * @param {Object} params  e.parameter
+ */
+function _requireAdminSecret(params) {
+  var props  = PropertiesService.getScriptProperties();
+  var secret = props.getProperty('ADMIN_SECRET') || '';
+  if (!secret || params.secret !== secret) {
+    throw { _errResponse: _err('UNAUTHORIZED', '認証に失敗しました。管理者のみアクセスできます。') };
+  }
 }
 
 // ─── パラメータバリデーションヘルパー ─────────────────────────────────────────
@@ -139,14 +161,16 @@ function doGet(e) {
         return _err('INVALID_PARAM', 'date または studentId のいずれかを指定してください。');
       }
 
-      // ── アクティブ生徒一覧 ──────────────────────────────────────────────────
+      // ── アクティブ生徒一覧（管理者専用） ────────────────────────────────────
       case 'students': {
+        _requireAdminSecret(params);
         var result = getActiveStudents();
         return _ok(result);
       }
 
-      // ── 承認待ち予約リクエスト一覧 ──────────────────────────────────────────
+      // ── 承認待ち予約リクエスト一覧（管理者専用） ────────────────────────────
       case 'booking_requests': {
+        _requireAdminSecret(params);
         var result = getPendingBookingRequests();
         return _ok(result);
       }
