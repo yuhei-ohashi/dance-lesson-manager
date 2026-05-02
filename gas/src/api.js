@@ -14,8 +14,10 @@
  *
  * 認証:
  *   生徒向け（認証なし）: availability, availability_week, booking_request
- *   管理者専用（ADMIN_SECRET 必須）: students, booking_requests, approve, reject, lessons
- *   doPost の書き込み系（approve / reject / cancel_lesson）も ADMIN_SECRET を必須とする
+ *   管理者専用（ADMIN_SECRET 必須）: students, booking_requests, approve, reject, lessons,
+ *                                    tasks, lesson_memos, sales
+ *   doPost の書き込み系（approve / reject / cancel_lesson / task_add / task_complete /
+ *                        task_delete / lesson_memo_add / lesson_memo_update）も ADMIN_SECRET を必須とする
  */
 
 // ─── レスポンスヘルパー ────────────────────────────────────────────────────────
@@ -208,6 +210,34 @@ function doGet(e) {
       case 'booking_requests': {
         _requireAdminSecret(params);
         var result = getPendingBookingRequests();
+        return _ok(result);
+      }
+
+      // ── タスク一覧（管理者専用） ─────────────────────────────────────────────
+      // all=1 を渡すと完了済みも含む全件、省略時は未完了のみ
+      case 'tasks': {
+        _requireAdminSecret(params);
+        var result = params.all === '1' ? getAllTasks() : getPendingTasks();
+        return _ok(result);
+      }
+
+      // ── レッスンメモ一覧（管理者専用） ──────────────────────────────────────
+      // studentId を指定すると特定生徒のメモ一覧、省略時は全件
+      case 'lesson_memos': {
+        _requireAdminSecret(params);
+        var result = params.studentId
+          ? getLessonMemosByStudent(params.studentId)
+          : getAllLessonMemos();
+        return _ok(result);
+      }
+
+      // ── 売上一覧（管理者専用） ───────────────────────────────────────────────
+      // from / to（YYYY-MM-DD）で期間絞り込み可。省略時は全件
+      case 'sales': {
+        _requireAdminSecret(params);
+        var result = (params.from && params.to)
+          ? getSalesByDateRange(params.from, params.to)
+          : getAllSales();
         return _ok(result);
       }
 
@@ -431,6 +461,61 @@ function doPost(e) {
           return _err(code, result.reason);
         }
         return _ok({ request_id: body.requestId });
+      }
+
+      // ── タスク追加（管理者専用）─────────────────────────────────────────────
+      case 'task_add': {
+        _requireAdminSecret(body);
+        _requireParams(body, ['text']);
+        var taskId = addTask({
+          text:      body.text,
+          is_urgent: body.is_urgent === true || body.is_urgent === 'true',
+        });
+        return _ok({ task_id: taskId });
+      }
+
+      // ── タスク完了（管理者専用）─────────────────────────────────────────────
+      case 'task_complete': {
+        _requireAdminSecret(body);
+        _requireParams(body, ['taskId']);
+        var ok = completeTask(body.taskId);
+        if (!ok) return _err('NOT_FOUND', 'タスクが見つかりません: ' + body.taskId);
+        return _ok({ task_id: body.taskId });
+      }
+
+      // ── タスク削除（管理者専用）─────────────────────────────────────────────
+      case 'task_delete': {
+        _requireAdminSecret(body);
+        _requireParams(body, ['taskId']);
+        var ok = deleteTask(body.taskId);
+        if (!ok) return _err('NOT_FOUND', 'タスクが見つかりません: ' + body.taskId);
+        return _ok({ task_id: body.taskId });
+      }
+
+      // ── レッスンメモ追加（管理者専用）───────────────────────────────────────
+      case 'lesson_memo_add': {
+        _requireAdminSecret(body);
+        _requireParams(body, ['student_id', 'lesson_date']);
+        var memoId = addLessonMemo({
+          student_id:  body.student_id,
+          lesson_id:   body.lesson_id  || '',
+          lesson_date: body.lesson_date,
+          memo:        body.memo       || '',
+          goal:        body.goal       || '',
+        });
+        return _ok({ memo_id: memoId });
+      }
+
+      // ── レッスンメモ更新（管理者専用）───────────────────────────────────────
+      case 'lesson_memo_update': {
+        _requireAdminSecret(body);
+        _requireParams(body, ['memoId']);
+        var ok = updateLessonMemo(body.memoId, {
+          memo: body.memo,
+          goal: body.goal,
+        });
+        if (!ok) return _err('NOT_FOUND', 'メモが見つかりません: ' + body.memoId);
+        return _ok({ memo_id: body.memoId });
       }
 
       // ── レッスンキャンセル（管理者専用）────────────────────────────────────
