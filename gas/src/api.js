@@ -70,6 +70,38 @@ function _requireAdminSecret(params) {
   }
 }
 
+// ─── LINE ユーザー ID → 生徒 ID 解決ヘルパー ──────────────────────────────────
+
+/**
+ * LINE ユーザーID から student_id を解決する（Phase 4-B コア処理）。
+ *
+ * 処理の流れ:
+ *   1. lineUserId が空 → '' を返す（未ログインや取得失敗の場合）
+ *   2. students シートを検索して既存の紐づきを確認
+ *   3. 見つかれば その student_id を返す
+ *   4. 見つからなければ仮登録して新しい student_id を返す
+ *
+ * 「仮登録」とは:
+ *   is_active=true の生徒レコードを作り、line_user_id を紐づけた状態で保存すること。
+ *   name は LIFF で入力した名前（nameInput）をそのまま使う。
+ *   講師が後でスプレッドシートから正式な情報（ふりがな・チケット種別など）を追記できる。
+ *
+ * @param {string} lineUserId   LINE ユーザーID（空文字の場合は '' を返す）
+ * @param {string} nameInput    LIFF の名前入力欄の値（仮登録時に使用）
+ * @returns {number|string}     student_id（見つからず仮登録も失敗した場合は ''）
+ */
+function _resolveStudentId(lineUserId, nameInput) {
+  if (!lineUserId) return '';
+  try {
+    var result = findOrCreateStudentByLineUserId(lineUserId, nameInput);
+    return result.studentId;
+  } catch (e) {
+    // 生徒解決に失敗しても予約リクエスト自体は受け付ける（空のまま保存）
+    Logger.log('_resolveStudentId エラー: ' + e.message);
+    return '';
+  }
+}
+
 // ─── パラメータバリデーションヘルパー ─────────────────────────────────────────
 
 /**
@@ -197,8 +229,14 @@ function doGet(e) {
           return _err('SLOT_UNAVAILABLE', validation.reason);
         }
 
+        // Phase 4-B: line_user_id で既存生徒を検索 or 仮登録して student_id を自動セット
+        var studentId = _resolveStudentId(
+          params.line_user_id || '',
+          params.student_name_input
+        );
+
         var requestId = addBookingRequest({
-          student_id:         '',
+          student_id:         studentId,
           student_name_input: params.student_name_input,
           requested_date:     params.requested_date,
           requested_start:    params.requested_start,
@@ -209,6 +247,43 @@ function doGet(e) {
         });
 
         return _ok({ request_id: requestId });
+      }
+
+      // ── 予約リクエスト承認（管理者専用・GET 版）────────────────────────────
+      // POST は GAS リダイレクト仕様で body が失われることがあるため
+      // 管理画面からは GET クエリパラメータで操作する。
+      case 'approve': {
+        _requireAdminSecret(params);
+        _requireParams(params, ['requestId']);
+
+        var lessonOptions = {};
+        if (params.level        ) lessonOptions.level        = params.level;
+        if (params.lesson_count ) lessonOptions.lesson_count = params.lesson_count;
+        if (params.note         ) lessonOptions.note         = params.note;
+
+        var result = approveBookingRequest(params.requestId, lessonOptions);
+        if (!result.success) {
+          var code = result.reason && result.reason.indexOf('見つかりません') !== -1
+            ? 'NOT_FOUND'
+            : 'SLOT_UNAVAILABLE';
+          return _err(code, result.reason);
+        }
+        return _ok({ lesson_id: result.lessonId });
+      }
+
+      // ── 予約リクエスト却下（管理者専用・GET 版）────────────────────────────
+      case 'reject': {
+        _requireAdminSecret(params);
+        _requireParams(params, ['requestId']);
+
+        var result = rejectBookingRequest(params.requestId, params.note || '');
+        if (!result.success) {
+          var code = result.reason && result.reason.indexOf('見つかりません') !== -1
+            ? 'NOT_FOUND'
+            : 'INVALID_PARAM';
+          return _err(code, result.reason);
+        }
+        return _ok({ request_id: params.requestId });
       }
 
       default:
@@ -271,8 +346,13 @@ function doPost(e) {
           return _err('SLOT_UNAVAILABLE', validation.reason);
         }
 
+        // Phase 4-B: line_user_id で既存生徒を検索 or 仮登録して student_id を自動セット
+        var resolvedStudentId = (body.student_id != null && body.student_id !== '')
+          ? body.student_id
+          : _resolveStudentId(body.line_user_id || '', body.student_name_input);
+
         var requestId = addBookingRequest({
-          student_id:         body.student_id          != null ? body.student_id : '',
+          student_id:         resolvedStudentId,
           student_name_input: body.student_name_input,
           requested_date:     body.requested_date,
           requested_start:    body.requested_start,

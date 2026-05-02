@@ -51,6 +51,52 @@ function getStudentByLineUserId(lineUserId) {
 }
 
 /**
+ * LINE ユーザーID で生徒を検索し、見つからなければ仮登録して student_id を返す。
+ *
+ * 同一 lineUserId からの二重リクエストを防ぐため、検索〜登録を withLock 内で行う。
+ *
+ * @param {string} lineUserId    LINE ユーザーID（"U" で始まる文字列）
+ * @param {string} nameInput     LIFF で入力された名前（仮登録時に使用）
+ * @returns {{ studentId: number|string, isNew: boolean }}
+ *   studentId … 見つかった or 新規作成した student_id
+ *   isNew     … true の場合は今回新規仮登録した
+ */
+function findOrCreateStudentByLineUserId(lineUserId, nameInput) {
+  return withLock(function() {
+    var sheet = getSheet(STUDENTS_SHEET);
+    var rows  = getAllRows(sheet);
+
+    // 既存の紐づきを検索
+    var found = rows.filter(function(row) {
+      return row.line_user_id === lineUserId;
+    });
+    if (found.length > 0) {
+      return { studentId: found[0].student_id, isNew: false };
+    }
+
+    // 見つからなければ仮登録（line_user_id も同時にセット）
+    var studentId = getNextId(sheet);
+    var now = nowDateTime();
+    appendRow(sheet, [
+      studentId,
+      nameInput || 'LINE仮登録',
+      '',         // furigana
+      lineUserId, // line_user_id を直接セット
+      '',         // since
+      '',         // ticket_type_id
+      '',         // dances
+      '',         // color_style
+      '',         // last_lesson_date
+      true,       // is_active
+      'LIFF経由で自動仮登録',
+      now,        // created_at
+      now,        // updated_at
+    ]);
+    return { studentId: studentId, isNew: true };
+  });
+}
+
+/**
  * 全件取得（is_active を問わず）。
  * @returns {Object[]}
  */
