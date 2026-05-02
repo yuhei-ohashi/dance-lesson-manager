@@ -63,10 +63,10 @@
     .day-card.can-book { cursor: pointer; }
     .day-card.can-book:active { transform: scale(0.90); }
 
-    /* ─── スロット行（新デザイン）────────────────────────────────────── */
+    /* ─── スロット行（共通ベース）────────────────────────────────────── */
     .slot-row {
       display: flex; align-items: center;
-      padding: 12px 16px;
+      padding: 11px 14px;
       border-radius: 14px;
       background: white;
       border: 1px solid #f3f4f6;
@@ -74,35 +74,57 @@
       width: 100%;
       text-align: left;
     }
+
+    /* ─── 空き枠スロット ─────────────────────────────────────────────── */
     .slot-row.available {
+      background: #f0fdf4;
+      border-color: #bbf7d0;
+      padding: 14px 16px;
       cursor: pointer;
       transition: transform 0.1s ease;
     }
     .slot-row.available:active { transform: scale(0.98); }
 
-    /* スロット内の時刻テキスト */
-    .slot-time {
-      font-size: 15px; font-weight: 700; color: #374151;
-      min-width: 44px; flex-shrink: 0;
+    /* 空き枠: 時刻テキスト */
+    .slot-avail-time {
+      font-size: 16px; font-weight: 800; color: #059669;
+      min-width: 52px; flex-shrink: 0;
     }
-    .slot-time.gray { color: #9ca3af; font-weight: 500; }
-
-    /* ◯/✕ バッジ */
-    .slot-badge {
-      display: flex; align-items: center; gap: 4px;
-      padding: 3px 10px; border-radius: 999px;
-      font-size: 12px; font-weight: 700;
+    /* 空き枠: 緑の◯サークル */
+    .slot-avail-circle {
+      width: 34px; height: 34px; border-radius: 50%;
+      background: #059669;
+      display: flex; align-items: center; justify-content: center;
+      color: white; font-size: 17px; font-weight: 900;
       flex-shrink: 0;
     }
-    .slot-badge.open   { background: #d1fae5; color: #059669; }
-    .slot-badge.closed { background: #fce7f3; color: #db2777; }
+    /* 空き枠: テキスト（空き + @スタジオ） */
+    .slot-avail-body { flex: 1; }
+    .slot-avail-label {
+      font-size: 14px; font-weight: 800; color: #059669; display: block;
+    }
+    .slot-avail-studio {
+      font-size: 11px; color: #6b7280; display: block; margin-top: 2px;
+    }
+    /* 空き枠: > 矢印 */
+    .slot-arrow {
+      font-size: 18px; color: #34d399; flex-shrink: 0;
+      font-weight: 700; line-height: 1;
+    }
 
-    /* @スタジオ名タグ */
-    .slot-studio {
-      margin-left: auto;
-      font-size: 11px; color: #6366f1; font-weight: 600;
-      background: #eef2ff; padding: 3px 8px; border-radius: 999px;
-      white-space: nowrap;
+    /* ─── 受付不可スロット ───────────────────────────────────────────── */
+    /* 受付不可: 時刻テキスト */
+    .slot-time-gray {
+      font-size: 14px; font-weight: 500; color: #9ca3af;
+      min-width: 52px; flex-shrink: 0;
+    }
+    /* 受付不可: グレーの×サークル */
+    .slot-unavail-circle {
+      width: 28px; height: 28px; border-radius: 50%;
+      background: #f3f4f6;
+      display: flex; align-items: center; justify-content: center;
+      color: #9ca3af; font-size: 11px; font-weight: 700;
+      flex-shrink: 0;
     }
 
     /* ─── 時間帯グループのセクション見出し ───────────────────────────── */
@@ -119,6 +141,24 @@
       border-bottom: 1px solid #f3f4f6;
       padding: 12px 16px;
     }
+
+    /* 枠数バッジ（緑） */
+    .count-badge {
+      background: #d1fae5; color: #059669;
+      font-size: 11px; font-weight: 800;
+      padding: 3px 10px; border-radius: 999px;
+      white-space: nowrap;
+    }
+
+    /* 更新ボタン */
+    .refresh-btn {
+      width: 30px; height: 30px; border-radius: 50%;
+      background: #f3f4f6; border: none; cursor: pointer;
+      display: flex; align-items: center; justify-content: center;
+      flex-shrink: 0;
+      transition: transform 0.3s ease;
+    }
+    .refresh-btn:active { transform: rotate(180deg); }
 
     /* ─── 予約確認ボトムシート ────────────────────────────────────────── */
     .overlay {
@@ -255,10 +295,21 @@
 
       <!-- 選択日付の帯 -->
       <div class="day-selected-bar">
-        <div class="flex items-center justify-between">
-          <h2 id="slots-heading" class="font-bold text-gray-800 text-sm"></h2>
-          <span id="slots-count" class="text-indigo-600 font-bold text-sm"></span>
+        <div class="flex items-center gap-2">
+          <h2 id="slots-heading" class="flex-1 font-bold text-indigo-600 text-sm"></h2>
+          <!-- 更新ボタン: タップすると空き状況を再取得する -->
+          <button class="refresh-btn" onclick="refreshSlots()" aria-label="空き状況を更新">
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none"
+                 stroke="#6b7280" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+              <polyline points="23 4 23 10 17 10"/>
+              <polyline points="1 20 1 14 7 14"/>
+              <path d="M3.51 9a9 9 0 0 1 14.85-3.36L23 10M1 14l4.64 4.36A9 9 0 0 0 20.49 15"/>
+            </svg>
+          </button>
+          <span id="slots-count" class="count-badge" style="display:none;"></span>
         </div>
+        <!-- スロット取得時刻（取得完了後に表示） -->
+        <p id="slots-updated" class="text-xs mt-1.5" style="color:#a5b4fc;display:none;"></p>
       </div>
 
       <!-- スロット読み込み中スピナー -->
@@ -546,16 +597,18 @@ function renderCalendar(summary) {
       const numColor = isToday ? 'white' : '#111827';
       const cntColor = isToday ? 'rgba(255,255,255,0.9)' : '#6366f1';
 
+      // 空き枠あり: 日付下に小さなドットで示す
+      const dotColor = isToday ? 'rgba(255,255,255,0.9)' : '#6366f1';
       return `<button class="day-card can-book" style="${bg}" onclick="selectDate('${day.date}')">
         <span style="font-size:11px;font-weight:700;color:${dayColor};margin-bottom:3px;">${DAY_NAMES[i]}</span>
         <span style="font-size:18px;font-weight:800;color:${numColor};line-height:1;">${dateNum}</span>
-        <span style="font-size:11px;font-weight:800;color:${cntColor};margin-top:4px;">${day.available_count}枠</span>
+        <span style="display:block;width:6px;height:6px;border-radius:50%;background:${dotColor};margin-top:5px;"></span>
       </button>`;
     } else {
       return `<div class="day-card" style="background:#f9fafb;">
         <span style="font-size:11px;font-weight:700;color:#d1d5db;margin-bottom:3px;">${DAY_NAMES[i]}</span>
         <span style="font-size:18px;font-weight:800;color:#d1d5db;line-height:1;">${dateNum}</span>
-        <span style="font-size:16px;color:#e5e7eb;margin-top:4px;">×</span>
+        <span style="display:block;width:6px;height:6px;border-radius:50%;background:#e5e7eb;margin-top:5px;"></span>
       </div>`;
     }
   }).join('');
@@ -632,8 +685,26 @@ function renderSlots(data) {
   const openCount = slots.filter(s => s.available).length;
 
   document.getElementById('slots-spinner').style.display = 'none';
-  document.getElementById('slots-count').textContent =
-    openCount > 0 ? `${openCount} 枠空き` : '空き枠なし';
+
+  // 枠数バッジを更新
+  const countEl = document.getElementById('slots-count');
+  if (openCount > 0) {
+    countEl.textContent    = `${openCount} 枠空き`;
+    countEl.style.display  = 'inline-block';
+  } else {
+    countEl.textContent   = '空き枠なし';
+    countEl.style.display = 'inline-block';
+    countEl.style.background = '#f3f4f6';
+    countEl.style.color      = '#9ca3af';
+  }
+
+  // 取得時刻を表示（「先生のスケジュール反映済み」）
+  const now     = new Date();
+  const hh      = String(now.getHours()).padStart(2, '0');
+  const min     = String(now.getMinutes()).padStart(2, '0');
+  const updEl   = document.getElementById('slots-updated');
+  updEl.textContent   = `📋 先生のスケジュール反映済み（${now.getMonth()+1}/${now.getDate()} ${hh}:${min} 更新）`;
+  updEl.style.display = 'block';
 
   if (openCount === 0) {
     document.getElementById('slots-empty').style.display = 'block';
@@ -664,27 +735,28 @@ function renderSlots(data) {
 
     groupItems.forEach(({ slot, idx }) => {
       if (slot.available) {
-        // 空き枠: ◯ バッジ + スタジオ名タグ
+        // 空き枠: 緑カード + ◯サークル + スタジオ名 + > 矢印
         const studioLabel = STUDIO_LABELS[slot.studio_id] || '';
-        const studioHtml  = studioLabel
-          ? `<span class="slot-studio">@${studioLabel}</span>`
+        const studioLine  = studioLabel
+          ? `<span class="slot-avail-studio">@${studioLabel}</span>`
           : '';
         html += `
           <button class="slot-row available" onclick="openBookingSheet(${idx})">
-            <span class="slot-time">${slot.start_time}</span>
-            <span class="slot-badge open">
-              <span style="font-size:14px;line-height:1;">◯</span>空き
-            </span>
-            ${studioHtml}
+            <span class="slot-avail-time">${slot.start_time}</span>
+            <div class="slot-avail-circle">◯</div>
+            <div class="slot-avail-body">
+              <span class="slot-avail-label">空き</span>
+              ${studioLine}
+            </div>
+            <span class="slot-arrow">›</span>
           </button>`;
       } else {
-        // 受付不可: ✕ バッジ（タップ不可）
+        // 受付不可: グレー×サークル（タップ不可）
         html += `
           <div class="slot-row">
-            <span class="slot-time gray">${slot.start_time}</span>
-            <span class="slot-badge closed">
-              <span style="font-size:12px;line-height:1;">✕</span>受付不可
-            </span>
+            <span class="slot-time-gray">${slot.start_time}</span>
+            <div class="slot-unavail-circle">×</div>
+            <span style="font-size:13px;color:#9ca3af;font-weight:500;">受付不可</span>
           </div>`;
       }
     });
@@ -695,6 +767,22 @@ function renderSlots(data) {
   const list = document.getElementById('slots-list');
   list.innerHTML = html;
   list.style.display = 'block';
+}
+
+/** 更新ボタンをタップしたとき: 現在の日付のスロットを再取得する */
+async function refreshSlots() {
+  if (!selectedDate) return;
+  document.getElementById('slots-spinner').style.display  = 'flex';
+  document.getElementById('slots-list').style.display     = 'none';
+  document.getElementById('slots-empty').style.display    = 'none';
+  document.getElementById('slots-count').style.display    = 'none';
+  document.getElementById('slots-updated').style.display  = 'none';
+  try {
+    currentDayData = await apiFetch({ action: 'availability', date: selectedDate });
+    renderSlots(currentDayData);
+  } catch (err) {
+    showError('スロットの読み込みに失敗しました。\n時間をおいて再試行してください。');
+  }
 }
 
 // ─── 予約確認シート ────────────────────────────────────────────────────────────
