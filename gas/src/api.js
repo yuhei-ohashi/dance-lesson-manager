@@ -232,6 +232,14 @@ function doGet(e) {
         return _ok(result);
       }
 
+      // ── チケット種別一覧（管理者専用） ──────────────────────────────────────
+      // ticket_type_id → label / color_hex / bg_hex / count のマスターデータ
+      case 'ticket_types': {
+        _requireAdminSecret(params);
+        var result = getAllTicketTypes();
+        return _ok(result);
+      }
+
       // ── 売上一覧（管理者専用） ───────────────────────────────────────────────
       // from / to（YYYY-MM-DD）で期間絞り込み可。省略時は全件
       case 'sales': {
@@ -574,6 +582,26 @@ function doPost(e) {
         var ok = deleteSale(body.saleId);
         if (!ok) return _err('NOT_FOUND', '売上が見つかりません: ' + body.saleId);
         return _ok({ sale_id: body.saleId });
+      }
+
+      // ── レッスン詳細更新（管理者専用）──────────────────────────────────────
+      // 管理画面のレッスン詳細シートから level / lesson_count / note 等を更新する。
+      // lessonId は必須。その他フィールドは渡したものだけ更新（省略 OK）。
+      case 'lesson_update': {
+        _requireAdminSecret(body);
+        _requireParams(body, ['lessonId']);
+
+        var lessonFields = {};
+        if (body.level        !== undefined) lessonFields.level        = body.level;
+        if (body.lesson_count !== undefined) lessonFields.lesson_count = Number(body.lesson_count);
+        if (body.note         !== undefined) lessonFields.note         = body.note;
+        if (body.studio_id    !== undefined) lessonFields.studio_id    = body.studio_id;
+        if (body.start_time   !== undefined) lessonFields.start_time   = body.start_time;
+        if (body.end_time     !== undefined) lessonFields.end_time     = body.end_time;
+
+        var updated = updateLesson(body.lessonId, lessonFields);
+        if (!updated) return _err('NOT_FOUND', 'レッスンが見つかりません: ' + body.lessonId);
+        return _ok({ lesson_id: body.lessonId });
       }
 
       // ── レッスンキャンセル（管理者専用）────────────────────────────────────

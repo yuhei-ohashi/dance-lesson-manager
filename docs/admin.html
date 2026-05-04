@@ -845,6 +845,92 @@
   </div>
 </div>
 
+<!-- ════════════════════════════════════════════════════════
+     ボトムシート: レッスン詳細
+════════════════════════════════════════════════════════ -->
+<div id="lesson-sheet-backdrop" class="sheet-backdrop" onclick="closeLessonSheet(event)">
+  <div class="sheet" onclick="event.stopPropagation()">
+    <div class="sheet-handle"></div>
+    <div class="px-4 pb-2">
+
+      <!-- ヘッダー：生徒名・日時 -->
+      <div class="flex items-center gap-3 mb-4">
+        <div id="lesson-sheet-avatar" class="avatar"></div>
+        <div class="flex-1 min-w-0">
+          <p id="lesson-sheet-name" class="text-base font-bold text-gray-800 truncate"></p>
+          <p id="lesson-sheet-meta" class="text-xs text-gray-500 mt-0.5"></p>
+        </div>
+        <button onclick="closeLessonSheet()"
+          class="w-11 h-11 rounded-full bg-gray-100 flex items-center justify-center
+                 text-gray-500 hover:bg-gray-200 transition-colors text-xl leading-none flex-shrink-0">
+          ×
+        </button>
+      </div>
+
+      <!-- レッスン詳細フォーム -->
+      <div class="card mb-4" style="border: 2px solid #e0e7ff;">
+        <p class="text-xs font-bold text-indigo-600 mb-3">レッスン詳細を確認・編集</p>
+
+        <div class="flex items-center gap-2 mb-3">
+          <div id="lesson-sheet-studio-badge" class="badge text-xs"></div>
+          <span id="lesson-sheet-ticket-label" class="text-xs text-gray-500"></span>
+        </div>
+
+        <div class="space-y-3">
+          <div>
+            <label class="block text-xs font-bold text-gray-600 mb-1">レベル</label>
+            <input id="lesson-sheet-level" type="text" placeholder="初級・中級…"
+              class="w-full border-2 border-gray-200 rounded-xl px-3 py-2 text-sm
+                     focus:outline-none focus:border-indigo-500 transition-colors">
+          </div>
+          <div>
+            <label class="block text-xs font-bold text-gray-600 mb-1">回数</label>
+            <input id="lesson-sheet-count" type="number" min="1"
+              class="w-full border-2 border-gray-200 rounded-xl px-3 py-2 text-sm
+                     focus:outline-none focus:border-indigo-500 transition-colors">
+          </div>
+          <div>
+            <label class="block text-xs font-bold text-gray-600 mb-1">備考</label>
+            <input id="lesson-sheet-note" type="text" placeholder="備考（任意）"
+              class="w-full border-2 border-gray-200 rounded-xl px-3 py-2 text-sm
+                     focus:outline-none focus:border-indigo-500 transition-colors">
+          </div>
+        </div>
+
+        <button onclick="saveLessonDetail()"
+          class="w-full mt-4 py-2.5 grad text-white text-sm font-bold rounded-xl
+                 hover:opacity-90 transition-opacity">
+          変更を保存
+        </button>
+      </div>
+
+      <!-- レッスンメモ追加フォーム -->
+      <div class="card mb-4" style="border: 2px solid #fde68a;">
+        <p class="text-xs font-bold text-amber-600 mb-2">＋ レッスンメモを記録</p>
+        <textarea id="lesson-sheet-memo-text" rows="3" placeholder="今日のレッスンメモを入力..."
+          class="w-full border-2 border-gray-200 rounded-xl px-3 py-2 text-sm
+                 focus:outline-none focus:border-indigo-500 transition-colors resize-none mb-2"></textarea>
+        <textarea id="lesson-sheet-memo-goal" rows="2" placeholder="次回の目標（任意）"
+          class="w-full border-2 border-gray-200 rounded-xl px-3 py-2 text-sm
+                 focus:outline-none focus:border-indigo-500 transition-colors resize-none mb-3"></textarea>
+        <button onclick="submitLessonMemo()"
+          class="w-full py-2.5 text-sm font-bold rounded-xl hover:opacity-90 transition-opacity"
+          style="background:#f59e0b;color:white;">
+          メモを保存
+        </button>
+      </div>
+
+      <!-- 過去メモ一覧 -->
+      <p class="text-xs font-bold text-gray-500 mb-2">この生徒の過去メモ</p>
+      <div id="lesson-sheet-memo-history"></div>
+      <div id="lesson-sheet-memo-empty" class="hidden text-center py-6">
+        <p class="text-sm text-gray-400">まだメモがありません</p>
+      </div>
+
+    </div>
+  </div>
+</div>
+
 <!-- トースト -->
 <div id="toast"></div>
 
@@ -885,6 +971,7 @@ let adminSecret = '';
 let state = {
   students:        [],
   studentMap:      {},   // studentId → student object
+  ticketTypeMap:   {},   // ticket_type_id → { label, color_hex, bg_hex, count }
   calLessons:      [],   // 現在表示中の日付のレッスン
   allMemos:        [],
   pendingRequests: [],
@@ -901,12 +988,13 @@ let state = {
   salesPeriod:  'month',
 
   // モーダル用
-  rejectTargetId:   null,
-  editingTaskId:    null,
+  rejectTargetId:       null,
+  editingTaskId:        null,
   editingMemoStudentId: null,
-  cancelLessonId:   null,
-  taskFormOpen:     false,
-  doneOpen:         false,
+  cancelLessonId:       null,
+  lessonSheetId:        null,  // レッスン詳細シートで編集中のlesson_id
+  taskFormOpen:         false,
+  doneOpen:             false,
 };
 
 // ─── ユーティリティ ────────────────────────────────────────────────────────────
@@ -1051,7 +1139,7 @@ async function showApp() {
 async function loadAllData() {
   const today = todayStr();
 
-  const [students, lessons, memos, requests, tasks, allTasks, sales] = await Promise.all([
+  const [students, lessons, memos, requests, tasks, allTasks, sales, ticketTypes] = await Promise.all([
     apiFetch({ action: 'students',        secret: adminSecret }),
     apiFetch({ action: 'lessons',   date: today, secret: adminSecret }),
     apiFetch({ action: 'lesson_memos',    secret: adminSecret }),
@@ -1059,11 +1147,15 @@ async function loadAllData() {
     apiFetch({ action: 'tasks',           secret: adminSecret }),
     apiFetch({ action: 'tasks', all: '1', secret: adminSecret }),
     apiFetch({ action: 'sales',           secret: adminSecret }),
+    apiFetch({ action: 'ticket_types',    secret: adminSecret }),
   ]);
 
   state.students   = students || [];
   state.studentMap = {};
   state.students.forEach(s => { state.studentMap[String(s.student_id)] = s; });
+
+  state.ticketTypeMap = {};
+  (ticketTypes || []).forEach(tt => { state.ticketTypeMap[tt.ticket_type_id] = tt; });
 
   state.calLessons      = (lessons  || []).filter(l => l.status !== 'cancelled');
   state.allMemos        = memos    || [];
@@ -1074,6 +1166,13 @@ async function loadAllData() {
 
   updateHeaderSub();
   updateReqBanner();
+}
+
+/** ticket_type_id を人間が読めるラベルに変換する（例: "bundle5" → "5枚チケット"） */
+function ticketTypeLabel(id) {
+  if (!id) return '';
+  const tt = state.ticketTypeMap[id];
+  return tt ? tt.label : id;
 }
 
 /** スプレッドシートの BOOLEAN 値の正規化 */
@@ -1189,19 +1288,20 @@ function renderLessonList() {
   document.getElementById('lesson-empty').classList.add('hidden');
 
   document.getElementById('lesson-list').innerHTML = lessons.map(lesson => {
-    const student = state.studentMap[String(lesson.student_id)] || {};
-    const name    = student.name || lesson.student_name_input || '（名前未設定）';
-    const studioLbl = STUDIO_LABELS[lesson.studio_id] || lesson.studio_id || '';
-    const studioClr = STUDIO_COLORS[lesson.studio_id] || '';
-    const level   = lesson.level || '';
-    const count   = lesson.lesson_count ? lesson.lesson_count + '回目' : '';
-    const time    = (lesson.start_time || '') + '〜' + (lesson.end_time || '');
-    const ticketType = student.ticket_type_id || '';
+    const student    = state.studentMap[String(lesson.student_id)] || {};
+    const name       = student.name || lesson.student_name_input || '（名前未設定）';
+    const studioLbl  = STUDIO_LABELS[lesson.studio_id] || lesson.studio_id || '';
+    const studioClr  = STUDIO_COLORS[lesson.studio_id] || '';
+    const level      = lesson.level || '';
+    const count      = lesson.lesson_count ? lesson.lesson_count + '回目' : '';
+    const time       = (lesson.start_time || '') + '〜' + (lesson.end_time || '');
+    const ticketLbl  = ticketTypeLabel(student.ticket_type_id || '');
     const av = avatarChar(name);
     const ac = avatarColor(name);
 
     return `
-    <div class="card flex items-start gap-3" id="lesson-card-${lesson.lesson_id}">
+    <div class="card flex items-start gap-3 cursor-pointer hover:shadow-md transition-shadow"
+         onclick="openLessonSheet(${lesson.lesson_id})" id="lesson-card-${lesson.lesson_id}">
       <div class="avatar mt-0.5" style="background:${ac};">${escapeHtml(av)}</div>
       <div class="flex-1 min-w-0">
         <div class="flex items-center gap-2 mb-1 flex-wrap">
@@ -1210,14 +1310,15 @@ function renderLessonList() {
         </div>
         <div class="flex items-center gap-2 text-xs text-gray-500 flex-wrap">
           <span class="badge ${studioClr}">@${escapeHtml(studioLbl)}</span>
-          ${ticketType ? `<span>${escapeHtml(ticketType)}</span>` : ''}
+          ${ticketLbl ? `<span>${escapeHtml(ticketLbl)}</span>` : ''}
           ${count ? `<span>${escapeHtml(count)}</span>` : ''}
           <span class="font-semibold text-indigo-600">${escapeHtml(time)}</span>
         </div>
         ${lesson.note ? `<p class="text-xs text-amber-700 mt-1 bg-amber-50 rounded-lg px-2 py-1">${escapeHtml(lesson.note)}</p>` : ''}
       </div>
-      <button onclick="openCancelDialog(${lesson.lesson_id}, '${escapeHtml(name)}')"
-        class="text-gray-300 hover:text-red-400 transition-colors flex-shrink-0 p-1">
+      <button onclick="event.stopPropagation(); openCancelDialog(${lesson.lesson_id}, '${escapeHtml(name)}')"
+        class="text-gray-300 hover:text-red-400 transition-colors flex-shrink-0
+               min-w-[44px] min-h-[44px] flex items-center justify-center -mr-2">
         <svg width="14" height="14" viewBox="0 0 24 24" fill="none"
              stroke="currentColor" stroke-width="2.5" stroke-linecap="round">
           <path d="M18 6L6 18M6 6l12 12"/>
@@ -1477,7 +1578,7 @@ function renderMemos() {
         <div class="flex-1 min-w-0">
           <div class="flex items-center gap-2 flex-wrap mb-0.5">
             <span class="text-sm font-bold text-gray-900">${escapeHtml(s.name)}</span>
-            ${s.ticket_type_id ? `<span class="text-xs text-gray-500">${escapeHtml(s.ticket_type_id)}</span>` : ''}
+            ${s.ticket_type_id ? `<span class="text-xs text-gray-500">${escapeHtml(ticketTypeLabel(s.ticket_type_id))}</span>` : ''}
             ${s.hasToday ? '<span class="badge badge-today">本日レッスン</span>' : ''}
           </div>
           ${(dancesStr || sinceStr) ? `<p class="text-xs text-gray-400 mb-1">${escapeHtml(dancesStr)}${escapeHtml(sinceStr)}</p>` : ''}
@@ -1618,7 +1719,8 @@ function taskRowHtml(task, isDone) {
     </div>
     ${!isDone ? `
     <button onclick="openTaskEditDialog(${task.task_id})"
-      class="text-gray-300 hover:text-indigo-500 transition-colors p-1">
+      class="text-gray-300 hover:text-indigo-500 transition-colors
+             min-w-[44px] min-h-[44px] flex items-center justify-center">
       <svg width="14" height="14" viewBox="0 0 24 24" fill="none"
            stroke="currentColor" stroke-width="2" stroke-linecap="round">
         <path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/>
@@ -1626,7 +1728,8 @@ function taskRowHtml(task, isDone) {
       </svg>
     </button>` : ''}
     <button onclick="deleteTaskAction(${task.task_id})"
-      class="text-gray-300 hover:text-red-400 transition-colors p-1">
+      class="text-gray-300 hover:text-red-400 transition-colors
+             min-w-[44px] min-h-[44px] flex items-center justify-center -mr-2">
       <svg width="14" height="14" viewBox="0 0 24 24" fill="none"
            stroke="currentColor" stroke-width="2.5" stroke-linecap="round">
         <path d="M18 6L6 18M6 6l12 12"/>
@@ -1815,7 +1918,8 @@ function renderSales() {
         ${s.memo ? `<p class="text-xs text-gray-400 mt-0.5">${escapeHtml(s.memo)}</p>` : ''}
       </div>
       <button onclick="deleteSaleAction(${s.sale_id})"
-        class="text-gray-300 hover:text-red-400 transition-colors flex-shrink-0 p-1">
+        class="text-gray-300 hover:text-red-400 transition-colors flex-shrink-0
+               min-w-[44px] min-h-[44px] flex items-center justify-center -mr-2">
         <svg width="14" height="14" viewBox="0 0 24 24" fill="none"
              stroke="currentColor" stroke-width="2.5" stroke-linecap="round">
           <path d="M18 6L6 18M6 6l12 12"/>
@@ -1854,6 +1958,152 @@ async function confirmCancelLesson() {
     showToast('失敗: ' + e.message);
   } finally {
     btn.disabled = false; btn.textContent = 'キャンセルする';
+  }
+}
+
+// ─── レッスン詳細シート ────────────────────────────────────────────────────────
+
+/**
+ * レッスンカードをタップしたときに呼ばれる。
+ * calLessons から対象レッスンを探してシートを開く。
+ */
+function openLessonSheet(lessonId) {
+  const lesson = state.calLessons.find(l => String(l.lesson_id) === String(lessonId));
+  if (!lesson) return;
+
+  state.lessonSheetId = lessonId;
+
+  const student = state.studentMap[String(lesson.student_id)] || {};
+  const name    = student.name || lesson.student_name_input || '（名前未設定）';
+  const av = avatarChar(name);
+  const ac = avatarColor(name);
+  const time = (lesson.start_time || '') + '〜' + (lesson.end_time || '');
+
+  // ヘッダー
+  document.getElementById('lesson-sheet-avatar').style.background = ac;
+  document.getElementById('lesson-sheet-avatar').textContent = av;
+  document.getElementById('lesson-sheet-name').textContent  = name;
+  document.getElementById('lesson-sheet-meta').textContent  = fmtDate(lesson.lesson_date) + '  ' + time;
+
+  // スタジオ・券種バッジ
+  const studioLbl = STUDIO_LABELS[lesson.studio_id] || lesson.studio_id || '';
+  const studioClr = STUDIO_COLORS[lesson.studio_id] || '';
+  const badge = document.getElementById('lesson-sheet-studio-badge');
+  badge.textContent  = '@' + studioLbl;
+  badge.className    = 'badge text-xs ' + studioClr;
+
+  const ticketLbl = ticketTypeLabel(student.ticket_type_id || '');
+  document.getElementById('lesson-sheet-ticket-label').textContent =
+    ticketLbl ? '券種: ' + ticketLbl : '';
+
+  // 編集フォーム
+  document.getElementById('lesson-sheet-level').value = lesson.level || '';
+  document.getElementById('lesson-sheet-count').value = lesson.lesson_count || 1;
+  document.getElementById('lesson-sheet-note').value  = lesson.note  || '';
+
+  // メモフォームをリセット
+  document.getElementById('lesson-sheet-memo-text').value = '';
+  document.getElementById('lesson-sheet-memo-goal').value = '';
+
+  // 過去メモ一覧
+  renderLessonMemoHistory(lesson.student_id);
+
+  document.getElementById('lesson-sheet-backdrop').classList.add('open');
+}
+
+function closeLessonSheet(e) {
+  if (e && e.target !== document.getElementById('lesson-sheet-backdrop')) return;
+  document.getElementById('lesson-sheet-backdrop').classList.remove('open');
+  state.lessonSheetId = null;
+}
+
+/** 対象生徒の過去メモをシート内に描画する */
+function renderLessonMemoHistory(studentId) {
+  const memos = state.allMemos
+    .filter(m => String(m.student_id) === String(studentId))
+    .sort((a, b) => b.lesson_date > a.lesson_date ? 1 : -1);
+
+  if (memos.length === 0) {
+    document.getElementById('lesson-sheet-memo-history').innerHTML = '';
+    document.getElementById('lesson-sheet-memo-empty').classList.remove('hidden');
+    return;
+  }
+  document.getElementById('lesson-sheet-memo-empty').classList.add('hidden');
+  document.getElementById('lesson-sheet-memo-history').innerHTML = memos.map(m => `
+    <div class="card mb-2">
+      <p class="text-xs font-bold text-gray-500 mb-1">${fmtDate(m.lesson_date)}</p>
+      ${m.memo ? `<p class="text-sm text-gray-700 leading-relaxed mb-1">${escapeHtml(m.memo)}</p>` : ''}
+      ${m.goal ? `<p class="text-xs text-indigo-600 bg-indigo-50 rounded-lg px-2 py-1">🎯 ${escapeHtml(m.goal)}</p>` : ''}
+    </div>`).join('');
+}
+
+/** レッスン詳細（level / lesson_count / note）を保存する */
+async function saveLessonDetail() {
+  const lessonId = state.lessonSheetId;
+  if (!lessonId) return;
+
+  const level = document.getElementById('lesson-sheet-level').value.trim();
+  const count = document.getElementById('lesson-sheet-count').value;
+  const note  = document.getElementById('lesson-sheet-note').value.trim();
+
+  try {
+    await apiPost('lesson_update', {
+      lessonId,
+      level,
+      lesson_count: Number(count) || 1,
+      note,
+    });
+
+    // ローカルの state にも反映してすぐ画面を更新
+    const lesson = state.calLessons.find(l => String(l.lesson_id) === String(lessonId));
+    if (lesson) {
+      lesson.level        = level;
+      lesson.lesson_count = count;
+      lesson.note         = note;
+    }
+    renderLessonList();
+    showToast('変更を保存しました ✅');
+  } catch(e) {
+    showToast('保存失敗: ' + e.message);
+  }
+}
+
+/** レッスン詳細シートからメモを追加する */
+async function submitLessonMemo() {
+  const lessonId = state.lessonSheetId;
+  const lesson   = state.calLessons.find(l => String(l.lesson_id) === String(lessonId));
+  if (!lesson) return;
+
+  const memo = document.getElementById('lesson-sheet-memo-text').value.trim();
+  const goal = document.getElementById('lesson-sheet-memo-goal').value.trim();
+
+  if (!memo && !goal) { showToast('メモまたは目標を入力してください'); return; }
+
+  try {
+    await apiPost('lesson_memo_add', {
+      student_id:  lesson.student_id,
+      lesson_id:   lessonId,
+      lesson_date: lesson.lesson_date,
+      memo,
+      goal,
+    });
+
+    // ローカル state に追加してすぐ反映
+    const newMemo = {
+      student_id:  lesson.student_id,
+      lesson_id:   lessonId,
+      lesson_date: lesson.lesson_date,
+      memo,
+      goal,
+    };
+    state.allMemos.push(newMemo);
+    renderLessonMemoHistory(lesson.student_id);
+    renderMemos();  // 生徒メモタブの最終メモも更新
+    document.getElementById('lesson-sheet-memo-text').value = '';
+    document.getElementById('lesson-sheet-memo-goal').value = '';
+    showToast('メモを保存しました ✅');
+  } catch(e) {
+    showToast('保存失敗: ' + e.message);
   }
 }
 
