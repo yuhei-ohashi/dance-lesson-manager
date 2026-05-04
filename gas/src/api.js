@@ -549,9 +549,10 @@ function doPost(e) {
             end_time:           body.end_time,
             student_id:         body.student_id,
             studio_id:          body.studio_id,
-            level:              body.level        || '',
+            level:              body.level           || '',
             lesson_count:       body.lesson_count != null ? body.lesson_count : 1,
-            note:               body.note         || '',
+            note:               body.note            || '',
+            ticket_type_id:     body.ticket_type_id  || '',
             status:             'confirmed',
           });
         });
@@ -592,12 +593,13 @@ function doPost(e) {
         _requireParams(body, ['lessonId']);
 
         var lessonFields = {};
-        if (body.level        !== undefined) lessonFields.level        = body.level;
-        if (body.lesson_count !== undefined) lessonFields.lesson_count = Number(body.lesson_count);
-        if (body.note         !== undefined) lessonFields.note         = body.note;
-        if (body.studio_id    !== undefined) lessonFields.studio_id    = body.studio_id;
-        if (body.start_time   !== undefined) lessonFields.start_time   = body.start_time;
-        if (body.end_time     !== undefined) lessonFields.end_time     = body.end_time;
+        if (body.level          !== undefined) lessonFields.level          = body.level;
+        if (body.lesson_count   !== undefined) lessonFields.lesson_count   = Number(body.lesson_count);
+        if (body.note           !== undefined) lessonFields.note           = body.note;
+        if (body.studio_id      !== undefined) lessonFields.studio_id      = body.studio_id;
+        if (body.start_time     !== undefined) lessonFields.start_time     = body.start_time;
+        if (body.end_time       !== undefined) lessonFields.end_time       = body.end_time;
+        if (body.ticket_type_id !== undefined) lessonFields.ticket_type_id = body.ticket_type_id;
 
         var updated = updateLesson(body.lessonId, lessonFields);
         if (!updated) return _err('NOT_FOUND', 'レッスンが見つかりません: ' + body.lessonId);

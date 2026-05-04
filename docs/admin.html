@@ -735,6 +735,14 @@
           <option value="izumi">泉中央</option>
         </select>
       </div>
+      <div>
+        <label class="block text-xs font-bold text-gray-600 mb-1">券種</label>
+        <select id="al-ticket-type"
+          class="w-full border-2 border-gray-200 rounded-xl px-3 py-2 text-sm
+                 focus:outline-none focus:border-indigo-500 transition-colors bg-white">
+          <option value="">（未設定）</option>
+        </select>
+      </div>
       <div class="flex gap-2">
         <div class="flex-1">
           <label class="block text-xs font-bold text-gray-600 mb-1">レベル</label>
@@ -873,10 +881,17 @@
 
         <div class="flex items-center gap-2 mb-3">
           <div id="lesson-sheet-studio-badge" class="badge text-xs"></div>
-          <span id="lesson-sheet-ticket-label" class="text-xs text-gray-500"></span>
         </div>
 
         <div class="space-y-3">
+          <div>
+            <label class="block text-xs font-bold text-gray-600 mb-1">券種</label>
+            <select id="lesson-sheet-ticket-type"
+              class="w-full border-2 border-gray-200 rounded-xl px-3 py-2 text-sm
+                     focus:outline-none focus:border-indigo-500 transition-colors bg-white">
+              <option value="">（未設定）</option>
+            </select>
+          </div>
           <div>
             <label class="block text-xs font-bold text-gray-600 mb-1">レベル</label>
             <input id="lesson-sheet-level" type="text" placeholder="初級・中級…"
@@ -1173,6 +1188,21 @@ function ticketTypeLabel(id) {
   if (!id) return '';
   const tt = state.ticketTypeMap[id];
   return tt ? tt.label : id;
+}
+
+/**
+ * selectId で指定した <select> 要素を ticket_types マスターで埋め、
+ * selectedId の option を選択状態にする。
+ */
+function _populateTicketTypeSelect(selectId, selectedId) {
+  const sel = document.getElementById(selectId);
+  if (!sel) return;
+  const types = Object.values(state.ticketTypeMap);
+  sel.innerHTML =
+    `<option value="">（未設定）</option>` +
+    types.map(tt =>
+      `<option value="${escapeHtml(tt.ticket_type_id)}"${tt.ticket_type_id === selectedId ? ' selected' : ''}>${escapeHtml(tt.label)}</option>`
+    ).join('');
 }
 
 /** スプレッドシートの BOOLEAN 値の正規化 */
@@ -1992,11 +2022,8 @@ function openLessonSheet(lessonId) {
   badge.textContent  = '@' + studioLbl;
   badge.className    = 'badge text-xs ' + studioClr;
 
-  const ticketLbl = ticketTypeLabel(student.ticket_type_id || '');
-  document.getElementById('lesson-sheet-ticket-label').textContent =
-    ticketLbl ? '券種: ' + ticketLbl : '';
-
   // 編集フォーム
+  _populateTicketTypeSelect('lesson-sheet-ticket-type', lesson.ticket_type_id || '');
   document.getElementById('lesson-sheet-level').value = lesson.level || '';
   document.getElementById('lesson-sheet-count').value = lesson.lesson_count || 1;
   document.getElementById('lesson-sheet-note').value  = lesson.note  || '';
@@ -2042,13 +2069,15 @@ async function saveLessonDetail() {
   const lessonId = state.lessonSheetId;
   if (!lessonId) return;
 
-  const level = document.getElementById('lesson-sheet-level').value.trim();
-  const count = document.getElementById('lesson-sheet-count').value;
-  const note  = document.getElementById('lesson-sheet-note').value.trim();
+  const ticketType = document.getElementById('lesson-sheet-ticket-type').value;
+  const level      = document.getElementById('lesson-sheet-level').value.trim();
+  const count      = document.getElementById('lesson-sheet-count').value;
+  const note       = document.getElementById('lesson-sheet-note').value.trim();
 
   try {
     await apiPost('lesson_update', {
       lessonId,
+      ticket_type_id: ticketType,
       level,
       lesson_count: Number(count) || 1,
       note,
@@ -2057,9 +2086,10 @@ async function saveLessonDetail() {
     // ローカルの state にも反映してすぐ画面を更新
     const lesson = state.calLessons.find(l => String(l.lesson_id) === String(lessonId));
     if (lesson) {
-      lesson.level        = level;
-      lesson.lesson_count = count;
-      lesson.note         = note;
+      lesson.ticket_type_id = ticketType;
+      lesson.level          = level;
+      lesson.lesson_count   = count;
+      lesson.note           = note;
     }
     renderLessonList();
     showToast('変更を保存しました ✅');
@@ -2146,6 +2176,9 @@ function openAddLessonDialog() {
     `<option value="${escapeHtml(s.name)}" data-id="${s.student_id}">`
   ).join('');
 
+  // 券種selectを最新のマスターで再描画
+  _populateTicketTypeSelect('al-ticket-type', '');
+
   document.getElementById('al-date').value  = state.calDate;
   document.getElementById('al-start').value = '';
   document.getElementById('al-end').value   = '';
@@ -2168,17 +2201,18 @@ function onAlStudentInput(val) {
 }
 
 async function submitAddLesson() {
-  const date    = document.getElementById('al-date').value;
-  const start   = document.getElementById('al-start').value;
-  const end     = document.getElementById('al-end').value;
-  const stuName = document.getElementById('al-student-name').value.trim();
-  const stuId   = document.getElementById('al-student-id').value;
-  const studio  = document.getElementById('al-studio').value;
-  const level   = document.getElementById('al-level').value.trim();
-  const count   = document.getElementById('al-count').value;
-  const note    = document.getElementById('al-note').value.trim();
-  const errEl   = document.getElementById('al-err');
-  const btn     = document.getElementById('al-submit-btn');
+  const date       = document.getElementById('al-date').value;
+  const start      = document.getElementById('al-start').value;
+  const end        = document.getElementById('al-end').value;
+  const stuName    = document.getElementById('al-student-name').value.trim();
+  const stuId      = document.getElementById('al-student-id').value;
+  const studio     = document.getElementById('al-studio').value;
+  const ticketType = document.getElementById('al-ticket-type').value;
+  const level      = document.getElementById('al-level').value.trim();
+  const count      = document.getElementById('al-count').value;
+  const note       = document.getElementById('al-note').value.trim();
+  const errEl      = document.getElementById('al-err');
+  const btn        = document.getElementById('al-submit-btn');
 
   errEl.classList.add('hidden');
 
@@ -2191,28 +2225,30 @@ async function submitAddLesson() {
   btn.disabled = true; btn.textContent = '追加中...';
   try {
     const result = await apiPost('add_lesson', {
-      lesson_date:  date,
-      start_time:   start,
-      end_time:     end,
-      student_id:   stuId,
-      studio_id:    studio,
+      lesson_date:     date,
+      start_time:      start,
+      end_time:        end,
+      student_id:      stuId,
+      studio_id:       studio,
+      ticket_type_id:  ticketType,
       level,
-      lesson_count: Number(count) || 1,
+      lesson_count:    Number(count) || 1,
       note,
     });
 
     // ローカル state に追加してすぐ反映
     const student = state.studentMap[String(stuId)] || {};
     const newLesson = {
-      lesson_id:    result.lesson_id,
-      lesson_date:  date,
-      start_time:   start,
-      end_time:     end,
-      student_id:   stuId,
+      lesson_id:          result.lesson_id,
+      lesson_date:        date,
+      start_time:         start,
+      end_time:           end,
+      student_id:         stuId,
       student_name_input: stuName,
-      studio_id:    studio,
+      studio_id:          studio,
+      ticket_type_id:     ticketType,
       level,
-      lesson_count: count,
+      lesson_count:       count,
       note,
       status: 'confirmed',
     };

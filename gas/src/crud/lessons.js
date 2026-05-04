@@ -15,6 +15,7 @@
  *   K: note             TEXT
  *   L: created_at       TEXT (YYYY-MM-DD HH:MM)
  *   M: updated_at       TEXT (YYYY-MM-DD HH:MM)
+ *   N: ticket_type_id   TEXT (FK→ticket_types, NULL可)
  */
 
 var LESSONS_SHEET = 'lessons';
@@ -116,6 +117,7 @@ function hasDuplicateConfirmedLesson(lessonDate, startTime, studioId, excludeLes
  * @param {number|string} [data.booking_request_id]
  * @param {string} [data.status]
  * @param {string} [data.note]
+ * @param {string} [data.ticket_type_id]
  * @returns {number} 追加した lesson_id
  */
 function addLesson(data) {
@@ -137,6 +139,7 @@ function addLesson(data) {
       data.note         || '',
       now,
       now,
+      data.ticket_type_id || '',
     ]);
     return lessonId;
   });
@@ -196,7 +199,7 @@ function updateLesson(lessonId, data) {
   }
   var updatable = [
     'lesson_date', 'start_time', 'end_time', 'student_id', 'studio_id',
-    'level', 'lesson_count', 'note', 'status',
+    'level', 'lesson_count', 'note', 'status', 'ticket_type_id',
   ];
   return withLock(function() {
     var sheet = getSheet(LESSONS_SHEET);
