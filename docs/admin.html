@@ -2644,7 +2644,7 @@ async function openMemoSheet(studentId) {
   // レッスン履歴を非同期で取得してプロフィールサマリーを更新
   try {
     const data = await apiFetch({ action: 'lessons', studentId: String(studentId), secret: adminSecret });
-    const lessons = (data.lessons || []).filter(l => l.status !== 'cancel');
+    const lessons = (Array.isArray(data) ? data : []).filter(l => l.status !== 'cancelled');
     const today = todayStr();
     const past   = lessons.filter(l => l.lesson_date <= today)
                           .sort((a,b) => b.lesson_date.localeCompare(a.lesson_date));
