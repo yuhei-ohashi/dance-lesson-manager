@@ -200,24 +200,32 @@
     .field:focus { outline: none; border-color: #6366f1; }
 
     /* ─── 週グリッドカレンダー ────────────────────────────────────────── */
-    #week-grid-wrap { overflow-x: auto; -webkit-overflow-scrolling: touch; }
+    #week-grid-wrap {
+      overflow-x: auto;
+      -webkit-overflow-scrolling: touch;
+      /* 右端に「まだ続く」を示すフェードシャドウ */
+      background:
+        linear-gradient(to right, white 0%, transparent 24px) left / 24px 100% no-repeat,
+        linear-gradient(to left,  #e0e7ff 0%, transparent 24px) right / 24px 100% no-repeat;
+      background-attachment: local, scroll;
+    }
 
-    /* グリッド本体: 時刻列 + 7日列 */
+    /* グリッド本体: 時刻列（固定幅）+ 7日列（最小幅保証で横スクロール） */
     .wg-table {
       display: grid;
-      grid-template-columns: 34px repeat(7, 1fr);
-      gap: 2px 3px;
-      min-width: 280px;
+      grid-template-columns: 42px repeat(7, minmax(44px, 1fr));
+      gap: 3px 4px;
+      min-width: 352px; /* 42 + 7×44 = 350px、余白2px */
     }
 
     /* 曜日ヘッダーセル */
     .wg-day-head {
-      text-align: center; padding: 0 2px 10px;
+      text-align: center; padding: 0 2px 12px;
     }
-    .wg-day-name { display: block; font-size: 10px; font-weight: 700; color: #9ca3af; }
+    .wg-day-name { display: block; font-size: 12px; font-weight: 700; color: #9ca3af; }
     .wg-day-num  {
       display: inline-flex; align-items: center; justify-content: center;
-      width: 26px; height: 26px; font-size: 13px; font-weight: 800; color: #111827;
+      width: 32px; height: 32px; font-size: 16px; font-weight: 800; color: #111827;
       border-radius: 50%;
     }
     .wg-day-head.is-today .wg-day-name { color: #818cf8; }
@@ -231,24 +239,24 @@
 
     /* 時刻ラベル */
     .wg-time {
-      font-size: 10px; font-weight: 600; color: #9ca3af;
+      font-size: 12px; font-weight: 600; color: #9ca3af;
       display: flex; align-items: center; justify-content: flex-end;
-      padding-right: 4px; height: 38px; white-space: nowrap;
+      padding-right: 6px; height: 54px; white-space: nowrap;
     }
 
     /* セル */
     .wg-cell {
-      height: 38px; border-radius: 8px;
+      height: 54px; border-radius: 10px;
       display: flex; align-items: center; justify-content: center;
-      font-size: 14px; font-weight: 700;
+      font-size: 22px; font-weight: 700;
     }
     .wg-cell.avail {
       background: #dcfce7; color: #16a34a;
       cursor: pointer;
-      transition: transform 0.1s ease, background 0.1s ease;
+      transition: transform 0.12s ease, background 0.12s ease;
     }
-    .wg-cell.avail:active { transform: scale(0.88); background: #bbf7d0; }
-    .wg-cell.unavail { background: #f9fafb; color: #d1d5db; font-size: 11px; }
+    .wg-cell.avail:active { transform: scale(0.84); background: #bbf7d0; }
+    .wg-cell.unavail { background: #f3f4f6; color: #d1d5db; font-size: 15px; }
     .wg-cell.empty   { background: transparent; }
     /* 空きコーナーセル（時刻列のヘッダー行） */
     .wg-corner { height: auto; }
@@ -331,33 +339,41 @@
   <div class="flex-1 overflow-y-auto bg-white">
 
     <!-- 週グリッドカレンダー -->
-    <div id="week-grid-wrap" class="px-3 pt-4 pb-6">
+    <div class="pt-4 pb-2 px-3">
 
       <!-- 読み込み中スピナー -->
       <div id="week-grid-spinner" class="flex justify-center py-12">
         <div class="w-8 h-8 border-4 border-indigo-500 border-t-transparent rounded-full spinner"></div>
       </div>
 
-      <!-- グリッド本体（JS が描画） -->
-      <div id="week-grid" style="display:none;"></div>
-
       <!-- この週に空き枠が1つもない場合 -->
       <p id="week-grid-empty" class="text-center text-gray-400 text-sm py-12"
          style="display:none;">
         この週は空き枠がありません
       </p>
+    </div>
 
-      <!-- グリッドの凡例 -->
-      <div id="week-grid-legend" class="flex items-center gap-4 mt-4 justify-center"
-           style="display:none!important;">
-        <span class="flex items-center gap-1 text-xs text-gray-500">
-          <span style="display:inline-block;width:18px;height:18px;border-radius:5px;background:#dcfce7;"></span>
-          空き
-        </span>
-        <span class="flex items-center gap-1 text-xs text-gray-500">
-          <span style="display:inline-block;width:18px;height:18px;border-radius:5px;background:#f9fafb;"></span>
-          受付不可
-        </span>
+    <!-- グリッド本体（横スクロール領域） -->
+    <div id="week-grid-wrap" class="px-3 pb-2" style="display:none;">
+      <div id="week-grid"></div>
+    </div>
+
+    <!-- 凡例 ＋ 横スクロールヒント -->
+    <div id="week-grid-footer" class="pb-4 px-3" style="display:none;">
+      <div class="flex items-center justify-between mt-3">
+        <!-- 凡例 -->
+        <div class="flex items-center gap-3">
+          <span class="flex items-center gap-1.5 text-xs text-gray-500">
+            <span style="display:inline-block;width:20px;height:20px;border-radius:6px;background:#dcfce7;font-size:13px;line-height:20px;text-align:center;color:#16a34a;font-weight:700;">○</span>
+            空き
+          </span>
+          <span class="flex items-center gap-1.5 text-xs text-gray-500">
+            <span style="display:inline-block;width:20px;height:20px;border-radius:6px;background:#f3f4f6;font-size:12px;line-height:20px;text-align:center;color:#d1d5db;font-weight:700;">×</span>
+            受付不可
+          </span>
+        </div>
+        <!-- 横スクロールヒント（小さい画面だけ表示） -->
+        <p class="text-xs text-indigo-300 font-medium">← 横にスクロール →</p>
       </div>
     </div>
 
@@ -620,9 +636,10 @@ async function loadWeek(mondayDate) {
   nextBtn.disabled      = isMaxWeek;
 
   // スピナーを表示してグリッドを隠す
-  document.getElementById('week-grid-spinner').style.display = 'flex';
-  document.getElementById('week-grid').style.display         = 'none';
-  document.getElementById('week-grid-empty').style.display   = 'none';
+  document.getElementById('week-grid-spinner').style.display  = 'flex';
+  document.getElementById('week-grid-wrap').style.display     = 'none';
+  document.getElementById('week-grid-footer').style.display   = 'none';
+  document.getElementById('week-grid-empty').style.display    = 'none';
 
   try {
     // 月曜〜日曜の日付文字列を生成
@@ -672,6 +689,7 @@ function renderWeekGrid(days) {
     return;
   }
 
+
   // ─── HTML 生成 ───────────────────────────────────────────────────
   let html = '<div class="wg-table">';
 
@@ -719,9 +737,9 @@ function renderWeekGrid(days) {
 
   html += '</div>';
 
-  const gridEl = document.getElementById('week-grid');
-  gridEl.innerHTML = html;
-  gridEl.style.display = 'block';
+  document.getElementById('week-grid').innerHTML = html;
+  document.getElementById('week-grid-wrap').style.display   = 'block';
+  document.getElementById('week-grid-footer').style.display = 'block';
 }
 
 /**
