@@ -1,4 +1,50 @@
 /**
+ * setupZones — ゾーン一括設定（一回限り実行）
+ *
+ * 既存ゾーンを全無効化し、以下のゾーンを新規追加する:
+ *   月: 10:00-18:00 齊藤DG
+ *   火: 10:00-13:30 齊藤DG / 14:30-18:00 仙台SS
+ *   水: 10:00-18:00 仙台SS
+ *   木: 10:00-18:00 仙台SS
+ *   金: 12:30-18:00 泉中央
+ *   土: 10:00-18:00 仙台SS
+ */
+function setupZones() {
+  var sheet = getSheet('zones');
+  var now   = nowDateTime();
+
+  // 1. 既存ゾーンを全て無効化
+  var lastRow = sheet.getLastRow();
+  if (lastRow > 1) {
+    var isActiveCol = 6; // F列 = is_active（1始まり）
+    sheet.getRange(2, isActiveCol, lastRow - 1, 1).setValue(false);
+    Logger.log('既存ゾーン ' + (lastRow - 1) + ' 件を無効化しました');
+  }
+
+  // 2. 新ゾーンを追加
+  var zones = [
+    // [day_of_week, start_time, end_time, studio_id]
+    [0, '10:00', '18:00', 'saito'],   // 月: 齊藤DG
+    [1, '10:00', '13:30', 'saito'],   // 火前半: 齊藤DG
+    [1, '14:30', '18:00', 'sendai'],  // 火後半: 仙台SS
+    [2, '10:00', '18:00', 'sendai'],  // 水: 仙台SS
+    [3, '10:00', '18:00', 'sendai'],  // 木: 仙台SS
+    [4, '12:30', '18:00', 'izumi'],   // 金: 泉中央
+    [5, '10:00', '18:00', 'sendai'],  // 土: 仙台SS
+  ];
+
+  var zoneRows = zones.map(function(z, i) {
+    var num = lastRow + i; // 単純連番でzoneIdを生成
+    var zoneId = 'z' + String(num).padStart(3, '0');
+    return [zoneId, z[0], z[1], z[2], z[3], true, now];
+  });
+
+  sheet.getRange(lastRow + 1, 1, zoneRows.length, 7).setValues(zoneRows);
+  Logger.log('新ゾーン ' + zoneRows.length + ' 件を追加しました');
+  Logger.log('✅ setupZones 完了');
+}
+
+/**
  * init.js — スプレッドシート初期化スクリプト（一回限り実行）
  *
  * 実行方法：
