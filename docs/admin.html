@@ -712,13 +712,12 @@
           </select>
         </div>
         <div class="flex-1">
-          <label class="block text-xs font-bold text-gray-600 mb-1">終了（自動）</label>
-          <div id="al-end-display"
-            class="w-full border-2 border-gray-100 rounded-xl px-3 py-2 text-sm
-                   bg-gray-50 text-gray-500">
-            --:--
-          </div>
-          <input type="hidden" id="al-end">
+          <label class="block text-xs font-bold text-gray-600 mb-1">終了 <span class="text-red-500">*</span></label>
+          <select id="al-end"
+            class="w-full border-2 border-gray-200 rounded-xl px-3 py-2 text-sm
+                   focus:outline-none focus:border-indigo-500 transition-colors bg-white">
+            <option value="">--:--</option>
+          </select>
         </div>
       </div>
       <div>
@@ -1220,18 +1219,31 @@ function _addMinutes(hhmm, minutes) {
   return (nh < 10 ? '0' : '') + nh + ':' + (nm < 10 ? '0' : '') + nm;
 }
 
-/** 開始時刻が変わったとき、終了時刻を +30分 で自動セット */
+/**
+ * 開始時刻が変わったとき、終了 select を「開始+30分〜」に絞り込む。
+ * 現在の終了選択値を維持し、それが範囲外なら先頭（+30分）に自動セット。
+ */
 function onAlStartChange(val) {
-  const endDisplay = document.getElementById('al-end-display');
-  const endInput   = document.getElementById('al-end');
+  const endSel = document.getElementById('al-end');
   if (!val) {
-    endDisplay.textContent = '--:--';
-    endInput.value = '';
+    endSel.innerHTML = '<option value="">--:--</option>';
+    endSel.value = '';
     return;
   }
-  const endTime = _addMinutes(val, 30);
-  endDisplay.textContent = endTime;
-  endInput.value = endTime;
+  const prevEnd = endSel.value;
+  const allSlots = _timeSlots();
+  // 開始より後のスロットのみ表示
+  const endSlots = allSlots.filter(t => t > val);
+  endSel.innerHTML =
+    '<option value="">--:--</option>' +
+    endSlots.map(t =>
+      `<option value="${t}"${t === prevEnd ? ' selected' : ''}>${t}</option>`
+    ).join('');
+  // 以前の選択値が範囲内にあればそのまま、なければ+30分をデフォルト
+  if (!prevEnd || prevEnd <= val) {
+    const defaultEnd = _addMinutes(val, 30);
+    if (endSlots.includes(defaultEnd)) endSel.value = defaultEnd;
+  }
 }
 
 /**
@@ -2216,10 +2228,9 @@ function openAddLessonDialog() {
     `<option value="${escapeHtml(s.name)}" data-id="${s.student_id}">`
   ).join('');
 
-  // 開始時刻 select を 30分刻みで再描画
+  // 開始時刻 select を 30分刻みで再描画、終了をリセット
   _populateStartSelect('al-start', '');
-  document.getElementById('al-end-display').textContent = '--:--';
-  document.getElementById('al-end').value = '';
+  document.getElementById('al-end').innerHTML = '<option value="">--:--</option>';
 
   // 券種selectを最新のマスターで再描画
   _populateTicketTypeSelect('al-ticket-type', '');
@@ -2240,6 +2251,10 @@ function closeAddLessonDialog() {
 function onAlStudentInput(val) {
   const matched = state.students.find(s => s.name === val);
   document.getElementById('al-student-id').value = matched ? matched.student_id : '';
+  // 生徒が確定したらその生徒のデフォルト券種を自動セット（変更可能）
+  if (matched) {
+    _populateTicketTypeSelect('al-ticket-type', matched.ticket_type_id || '');
+  }
 }
 
 async function submitAddLesson() {
