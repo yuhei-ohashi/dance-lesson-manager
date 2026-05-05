@@ -963,18 +963,23 @@
   <div class="dialog">
     <h3 class="text-base font-bold text-gray-800 mb-2">レッスンをキャンセル</h3>
     <p id="cancel-dialog-body" class="text-sm text-gray-600 mb-4"></p>
-    <div class="flex gap-3">
-      <button onclick="closeCancelDialog()"
-        class="flex-1 py-2.5 border-2 border-gray-200 rounded-xl text-gray-600
-               font-semibold text-sm hover:bg-gray-50 transition-colors">
-        戻る
-      </button>
+    <div class="space-y-2 mb-3">
       <button id="cancel-confirm-btn" onclick="confirmCancelLesson()"
-        class="flex-1 py-2.5 bg-red-500 text-white rounded-xl font-bold text-sm
+        class="w-full py-2.5 bg-red-500 text-white rounded-xl font-bold text-sm
                hover:bg-red-600 transition-colors">
-        キャンセルする
+        この1件のみキャンセル
+      </button>
+      <button id="cancel-bulk-btn" onclick="confirmBulkCancelLesson()"
+        class="w-full py-2.5 bg-red-800 text-white rounded-xl font-bold text-sm
+               hover:bg-red-900 transition-colors">
+        本日以降の繰り返しを一括キャンセル
       </button>
     </div>
+    <button onclick="closeCancelDialog()"
+      class="w-full py-2.5 border-2 border-gray-200 rounded-xl text-gray-600
+             font-semibold text-sm hover:bg-gray-50 transition-colors">
+      戻る
+    </button>
   </div>
 </div>
 
@@ -1315,6 +1320,7 @@ let state = {
   editingTaskId:        null,
   editingMemoStudentId: null,
   cancelLessonId:       null,
+  cancelLesson:         null,  // 一括キャンセル用：キャンセル対象のレッスンオブジェクト
   lessonSheetId:        null,  // レッスン詳細シートで編集中のlesson_id
   taskFormOpen:         false,
   doneOpen:             false,
@@ -2567,7 +2573,7 @@ async function submitAddMemo() {
 /** ナビバッジ（赤丸）とカレンダーバナーを更新する */
 function updateTaskDueBadge() {
   const today    = todayStr();
-  const tomorrow = (() => { const d = new Date(today + 'T00:00:00'); d.setDate(d.getDate()+1); return d.toISOString().slice(0,10); })();
+  const tomorrow = (() => { const d = new Date(today + 'T00:00:00'); d.setDate(d.getDate()+1); return dateToYMD(d); })();
 
   const urgent = state.pendingTasks.filter(t =>
     t.due_date && (t.due_date <= today || t.due_date === tomorrow)
@@ -2644,7 +2650,7 @@ function renderTasks() {
 function taskDueBadgeHtml(dueDate, isDone) {
   if (!dueDate || isDone) return '';
   const today    = todayStr();
-  const tomorrow = (() => { const d = new Date(today + 'T00:00:00'); d.setDate(d.getDate()+1); return d.toISOString().slice(0,10); })();
+  const tomorrow = (() => { const d = new Date(today + 'T00:00:00'); d.setDate(d.getDate()+1); return dateToYMD(d); })();
   if (dueDate < today) {
     return `<span class="badge" style="background:#fee2e2;color:#991b1b;">⚠ 期限超過</span>`;
   } else if (dueDate === today) {
@@ -2903,13 +2909,19 @@ function renderSales() {
 
 function openCancelDialog(lessonId, studentName) {
   state.cancelLessonId = lessonId;
+  // 一括キャンセルで使うレッスン情報を保持（calLessons から検索）
+  state.cancelLesson = state.calLessons.find(l => String(l.lesson_id) === String(lessonId)) || null;
   document.getElementById('cancel-dialog-body').textContent =
     studentName + ' さんのレッスンをキャンセルします。この操作は取り消せません。';
+  // ボタンテキストをリセット
+  document.getElementById('cancel-confirm-btn').textContent = 'この1件のみキャンセル';
+  document.getElementById('cancel-bulk-btn').textContent = '本日以降の繰り返しを一括キャンセル';
   document.getElementById('cancel-dialog-backdrop').classList.add('open');
 }
 
 function closeCancelDialog() {
   state.cancelLessonId = null;
+  state.cancelLesson   = null;
   document.getElementById('cancel-dialog-backdrop').classList.remove('open');
 }
 
@@ -2928,7 +2940,65 @@ async function confirmCancelLesson() {
   } catch(e) {
     showToast('失敗: ' + e.message);
   } finally {
-    btn.disabled = false; btn.textContent = 'キャンセルする';
+    btn.disabled = false; btn.textContent = 'この1件のみキャンセル';
+  }
+}
+
+/**
+ * 本日以降・同じ曜日・同じ時間帯のレッスンをまとめてキャンセルする。
+ * GAS の lessons?studentId= で対象生徒の全件を取得し、JS 側でフィルタリングする。
+ */
+async function confirmBulkCancelLesson() {
+  const lesson = state.cancelLesson;
+  if (!lesson) { showToast('レッスン情報が見つかりません'); return; }
+
+  const btn = document.getElementById('cancel-bulk-btn');
+  btn.disabled = true; btn.textContent = '取得中...';
+
+  try {
+    const today = todayStr();
+    const dow   = new Date(lesson.lesson_date + 'T00:00:00').getDay(); // 0=日〜6=土
+
+    // 対象生徒の全レッスンを取得（GAS側はdate絞り込み不可のため、JS側でフィルタ）
+    const allLessons = await apiFetch({
+      action:    'lessons',
+      studentId: lesson.student_id,
+      secret:    adminSecret,
+    });
+
+    // 本日以降・同じ曜日・同じ開始終了時刻・未キャンセルのみ
+    const targets = allLessons.filter(l =>
+      l.lesson_date >= today &&
+      l.status !== 'cancelled' &&
+      new Date(l.lesson_date + 'T00:00:00').getDay() === dow &&
+      l.start_time === lesson.start_time &&
+      l.end_time   === lesson.end_time
+    );
+
+    if (targets.length === 0) {
+      showToast('対象のレッスンが見つかりませんでした');
+      btn.disabled = false; btn.textContent = '本日以降の繰り返しを一括キャンセル';
+      return;
+    }
+
+    // 順次キャンセル
+    for (let i = 0; i < targets.length; i++) {
+      btn.textContent = `${i + 1}/${targets.length}件キャンセル中...`;
+      await apiPost('cancel_lesson', { lessonId: targets[i].lesson_id });
+      // ローカル state からも削除
+      state.calLessons = state.calLessons.filter(
+        l => String(l.lesson_id) !== String(targets[i].lesson_id)
+      );
+    }
+
+    updateHeaderSub();
+    renderVerticalCalendar();
+    renderLessonList();
+    closeCancelDialog();
+    showToast(`${targets.length}件のレッスンをキャンセルしました ✅`);
+  } catch(e) {
+    showToast('失敗: ' + e.message);
+    btn.disabled = false; btn.textContent = '本日以降の繰り返しを一括キャンセル';
   }
 }
 
@@ -3178,6 +3248,13 @@ function calcWeeklyCount(startDate, endDate) {
   return count;
 }
 
+/** Date オブジェクトをローカル時間で 'YYYY-MM-DD' にフォーマット（toISOStringはUTC変換でズレるため使わない） */
+function dateToYMD(d) {
+  return d.getFullYear() + '-' +
+    String(d.getMonth() + 1).padStart(2, '0') + '-' +
+    String(d.getDate()).padStart(2, '0');
+}
+
 function _updateAlSubmitBtn() {
   const btn = document.getElementById('al-submit-btn');
   if (!btn) return;
@@ -3285,7 +3362,7 @@ async function submitAddLesson() {
     let d = new Date(date + 'T00:00:00');
     const endDate = new Date(repeatUntil + 'T00:00:00');
     while (d <= endDate) {
-      dates.push(d.toISOString().slice(0, 10));
+      dates.push(dateToYMD(d));
       d.setDate(d.getDate() + 7);
     }
     // 上限チェック（最大52件）
