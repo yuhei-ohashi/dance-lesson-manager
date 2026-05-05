@@ -1200,11 +1200,45 @@
       <div class="card mb-4" style="border: 2px solid #e0e7ff;">
         <p class="text-xs font-bold text-indigo-600 mb-3">レッスン詳細を確認・編集</p>
 
-        <div class="flex items-center gap-2 mb-3">
-          <div id="lesson-sheet-studio-badge" class="badge text-xs"></div>
-        </div>
-
         <div class="space-y-3">
+          <!-- 日付 -->
+          <div>
+            <label class="block text-xs font-bold text-gray-600 mb-1">日付</label>
+            <input id="lesson-sheet-date" type="date"
+              class="w-full border-2 border-gray-200 rounded-xl px-3 py-2 text-sm
+                     focus:outline-none focus:border-indigo-500 transition-colors">
+          </div>
+          <!-- 時刻 -->
+          <div class="flex gap-2">
+            <div class="flex-1">
+              <label class="block text-xs font-bold text-gray-600 mb-1">開始</label>
+              <select id="lesson-sheet-start" onchange="onLsStartChange(this.value)"
+                class="w-full border-2 border-gray-200 rounded-xl px-3 py-2 text-sm
+                       focus:outline-none focus:border-indigo-500 transition-colors bg-white">
+                <option value="">--:--</option>
+              </select>
+            </div>
+            <div class="flex-1">
+              <label class="block text-xs font-bold text-gray-600 mb-1">終了</label>
+              <select id="lesson-sheet-end"
+                class="w-full border-2 border-gray-200 rounded-xl px-3 py-2 text-sm
+                       focus:outline-none focus:border-indigo-500 transition-colors bg-white">
+                <option value="">--:--</option>
+              </select>
+            </div>
+          </div>
+          <!-- スタジオ -->
+          <div>
+            <label class="block text-xs font-bold text-gray-600 mb-1">スタジオ</label>
+            <select id="lesson-sheet-studio"
+              class="w-full border-2 border-gray-200 rounded-xl px-3 py-2 text-sm
+                     focus:outline-none focus:border-indigo-500 transition-colors bg-white">
+              <option value="saito">齊藤DG</option>
+              <option value="sendai">仙台SS</option>
+              <option value="izumi">泉中央</option>
+            </select>
+          </div>
+          <!-- 券種 -->
           <div>
             <label class="block text-xs font-bold text-gray-600 mb-1">券種</label>
             <select id="lesson-sheet-ticket-type"
@@ -1213,12 +1247,14 @@
               <option value="">（未設定）</option>
             </select>
           </div>
+          <!-- 回数 -->
           <div>
             <label class="block text-xs font-bold text-gray-600 mb-1">回数</label>
             <input id="lesson-sheet-count" type="number" min="1"
               class="w-full border-2 border-gray-200 rounded-xl px-3 py-2 text-sm
                      focus:outline-none focus:border-indigo-500 transition-colors">
           </div>
+          <!-- 備考 -->
           <div>
             <label class="block text-xs font-bold text-gray-600 mb-1">備考</label>
             <input id="lesson-sheet-note" type="text" placeholder="備考（任意）"
@@ -1226,6 +1262,9 @@
                      focus:outline-none focus:border-indigo-500 transition-colors">
           </div>
         </div>
+
+        <!-- エラー表示 -->
+        <p id="lesson-sheet-err" class="hidden text-xs text-red-500 mt-2"></p>
 
         <button onclick="saveLessonDetail()"
           class="w-full mt-4 py-2.5 grad text-white text-sm font-bold rounded-xl
@@ -1586,6 +1625,31 @@ function onAlStartChange(val) {
   if (!prevEnd || prevEnd <= val) {
     const defaultEnd = _addMinutes(val, 30);
     if (endSlots.includes(defaultEnd)) endSel.value = defaultEnd;
+  }
+}
+
+/** レッスン詳細シートの開始時刻変更時に終了 select を更新する */
+function onLsStartChange(val) {
+  _populateLsEndSelect(val, '');
+}
+
+/** レッスン詳細シートの終了 select を、開始より後のスロットで再描画する */
+function _populateLsEndSelect(startVal, selectedEnd) {
+  const endSel = document.getElementById('lesson-sheet-end');
+  if (!startVal) {
+    endSel.innerHTML = '<option value="">--:--</option>';
+    return;
+  }
+  const endSlots = _timeSlots().filter(t => t > startVal);
+  endSel.innerHTML =
+    '<option value="">--:--</option>' +
+    endSlots.map(t =>
+      `<option value="${t}"${t === selectedEnd ? ' selected' : ''}>${t}</option>`
+    ).join('');
+  // selectedEnd が範囲内になければ +30分をデフォルト
+  if (!selectedEnd || selectedEnd <= startVal) {
+    const def = _addMinutes(startVal, 30);
+    if (endSlots.includes(def)) endSel.value = def;
   }
 }
 
@@ -3063,17 +3127,17 @@ function openLessonSheet(lessonId) {
   document.getElementById('lesson-sheet-name').textContent  = name;
   document.getElementById('lesson-sheet-meta').textContent  = fmtDate(lesson.lesson_date) + '  ' + time;
 
-  // スタジオ・券種バッジ
-  const studioLbl = STUDIO_LABELS[lesson.studio_id] || lesson.studio_id || '';
-  const studioClr = STUDIO_COLORS[lesson.studio_id] || '';
-  const badge = document.getElementById('lesson-sheet-studio-badge');
-  badge.textContent  = '@' + studioLbl;
-  badge.className    = 'badge text-xs ' + studioClr;
+  // 編集フォーム：日付・時刻・スタジオ
+  document.getElementById('lesson-sheet-date').value = lesson.lesson_date || '';
+  _populateStartSelect('lesson-sheet-start', lesson.start_time || '');
+  _populateLsEndSelect(lesson.start_time || '', lesson.end_time || '');
+  document.getElementById('lesson-sheet-studio').value = lesson.studio_id || 'saito';
 
-  // 編集フォーム
+  // 編集フォーム：その他
   _populateTicketTypeSelect('lesson-sheet-ticket-type', lesson.ticket_type_id || '');
   document.getElementById('lesson-sheet-count').value = lesson.lesson_count || 1;
   document.getElementById('lesson-sheet-note').value  = lesson.note  || '';
+  document.getElementById('lesson-sheet-err').classList.add('hidden');
 
   // メモフォームをリセット
   document.getElementById('lesson-sheet-memo-text').value = '';
@@ -3132,35 +3196,61 @@ function renderLessonMemoHistory(studentId) {
     </div>`).join('');
 }
 
-/** レッスン詳細（level / lesson_count / note）を保存する */
+/** レッスン詳細を保存する（日付・時刻・スタジオ・券種・回数・備考） */
 async function saveLessonDetail() {
   const lessonId = state.lessonSheetId;
   if (!lessonId) return;
 
+  const date       = document.getElementById('lesson-sheet-date').value;
+  const start      = document.getElementById('lesson-sheet-start').value;
+  const end        = document.getElementById('lesson-sheet-end').value;
+  const studio     = document.getElementById('lesson-sheet-studio').value;
   const ticketType = document.getElementById('lesson-sheet-ticket-type').value;
   const count      = document.getElementById('lesson-sheet-count').value;
   const note       = document.getElementById('lesson-sheet-note').value.trim();
+  const errEl      = document.getElementById('lesson-sheet-err');
+
+  // バリデーション
+  if (!date)  { errEl.textContent = '日付を入力してください'; errEl.classList.remove('hidden'); return; }
+  if (!start) { errEl.textContent = '開始時刻を選択してください'; errEl.classList.remove('hidden'); return; }
+  if (!end)   { errEl.textContent = '終了時刻を選択してください'; errEl.classList.remove('hidden'); return; }
+  if (end <= start) { errEl.textContent = '終了時刻は開始時刻より後にしてください'; errEl.classList.remove('hidden'); return; }
+  errEl.classList.add('hidden');
 
   try {
     await apiPost('lesson_update', {
       lessonId,
+      lesson_date:    date,
+      start_time:     start,
+      end_time:       end,
+      studio_id:      studio,
       ticket_type_id: ticketType,
-      lesson_count: Number(count) || 1,
+      lesson_count:   Number(count) || 1,
       note,
     });
 
     // ローカルの state にも反映してすぐ画面を更新
     const lesson = state.calLessons.find(l => String(l.lesson_id) === String(lessonId));
     if (lesson) {
+      lesson.lesson_date    = date;
+      lesson.start_time     = start;
+      lesson.end_time       = end;
+      lesson.studio_id      = studio;
       lesson.ticket_type_id = ticketType;
       lesson.lesson_count   = count;
       lesson.note           = note;
     }
+
+    // ヘッダーも更新
+    document.getElementById('lesson-sheet-meta').textContent =
+      fmtDate(date) + '  ' + start + '〜' + end;
+
     renderVerticalCalendar();
     renderLessonList();
     showToast('変更を保存しました ✅');
   } catch(e) {
-    showToast('保存失敗: ' + e.message);
+    errEl.textContent = e.message || '保存に失敗しました';
+    errEl.classList.remove('hidden');
   }
 }
 
