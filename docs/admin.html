@@ -251,9 +251,9 @@
     <!-- 日報 / 今週 トグル -->
     <div class="flex gap-2 mb-4">
       <button onclick="setCalMode('daily')" id="btn-mode-daily"
-        class="filter-tab active">日報</button>
+        class="filter-tab">日報</button>
       <button onclick="setCalMode('weekly')" id="btn-mode-weekly"
-        class="filter-tab">今週</button>
+        class="filter-tab active">今週</button>
       <div class="flex-1"></div>
       <button onclick="refreshCalendar()"
         class="text-xs text-indigo-600 font-semibold flex items-center gap-1">
@@ -267,7 +267,7 @@
     </div>
 
     <!-- 週ヘッダー（今週モード時のみ表示） -->
-    <div id="week-header" class="hidden mb-4">
+    <div id="week-header" class="mb-4">
       <div class="flex items-center justify-between mb-2">
         <button onclick="shiftWeek(-1)" class="p-2 rounded-xl hover:bg-gray-100 transition-colors">
           <svg width="18" height="18" viewBox="0 0 24 24" fill="none"
@@ -314,6 +314,29 @@
     <!-- ローディング -->
     <div id="cal-spinner" class="hidden text-center py-10">
       <div class="w-8 h-8 border-4 border-indigo-500 border-t-transparent rounded-full spinner mx-auto"></div>
+    </div>
+
+    <!-- 日報サマリー（daily モード時のみ表示） -->
+    <div id="daily-summary" class="hidden mb-4"></div>
+
+    <!-- 月次CSVボタン（daily モード時のみ表示） -->
+    <div id="monthly-csv-bar" class="hidden mb-4">
+      <div class="flex items-center gap-2">
+        <input id="csv-month-input" type="month"
+          class="border-2 border-gray-200 rounded-xl px-3 py-1.5 text-sm
+                 focus:outline-none focus:border-indigo-500 transition-colors bg-white flex-1">
+        <button onclick="downloadMonthlyCSV()"
+          class="flex items-center gap-1.5 px-3 py-1.5 bg-emerald-500 text-white
+                 text-xs font-bold rounded-xl hover:opacity-90 transition-opacity whitespace-nowrap">
+          <svg width="13" height="13" viewBox="0 0 24 24" fill="none"
+               stroke="white" stroke-width="2.5" stroke-linecap="round">
+            <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/>
+            <polyline points="7 10 12 15 17 10"/>
+            <line x1="12" y1="15" x2="12" y2="3"/>
+          </svg>
+          月次CSV
+        </button>
+      </div>
     </div>
 
     <!-- レッスン一覧 -->
@@ -985,7 +1008,7 @@ let state = {
   allSales:        [],
 
   activeTab:    'calendar',
-  calMode:      'daily',   // 'daily' | 'weekly'
+  calMode:      'weekly',  // 'daily' | 'weekly'
   calDate:      todayStr(),
   weekOffset:   0,         // 今週から何週ずれているか
   studioFilter: 'all',
@@ -1302,8 +1325,6 @@ function setCalMode(mode) {
   state.calMode = mode;
   document.getElementById('btn-mode-daily').classList.toggle('active',  mode === 'daily');
   document.getElementById('btn-mode-weekly').classList.toggle('active', mode === 'weekly');
-  document.getElementById('week-header').classList.toggle('hidden', mode === 'daily');
-  if (mode === 'weekly') renderWeekHeader();
   renderCalendar();
 }
 
@@ -1351,9 +1372,69 @@ async function selectCalDate(dateStr) {
 }
 
 function renderCalendar() {
-  // 日付ヘッダー
   document.getElementById('cal-date-label').textContent = fmtDate(state.calDate);
-  renderLessonList();
+  const isDaily = state.calMode === 'daily';
+  // weekly ヘッダーの表示制御
+  document.getElementById('week-header').classList.toggle('hidden', isDaily);
+  // daily 専用要素の表示制御
+  document.getElementById('cal-date-header').classList.toggle('hidden', !isDaily);
+  document.getElementById('daily-summary').classList.toggle('hidden', !isDaily);
+  document.getElementById('monthly-csv-bar').classList.toggle('hidden', !isDaily);
+  document.getElementById('lesson-list').classList.toggle('hidden', !isDaily);
+  document.getElementById('lesson-empty').classList.toggle('hidden', true);
+
+  if (isDaily) {
+    renderDailySummary();
+    renderLessonList();
+    // 月入力欄を今月に初期化（未設定の場合のみ）
+    const mi = document.getElementById('csv-month-input');
+    if (!mi.value) mi.value = state.calDate.slice(0, 7);
+  } else {
+    renderWeekHeader();
+  }
+}
+
+/** 日報サマリー（生徒ごとのコマ数・券種集計）を描画する */
+function renderDailySummary() {
+  const el = document.getElementById('daily-summary');
+  const confirmed = state.calLessons.filter(l => l.status !== 'cancelled');
+  if (confirmed.length === 0) { el.innerHTML = ''; return; }
+
+  // 生徒ごとに集計
+  const map = {};
+  confirmed.forEach(l => {
+    const sid  = String(l.student_id);
+    const stu  = state.studentMap[sid] || {};
+    const name = stu.name || l.student_name_input || '（名前未設定）';
+    const ttId = l.ticket_type_id || stu.ticket_type_id || '';
+    if (!map[sid]) map[sid] = { name, ttId, slots: 0 };
+    map[sid].slots += 1;
+  });
+
+  const rows = Object.values(map);
+  const total = rows.reduce((s, r) => s + r.slots, 0);
+
+  el.innerHTML = `
+    <div class="card" style="border:2px solid #e0e7ff; padding:12px 14px;">
+      <p class="text-xs font-bold text-indigo-600 mb-2">本日のレッスン（${total}コマ）</p>
+      <table style="width:100%; border-collapse:collapse; font-size:13px;">
+        <thead>
+          <tr style="color:#6b7280; font-size:11px; border-bottom:1px solid #f0f1f3;">
+            <th style="text-align:left; padding-bottom:4px; font-weight:600;">生徒</th>
+            <th style="text-align:left; padding-bottom:4px; font-weight:600;">券種</th>
+            <th style="text-align:right; padding-bottom:4px; font-weight:600;">コマ</th>
+          </tr>
+        </thead>
+        <tbody>
+          ${rows.map(r => `
+            <tr style="border-bottom:1px solid #f9fafb;">
+              <td style="padding:5px 0; font-weight:600; color:#111827;">${escapeHtml(r.name)}</td>
+              <td style="padding:5px 8px; color:#6b7280;">${escapeHtml(ticketTypeLabel(r.ttId) || '—')}</td>
+              <td style="padding:5px 0; text-align:right; font-weight:700; color:#6366f1;">${r.slots}</td>
+            </tr>`).join('')}
+        </tbody>
+      </table>
+    </div>`;
 }
 
 function renderLessonList() {
@@ -1381,7 +1462,7 @@ function renderLessonList() {
     const level      = lesson.level || '';
     const count      = lesson.lesson_count ? lesson.lesson_count + '回目' : '';
     const time       = (lesson.start_time || '') + '〜' + (lesson.end_time || '');
-    const ticketLbl  = ticketTypeLabel(student.ticket_type_id || '');
+    const ticketLbl  = ticketTypeLabel(lesson.ticket_type_id || student.ticket_type_id || '');
     const av = avatarChar(name);
     const ac = avatarColor(name);
 
@@ -2320,6 +2401,61 @@ async function submitAddLesson() {
   } finally {
     btn.disabled = false; btn.textContent = '追加する';
   }
+}
+
+// ─── 月次CSV ──────────────────────────────────────────────────────────────────
+
+async function downloadMonthlyCSV() {
+  const monthVal = document.getElementById('csv-month-input').value;
+  if (!monthVal) { showToast('年月を選択してください'); return; }
+
+  const [year, month] = monthVal.split('-').map(Number);
+  const from = `${year}-${String(month).padStart(2,'0')}-01`;
+  const lastDay = new Date(year, month, 0).getDate();
+  const to   = `${year}-${String(month).padStart(2,'0')}-${String(lastDay).padStart(2,'0')}`;
+
+  showToast('データを取得中...');
+  let lessons;
+  try {
+    lessons = await apiFetch({ action: 'lessons', from, to, secret: adminSecret });
+  } catch(e) {
+    showToast('取得失敗: ' + e.message); return;
+  }
+
+  const confirmed = (lessons || []).filter(l => l.status !== 'cancelled');
+  if (confirmed.length === 0) { showToast('この月のレッスンはありません'); return; }
+
+  // CSV 生成
+  const BOM = '\uFEFF'; // Excel で文字化けしないように BOM を付与
+  const header = ['日付','曜日','生徒名','券種','コマ数','開始時刻','終了時刻','スタジオ','備考'];
+  const WEEKDAYS = ['日','月','火','水','木','金','土'];
+  const rows = confirmed
+    .sort((a, b) => (a.lesson_date + a.start_time).localeCompare(b.lesson_date + b.start_time))
+    .map(l => {
+      const stu    = state.studentMap[String(l.student_id)] || {};
+      const name   = stu.name || l.student_name_input || '';
+      const ttId   = l.ticket_type_id || stu.ticket_type_id || '';
+      const ticket = ticketTypeLabel(ttId) || ttId;
+      const d      = new Date(l.lesson_date + 'T00:00:00');
+      const wday   = WEEKDAYS[d.getDay()];
+      return [
+        l.lesson_date, wday, name, ticket,
+        l.lesson_count || 1,
+        l.start_time || '', l.end_time || '',
+        STUDIO_LABELS[l.studio_id] || l.studio_id || '',
+        l.note || '',
+      ].map(v => `"${String(v).replace(/"/g, '""')}"`).join(',');
+    });
+
+  const csv = BOM + header.map(h => `"${h}"`).join(',') + '\n' + rows.join('\n');
+  const blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' });
+  const url  = URL.createObjectURL(blob);
+  const a    = document.createElement('a');
+  a.href     = url;
+  a.download = `レッスン日報_${monthVal}.csv`;
+  a.click();
+  URL.revokeObjectURL(url);
+  showToast(`${confirmed.length}件をCSVに出力しました`);
 }
 
 // ─── 売上追加ダイアログ ────────────────────────────────────────────────────────
