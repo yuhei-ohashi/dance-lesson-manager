@@ -894,6 +894,46 @@
         </button>
       </div>
 
+      <!-- プロフィールサマリー（最終レッスン・次回レッスン） -->
+      <div class="card mb-3" style="border: 1px solid #e0e7ff; background: #fafbff;">
+        <!-- ローディング中 -->
+        <div id="profile-summary-loading" class="flex justify-center py-2">
+          <div class="w-5 h-5 border-4 border-indigo-400 border-t-transparent rounded-full spinner"></div>
+        </div>
+        <!-- サマリー内容 -->
+        <div id="profile-summary-content" class="hidden">
+          <div class="flex items-center">
+            <div class="flex-1 text-center py-1">
+              <p class="text-xs text-gray-400 mb-1">最終レッスン</p>
+              <p id="profile-last-lesson" class="text-sm font-bold text-gray-800"></p>
+              <p id="profile-last-ago" class="text-xs text-gray-400 mt-0.5"></p>
+            </div>
+            <div class="w-px bg-gray-200 self-stretch"></div>
+            <div class="flex-1 text-center py-1">
+              <p class="text-xs text-gray-400 mb-1">次回レッスン</p>
+              <p id="profile-next-lesson" class="text-sm font-bold text-gray-800"></p>
+              <p id="profile-next-until" class="text-xs text-gray-400 mt-0.5"></p>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- 受講履歴セクション（折り畳み） -->
+      <div class="mb-4">
+        <button onclick="toggleProfileHistory()"
+          class="flex items-center gap-1.5 text-xs font-bold text-gray-500 w-full py-1 mb-1">
+          <span id="profile-history-arrow" class="inline-block transition-transform duration-200">▶</span>
+          受講履歴
+          <span id="profile-history-count" class="text-gray-400 font-normal ml-1"></span>
+        </button>
+        <div id="profile-history-list" class="hidden card p-0 overflow-hidden">
+          <!-- renderProfileHistory() で描画 -->
+        </div>
+        <div id="profile-history-loading" class="hidden text-center py-2">
+          <div class="w-4 h-4 border-4 border-indigo-400 border-t-transparent rounded-full spinner mx-auto"></div>
+        </div>
+      </div>
+
       <!-- メモ追加フォーム -->
       <div class="card mb-4" style="border: 2px solid #e0e7ff;">
         <p class="text-xs font-bold text-indigo-600 mb-2">＋ 新しいメモを追加</p>
@@ -1370,6 +1410,7 @@ let state = {
   rejectTargetId:       null,
   editingTaskId:        null,
   editingMemoStudentId: null,
+  profileLessons:       null,  // 生徒プロフィールシートの受講履歴（直近20件）
   cancelLessonId:       null,
   cancelLesson:         null,  // 一括キャンセル用：キャンセル対象のレッスンオブジェクト
   lessonSheetId:        null,  // レッスン詳細シートで編集中のlesson_id
@@ -2572,9 +2613,10 @@ function renderMemos() {
   }).join('');
 }
 
-// メモ詳細シート
-function openMemoSheet(studentId) {
+// メモ詳細シート（= 生徒プロフィールシート）
+async function openMemoSheet(studentId) {
   state.editingMemoStudentId = studentId;
+  state.profileLessons = null;  // 受講履歴リセット
   const s = state.students.find(x => String(x.student_id) === String(studentId)) || {};
   const av = avatarChar(s.name);
   const ac = avatarColor(s.name);
@@ -2587,13 +2629,114 @@ function openMemoSheet(studentId) {
   document.getElementById('memo-add-text').value  = '';
   document.getElementById('memo-add-goal').value  = '';
 
+  // プロフィールサマリーをローディング状態に戻す
+  document.getElementById('profile-summary-loading').classList.remove('hidden');
+  document.getElementById('profile-summary-content').classList.add('hidden');
+  // 受講履歴セクションを折り畳み状態に戻す
+  document.getElementById('profile-history-list').classList.add('hidden');
+  document.getElementById('profile-history-list').innerHTML = '';
+  document.getElementById('profile-history-arrow').style.transform = 'rotate(0deg)';
+  document.getElementById('profile-history-count').textContent = '';
+
   renderMemoHistory(studentId);
   document.getElementById('memo-sheet-backdrop').classList.add('open');
+
+  // レッスン履歴を非同期で取得してプロフィールサマリーを更新
+  try {
+    const data = await apiFetch({ action: 'lessons', studentId: String(studentId), secret: adminSecret });
+    const lessons = (data.lessons || []).filter(l => l.status !== 'cancel');
+    const today = todayStr();
+    const past   = lessons.filter(l => l.lesson_date <= today)
+                          .sort((a,b) => b.lesson_date.localeCompare(a.lesson_date));
+    const future = lessons.filter(l => l.lesson_date > today)
+                          .sort((a,b) => a.lesson_date.localeCompare(b.lesson_date));
+
+    // 最終レッスン
+    const last = past[0];
+    if (last) {
+      document.getElementById('profile-last-lesson').textContent = fmtDateShort(last.lesson_date);
+      const diffDays = Math.round((new Date(today) - new Date(last.lesson_date)) / 86400000);
+      document.getElementById('profile-last-ago').textContent = diffDays === 0 ? '今日' : diffDays + '日前';
+    } else {
+      document.getElementById('profile-last-lesson').textContent = 'なし';
+      document.getElementById('profile-last-ago').textContent = '';
+    }
+
+    // 次回レッスン
+    const next = future[0];
+    if (next) {
+      document.getElementById('profile-next-lesson').textContent = fmtDateShort(next.lesson_date);
+      const diffDays = Math.round((new Date(next.lesson_date) - new Date(today)) / 86400000);
+      document.getElementById('profile-next-until').textContent = diffDays === 0 ? '今日' : diffDays + '日後';
+    } else {
+      document.getElementById('profile-next-lesson').textContent = '予定なし';
+      document.getElementById('profile-next-until').textContent = '';
+    }
+
+    // 受講履歴データを保存（直近20件）
+    state.profileLessons = past.slice(0, 20);
+    document.getElementById('profile-history-count').textContent = '（' + past.length + '件）';
+
+    document.getElementById('profile-summary-loading').classList.add('hidden');
+    document.getElementById('profile-summary-content').classList.remove('hidden');
+  } catch(e) {
+    document.getElementById('profile-summary-loading').classList.add('hidden');
+    document.getElementById('profile-summary-content').classList.remove('hidden');
+    document.getElementById('profile-last-lesson').textContent = '取得失敗';
+    document.getElementById('profile-last-ago').textContent = '';
+    document.getElementById('profile-next-lesson').textContent = '取得失敗';
+    document.getElementById('profile-next-until').textContent = '';
+    document.getElementById('profile-history-count').textContent = '';
+  }
 }
 
 function closeMemoSheet(e) {
   if (e && e.target !== document.getElementById('memo-sheet-backdrop')) return;
   document.getElementById('memo-sheet-backdrop').classList.remove('open');
+}
+
+// 受講履歴の折り畳み開閉
+function toggleProfileHistory() {
+  const list  = document.getElementById('profile-history-list');
+  const arrow = document.getElementById('profile-history-arrow');
+  const isOpen = !list.classList.contains('hidden');
+
+  if (isOpen) {
+    list.classList.add('hidden');
+    arrow.style.transform = 'rotate(0deg)';
+  } else {
+    // まだ描画していなければ描画してから表示
+    if (!list.innerHTML.trim()) renderProfileHistory();
+    list.classList.remove('hidden');
+    arrow.style.transform = 'rotate(90deg)';
+  }
+}
+
+// 受講履歴を直近20件描画
+function renderProfileHistory() {
+  const lessons = state.profileLessons || [];
+  const list = document.getElementById('profile-history-list');
+
+  if (lessons.length === 0) {
+    list.innerHTML = '<p class="text-xs text-gray-400 text-center py-3">受講履歴がありません</p>';
+    return;
+  }
+
+  const STUDIO_LABEL = { saito: '斉藤', sendai: '仙台', izumi: '泉' };
+  list.innerHTML = lessons.map((l, i) => {
+    const isLast    = i === lessons.length - 1;
+    const studio    = STUDIO_LABEL[l.studio_id] || l.studio_id || '';
+    const studioCls = l.studio_id ? 'studio-' + l.studio_id : '';
+    const timeStr   = [l.start_time, l.end_time].filter(Boolean).join('〜');
+    const ticket    = ticketTypeLabel(l.ticket_type_id);
+    return `
+    <div class="flex items-center gap-2 px-3 py-2.5 ${isLast ? '' : 'border-b border-gray-100'}">
+      <span class="text-xs text-gray-700 font-medium w-20 flex-shrink-0">${fmtDateShort(l.lesson_date)}</span>
+      <span class="text-xs text-gray-400 flex-shrink-0">${escapeHtml(timeStr)}</span>
+      ${studio ? `<span class="text-xs px-2 py-0.5 rounded-full flex-shrink-0 ${studioCls}">${escapeHtml(studio)}</span>` : ''}
+      ${ticket  ? `<span class="text-xs text-gray-400 truncate">${escapeHtml(ticket)}</span>` : ''}
+    </div>`;
+  }).join('');
 }
 
 function renderMemoHistory(studentId) {
