@@ -612,19 +612,14 @@
     </div>
 
     <!-- サマリー -->
-    <div id="sales-summary" class="card mb-4 hidden">
+    <div id="sales-summary" class="card mb-4 hidden" style="border:2px solid #e0e7ff; padding:14px 16px;">
       <div class="flex justify-between items-center">
         <div>
-          <p class="text-xs text-gray-500 font-semibold">合計売上</p>
-          <p id="sales-total" class="text-2xl font-black text-gray-900 mt-0.5">¥0</p>
+          <p id="sales-summary-label" class="text-xs text-indigo-600 font-bold mb-0.5">合計売上</p>
+          <p id="sales-total" class="text-2xl font-black text-gray-900">¥0</p>
         </div>
         <div class="text-right">
-          <p class="text-xs text-gray-500">
-            <span id="sales-paid-count">0</span>件 支払済み
-          </p>
-          <p class="text-xs text-red-500 mt-0.5">
-            未払い <span id="sales-unpaid-total">¥0</span>
-          </p>
+          <p class="text-xs text-gray-500"><span id="sales-count">0</span>件</p>
         </div>
       </div>
     </div>
@@ -1099,18 +1094,10 @@
           <option value="other">その他</option>
         </select>
       </div>
+      <input type="hidden" id="as-payment" value="paid">
       <div>
-        <label class="block text-xs font-bold text-gray-600 mb-1">支払状態</label>
-        <select id="as-payment"
-          class="w-full border-2 border-gray-200 rounded-xl px-3 py-2 text-sm
-                 focus:outline-none focus:border-indigo-500 transition-colors bg-white">
-          <option value="paid">支払済み</option>
-          <option value="unpaid">未払い</option>
-        </select>
-      </div>
-      <div>
-        <label class="block text-xs font-bold text-gray-600 mb-1">メモ</label>
-        <input id="as-memo" type="text" placeholder="備考（任意）"
+        <label class="block text-xs font-bold text-gray-600 mb-1">備考</label>
+        <input id="as-memo" type="text" placeholder="例：田中花子 チケット10枚購入 / 〇〇イベント出演料"
           class="w-full border-2 border-gray-200 rounded-xl px-3 py-2 text-sm
                  focus:outline-none focus:border-indigo-500 transition-colors">
       </div>
@@ -2743,15 +2730,17 @@ function renderSales() {
   }).sort((a,b) => b.sale_date > a.sale_date ? 1 : -1);
 
   // サマリー計算
-  const total       = sales.reduce((sum,s) => sum + (Number(s.amount)||0), 0);
-  const paidCount   = sales.filter(s => s.payment_status === 'paid').length;
-  const unpaidTotal = sales.filter(s => s.payment_status === 'unpaid')
-                           .reduce((sum,s) => sum + (Number(s.amount)||0), 0);
+  const total = sales.reduce((sum,s) => sum + (Number(s.amount)||0), 0);
+
+  // 月ラベル（今月フィルター時は「〇月の売上」、全期間は「全期間の売上」）
+  const summaryLabel = state.salesPeriod === 'month'
+    ? (today.getMonth()+1) + '月の売上'
+    : '全期間の売上';
 
   document.getElementById('sales-summary').classList.toggle('hidden', sales.length === 0);
-  document.getElementById('sales-total').textContent       = '¥' + total.toLocaleString();
-  document.getElementById('sales-paid-count').textContent  = paidCount;
-  document.getElementById('sales-unpaid-total').textContent = '¥' + unpaidTotal.toLocaleString();
+  document.getElementById('sales-summary-label').textContent = summaryLabel;
+  document.getElementById('sales-total').textContent         = '¥' + total.toLocaleString();
+  document.getElementById('sales-count').textContent         = sales.length;
 
   if (sales.length === 0) {
     document.getElementById('sales-list').innerHTML = '';
@@ -2770,12 +2759,11 @@ function renderSales() {
     <div class="card flex items-center gap-3" id="sale-card-${s.sale_id}">
       <div class="flex-1 min-w-0">
         <div class="flex items-center gap-2 flex-wrap mb-0.5">
-          <span class="text-sm font-bold text-gray-900">¥${Number(s.amount||0).toLocaleString()}</span>
-          <span class="badge ${isPaid ? 'badge-paid' : 'badge-unpaid'}">${isPaid ? '支払済' : '未払い'}</span>
+          <span class="text-base font-black text-gray-900">¥${Number(s.amount||0).toLocaleString()}</span>
           <span class="badge" style="background:#f3f4f6;color:#374151;">${escapeHtml(typeLabel)}</span>
         </div>
         <p class="text-xs text-gray-500">${escapeHtml(name)} · ${fmtDate(s.sale_date)}</p>
-        ${s.memo ? `<p class="text-xs text-gray-400 mt-0.5">${escapeHtml(s.memo)}</p>` : ''}
+        ${s.memo ? `<p class="text-xs text-amber-700 mt-1 bg-amber-50 rounded-lg px-2 py-1">${escapeHtml(s.memo)}</p>` : ''}
       </div>
       <button onclick="deleteSaleAction(${s.sale_id})"
         class="text-gray-300 hover:text-red-400 transition-colors flex-shrink-0
