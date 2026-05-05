@@ -415,10 +415,11 @@ function doPost(e) {
           return _err('SLOT_UNAVAILABLE', validation.reason);
         }
 
-        // Phase 4-B: line_user_id で既存生徒を検索 or 仮登録して student_id を自動セット
-        var resolvedStudentId = (body.student_id != null && body.student_id !== '')
-          ? body.student_id
-          : _resolveStudentId(body.line_user_id || '', body.student_name_input);
+        // student_id は外部入力を直接使わず、常に line_user_id / student_name_input から解決する。
+        // body.student_id を受け付けると第三者がなりすまし予約できるため無視する。
+        var resolvedStudentId = _resolveStudentId(
+          body.line_user_id || '', body.student_name_input
+        );
 
         var requestId = addBookingRequest({
           student_id:         resolvedStudentId,
@@ -616,15 +617,8 @@ function doPost(e) {
           'lesson_date', 'start_time', 'end_time', 'student_id', 'studio_id',
         ]);
 
-        // addLesson() が内部で withLock を取得するため、ここでは二重ロックを避ける。
-        // 重複チェックは参照のみなのでロック外で実施し、書き込みは addLesson() に委ねる。
-        if (hasDuplicateConfirmedLesson(
-          body.lesson_date, body.start_time, body.studio_id
-        )) {
-          return _err('SLOT_UNAVAILABLE',
-            '同日時・同スタジオに既に確定済みのレッスンがあります。');
-        }
-        var lessonId = addLesson({
+        // 重複チェックと追加を同一ロック内で行い、競合状態を防ぐ。
+        var addResult = addLessonWithDuplicateCheck({
           lesson_date:        body.lesson_date,
           start_time:         body.start_time,
           end_time:           body.end_time,
@@ -636,7 +630,11 @@ function doPost(e) {
           ticket_type_id:     body.ticket_type_id  || '',
           status:             'confirmed',
         });
-        return _ok({ lesson_id: lessonId });
+        if (addResult.duplicate) {
+          return _err('SLOT_UNAVAILABLE',
+            '同日時・同スタジオに既に確定済みのレッスンがあります。');
+        }
+        return _ok({ lesson_id: addResult.lessonId });
       }
 
       // ── 売上追加（管理者専用）───────────────────────────────────────────────
@@ -668,6 +666,7 @@ function doPost(e) {
       // ── レッスン詳細更新（管理者専用）──────────────────────────────────────
       // 管理画面のレッスン詳細シートから level / lesson_count / note 等を更新する。
       // lessonId は必須。その他フィールドは渡したものだけ更新（省略 OK）。
+      // lesson_date / start_time / studio_id のいずれかを変更する場合は重複チェックを行う。
       case 'lesson_update': {
         _requireAdminSecret(body);
         _requireParams(body, ['lessonId']);
@@ -680,6 +679,24 @@ function doPost(e) {
         if (body.start_time     !== undefined) lessonFields.start_time     = body.start_time;
         if (body.end_time       !== undefined) lessonFields.end_time       = body.end_time;
         if (body.ticket_type_id !== undefined) lessonFields.ticket_type_id = body.ticket_type_id;
+
+        // 日時・スタジオが変わる場合は重複チェック（自分自身は除外）
+        var isSlotChanging = (
+          body.lesson_date !== undefined ||
+          body.start_time  !== undefined ||
+          body.studio_id   !== undefined
+        );
+        if (isSlotChanging) {
+          var currentLesson = getLesson(body.lessonId);
+          if (!currentLesson) return _err('NOT_FOUND', 'レッスンが見つかりません: ' + body.lessonId);
+          var checkDate    = body.lesson_date !== undefined ? body.lesson_date : currentLesson.lesson_date;
+          var checkStart   = body.start_time  !== undefined ? body.start_time  : currentLesson.start_time;
+          var checkStudio  = body.studio_id   !== undefined ? body.studio_id   : currentLesson.studio_id;
+          if (hasDuplicateConfirmedLesson(checkDate, checkStart, checkStudio, body.lessonId)) {
+            return _err('SLOT_UNAVAILABLE',
+              '変更後の日時・スタジオに既に確定済みのレッスンがあります。');
+          }
+        }
 
         var updated = updateLesson(body.lessonId, lessonFields);
         if (!updated) return _err('NOT_FOUND', 'レッスンが見つかりません: ' + body.lessonId);
@@ -701,6 +718,63 @@ function doPost(e) {
           return _err('INTERNAL_ERROR', 'レッスンのキャンセルに失敗しました: ' + body.lessonId);
         }
         return _ok({ lesson_id: body.lessonId });
+      }
+
+      // ── 以下、管理者向け読み取り系（POST 版）──────────────────────────────
+      // admin.html の apiFetch は secret を URL に乗せないよう POST で呼ぶ。
+      // doGet 版と同じロジックだが body から params を取る。
+
+      case 'lessons': {
+        _requireAdminSecret(body);
+        if (body.date) {
+          return _ok(getLessonsByDate(body.date));
+        }
+        if (body.from && body.to) {
+          return _ok(getLessonsByDateRange(body.from, body.to));
+        }
+        if (body.studentId) {
+          return _ok(getLessonsByStudent(body.studentId));
+        }
+        return _err('INVALID_PARAM', 'date / from+to / studentId のいずれかを指定してください。');
+      }
+
+      case 'students': {
+        _requireAdminSecret(body);
+        return _ok(getActiveStudents());
+      }
+
+      case 'booking_requests': {
+        _requireAdminSecret(body);
+        return _ok(getPendingBookingRequests());
+      }
+
+      case 'blocks': {
+        _requireAdminSecret(body);
+        return _ok(getActiveBlocks());
+      }
+
+      case 'tasks': {
+        _requireAdminSecret(body);
+        return _ok(body.all === '1' ? getAllTasks() : getPendingTasks());
+      }
+
+      case 'lesson_memos': {
+        _requireAdminSecret(body);
+        return _ok(body.studentId
+          ? getLessonMemosByStudent(body.studentId)
+          : getAllLessonMemos());
+      }
+
+      case 'ticket_types': {
+        _requireAdminSecret(body);
+        return _ok(getAllTicketTypes());
+      }
+
+      case 'sales': {
+        _requireAdminSecret(body);
+        return _ok((body.from && body.to)
+          ? getSalesByDateRange(body.from, body.to)
+          : getAllSales());
       }
 
       default:

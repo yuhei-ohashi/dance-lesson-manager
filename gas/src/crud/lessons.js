@@ -103,8 +103,45 @@ function hasDuplicateConfirmedLesson(lessonDate, startTime, studioId, excludeLes
 // ─── 書き込み ─────────────────────────────────────────────────────────────────
 
 /**
+ * 重複チェックとレッスン追加を同一ロック内で行う。
+ * 同日時・同スタジオに confirmed レッスンが既に存在する場合は null を返す。
+ * ⚠️ add_lesson エンドポイントはこちらを使うこと（addLesson は使わない）。
+ *
+ * @param {Object} data  addLesson と同じフィールド
+ * @returns {{ lessonId: number }|{ duplicate: true }} 重複時は { duplicate: true }
+ */
+function addLessonWithDuplicateCheck(data) {
+  return withLock(function() {
+    if (hasDuplicateConfirmedLesson(data.lesson_date, data.start_time, data.studio_id)) {
+      return { duplicate: true };
+    }
+    var sheet = getSheet(LESSONS_SHEET);
+    var lessonId = getNextId(sheet);
+    var now = nowDateTime();
+    appendRow(sheet, [
+      lessonId,
+      data.lesson_date,
+      data.start_time,
+      data.end_time,
+      data.student_id,
+      data.studio_id,
+      data.level        || '',
+      data.lesson_count != null ? data.lesson_count : 1,
+      data.booking_request_id != null ? data.booking_request_id : '',
+      data.status       || 'confirmed',
+      data.note         || '',
+      now,
+      now,
+      data.ticket_type_id || '',
+    ]);
+    return { lessonId: lessonId };
+  });
+}
+
+/**
  * レッスンを追加する。
  * status のデフォルトは 'confirmed'。
+ * ⚠️ 重複チェックが必要な場合は addLessonWithDuplicateCheck を使うこと。
  *
  * @param {Object} data
  * @param {string} data.lesson_date

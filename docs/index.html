@@ -913,8 +913,12 @@ async function submitBooking() {
     showScreen('screen-done');
 
   } catch (err) {
-    document.getElementById('booking-overlay').classList.remove('open');
-    showError(err.message || '通信エラーが発生しました。\n時間をおいて再試行してください。');
+    // エラー時はシートを閉じずに、シート内のエラー欄にメッセージを表示する。
+    // シートを閉じると入力内容が失われて生徒が再入力しなければならなくなるため。
+    errEl.textContent   = err.message || '通信エラーが発生しました。時間をおいて再試行してください。';
+    errEl.style.display = 'block';
+    submitBtn.disabled    = false;
+    submitBtn.textContent = '予約リクエストを送る';
   }
 }
 

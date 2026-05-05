@@ -974,7 +974,7 @@
       <button id="cancel-bulk-btn" onclick="confirmBulkCancelLesson()"
         class="w-full py-2.5 bg-red-800 text-white rounded-xl font-bold text-sm
                hover:bg-red-900 transition-colors">
-        本日以降の繰り返しを一括キャンセル
+        同じ曜日・時間帯のレッスンを一括キャンセル
       </button>
     </div>
     <button onclick="closeCancelDialog()"
@@ -1393,10 +1393,16 @@ function showToast(msg) {
 
 // ─── API ヘルパー ─────────────────────────────────────────────────────────────
 
-/** GAS Web App を GET で呼ぶ */
+/** GAS Web App を POST で呼ぶ（管理者用・secret を URL に載せないようにするため） */
 async function apiFetch(params) {
-  const url = API_URL + '?' + new URLSearchParams(params).toString();
-  const res = await fetch(url, { redirect: 'follow' });
+  // secret をクエリストリングに乗せるとブラウザ履歴・サーバーログに残るため POST を使う。
+  // text/plain にしないと GAS が CORS プリフライトを通さない。
+  const res = await fetch(API_URL, {
+    method: 'POST',
+    redirect: 'follow',
+    headers: { 'Content-Type': 'text/plain' },
+    body: JSON.stringify(params),
+  });
   if (!res.ok) throw new Error('HTTP ' + res.status);
   const json = await res.json();
   if (!json.success) throw new Error((json.error && json.error.message) || 'APIエラー');
@@ -1884,10 +1890,10 @@ function renderVerticalCalendar() {
            style="top:${top}px;height:${hpx}px;left:calc(${leftPct}% + 2px);width:calc(${widthPct}% - 4px);"
            onclick="openLessonSheet(${lesson.lesson_id})">
         ${isShort
-          ? `<div class="vcal-lesson-name">${escapeHtml(name)} <span class="vcal-lesson-time" style="font-weight:400;">${timeStr}</span></div>`
+          ? `<div class="vcal-lesson-name">${escapeHtml(name)} <span class="vcal-lesson-time" style="font-weight:400;">${escapeHtml(timeStr)}</span></div>`
           : `<div class="vcal-lesson-name">${escapeHtml(name)}</div>
-             <div class="vcal-lesson-meta">${studioLbl ? '@'+studioLbl : ''}${ticketLbl ? ' · '+ticketLbl : ''}</div>
-             <div class="vcal-lesson-time">${timeStr}</div>`
+             <div class="vcal-lesson-meta">${studioLbl ? '@'+escapeHtml(studioLbl) : ''}${ticketLbl ? ' · '+escapeHtml(ticketLbl) : ''}</div>
+             <div class="vcal-lesson-time">${escapeHtml(timeStr)}</div>`
         }
       </div>`;
   }).join('');
@@ -2919,13 +2925,15 @@ function openCancelDialog(lessonId, studentName) {
     studentName + ' さんのレッスンをキャンセルします。この操作は取り消せません。';
   // ボタンテキストをリセット
   document.getElementById('cancel-confirm-btn').textContent = 'この1件のみキャンセル';
-  document.getElementById('cancel-bulk-btn').textContent = '本日以降の繰り返しを一括キャンセル';
+  document.getElementById('cancel-bulk-btn').textContent = '同じ曜日・時間帯のレッスンを一括キャンセル';
+  _bulkCancelTargets = null;
   document.getElementById('cancel-dialog-backdrop').classList.add('open');
 }
 
 function closeCancelDialog() {
   state.cancelLessonId = null;
   state.cancelLesson   = null;
+  _bulkCancelTargets   = null;  // 2段階確認キャッシュをクリア
   document.getElementById('cancel-dialog-backdrop').classList.remove('open');
 }
 
@@ -2952,25 +2960,59 @@ async function confirmCancelLesson() {
  * 本日以降・同じ曜日・同じ時間帯のレッスンをまとめてキャンセルする。
  * GAS の lessons?studentId= で対象生徒の全件を取得し、JS 側でフィルタリングする。
  */
+// 一括キャンセルの内部状態（対象リストをキャッシュして2段階確認に使う）
+let _bulkCancelTargets = null;
+
+/**
+ * 一括キャンセル：2段階確認フロー
+ *  1回目クリック → 対象件数を取得してボタンに「〇件をキャンセル（確定）」と表示
+ *  2回目クリック → 実際にキャンセル実行
+ */
 async function confirmBulkCancelLesson() {
   const lesson = state.cancelLesson;
   if (!lesson) { showToast('レッスン情報が見つかりません'); return; }
 
   const btn = document.getElementById('cancel-bulk-btn');
-  btn.disabled = true; btn.textContent = '取得中...';
+
+  // 2回目クリック（対象リストが既にキャッシュ済み）→ 実行
+  if (_bulkCancelTargets !== null) {
+    const targets = _bulkCancelTargets;
+    _bulkCancelTargets = null;
+    btn.disabled = true;
+    try {
+      for (let i = 0; i < targets.length; i++) {
+        btn.textContent = `${i + 1}/${targets.length}件キャンセル中...`;
+        await apiPost('cancel_lesson', { lessonId: targets[i].lesson_id });
+        state.calLessons = state.calLessons.filter(
+          l => String(l.lesson_id) !== String(targets[i].lesson_id)
+        );
+      }
+      updateHeaderSub();
+      renderVerticalCalendar();
+      renderLessonList();
+      closeCancelDialog();
+      showToast(`${targets.length}件のレッスンをキャンセルしました ✅`);
+    } catch(e) {
+      showToast('失敗: ' + e.message);
+      btn.disabled = false;
+      btn.textContent = '同じ曜日・時間帯のレッスンを一括キャンセル';
+    }
+    return;
+  }
+
+  // 1回目クリック → 対象リストを取得して件数を表示
+  btn.disabled = true; btn.textContent = '対象件数を確認中...';
 
   try {
     const today = todayStr();
-    const dow   = new Date(lesson.lesson_date + 'T00:00:00').getDay(); // 0=日〜6=土
+    const dow   = new Date(lesson.lesson_date + 'T00:00:00').getDay();
 
-    // 対象生徒の全レッスンを取得（GAS側はdate絞り込み不可のため、JS側でフィルタ）
     const allLessons = await apiFetch({
       action:    'lessons',
       studentId: lesson.student_id,
       secret:    adminSecret,
     });
 
-    // 本日以降・同じ曜日・同じ開始終了時刻・未キャンセルのみ
     const targets = allLessons.filter(l =>
       l.lesson_date >= today &&
       l.status !== 'cancelled' &&
@@ -2981,28 +3023,19 @@ async function confirmBulkCancelLesson() {
 
     if (targets.length === 0) {
       showToast('対象のレッスンが見つかりませんでした');
-      btn.disabled = false; btn.textContent = '本日以降の繰り返しを一括キャンセル';
+      btn.disabled = false;
+      btn.textContent = '同じ曜日・時間帯のレッスンを一括キャンセル';
       return;
     }
 
-    // 順次キャンセル
-    for (let i = 0; i < targets.length; i++) {
-      btn.textContent = `${i + 1}/${targets.length}件キャンセル中...`;
-      await apiPost('cancel_lesson', { lessonId: targets[i].lesson_id });
-      // ローカル state からも削除
-      state.calLessons = state.calLessons.filter(
-        l => String(l.lesson_id) !== String(targets[i].lesson_id)
-      );
-    }
-
-    updateHeaderSub();
-    renderVerticalCalendar();
-    renderLessonList();
-    closeCancelDialog();
-    showToast(`${targets.length}件のレッスンをキャンセルしました ✅`);
+    // 件数を表示してもう一度クリックで実行できるよう促す
+    _bulkCancelTargets = targets;
+    btn.disabled = false;
+    btn.textContent = `⚠ ${targets.length}件が対象です。もう一度押して確定`;
   } catch(e) {
     showToast('失敗: ' + e.message);
-    btn.disabled = false; btn.textContent = '本日以降の繰り返しを一括キャンセル';
+    btn.disabled = false;
+    btn.textContent = '同じ曜日・時間帯のレッスンを一括キャンセル';
   }
 }
 
@@ -3397,6 +3430,7 @@ async function submitAddLesson() {
     }
 
     btn.disabled = true;
+    let addedCount = 0;
     try {
       for (let i = 0; i < dates.length; i++) {
         btn.textContent = `${i + 1}/${dates.length}件追加中...`;
@@ -3410,6 +3444,7 @@ async function submitAddLesson() {
           lesson_count:   1,
           note,
         });
+        addedCount++;
         // カレンダー表示中の日付分だけローカル state に反映
         if (dates[i] === state.calDate) {
           state.calLessons.push({
@@ -3433,7 +3468,12 @@ async function submitAddLesson() {
       closeAddLessonDialog();
       showToast(`${dates.length}件のレッスンを追加しました ✅`);
     } catch(e) {
-      errEl.textContent = e.message || '追加に失敗しました';
+      // 途中でエラーになった場合：何件まで追加できたかを明示してカレンダー再読み込みを促す
+      updateHeaderSub();
+      renderVerticalCalendar();
+      renderLessonList();
+      const remaining = dates.length - addedCount;
+      errEl.textContent = `${addedCount}件を追加しました。残り${remaining}件は失敗しました: ${e.message || '通信エラー'}。カレンダーを確認してください。`;
       errEl.classList.remove('hidden');
     } finally {
       btn.disabled = false; btn.textContent = '追加する';
