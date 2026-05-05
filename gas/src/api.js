@@ -14,7 +14,7 @@
  *
  * 認証:
  *   生徒向け（認証なし）: availability, availability_week, booking_request
- *   管理者専用（ADMIN_SECRET 必須）: students, booking_requests, approve, reject, lessons,
+ *   管理者専用（ADMIN_SECRET 必須）: students, booking_requests, lessons,
  *                                    tasks, lesson_memos, sales
  *   doPost の書き込み系（approve / reject / cancel_lesson / student_add /
  *                        task_add / task_complete / task_delete /
@@ -140,6 +140,8 @@ function _requireParams(params, keys) {
  *   action=lessons              + date=YYYY-MM-DD  または  studentId=<id>
  *   action=students
  *   action=booking_requests
+ *
+ * ※ approve / reject は GET では受け付けない（secret が URL に露出するため）。POST のみ。
  *
  * @param {GoogleAppsScript.Events.DoGet} e
  * @returns {GoogleAppsScript.Content.TextOutput|GoogleAppsScript.HTML.HtmlOutput}
@@ -318,42 +320,10 @@ function doGet(e) {
         });
       }
 
-      // ── 予約リクエスト承認（管理者専用・GET 版）────────────────────────────
-      // POST は GAS リダイレクト仕様で body が失われることがあるため
-      // 管理画面からは GET クエリパラメータで操作する。
-      case 'approve': {
-        _requireAdminSecret(params);
-        _requireParams(params, ['requestId']);
-
-        var lessonOptions = {};
-        if (params.level        ) lessonOptions.level        = params.level;
-        if (params.lesson_count ) lessonOptions.lesson_count = params.lesson_count;
-        if (params.note         ) lessonOptions.note         = params.note;
-
-        var result = approveBookingRequest(params.requestId, lessonOptions);
-        if (!result.success) {
-          var code = result.reason && result.reason.indexOf('見つかりません') !== -1
-            ? 'NOT_FOUND'
-            : 'SLOT_UNAVAILABLE';
-          return _err(code, result.reason);
-        }
-        return _ok({ lesson_id: result.lessonId, notify_status: result.notifyStatus || 'skipped', notify_error: result.notifyError || '' });
-      }
-
-      // ── 予約リクエスト却下（管理者専用・GET 版）────────────────────────────
-      case 'reject': {
-        _requireAdminSecret(params);
-        _requireParams(params, ['requestId']);
-
-        var result = rejectBookingRequest(params.requestId, params.note || '');
-        if (!result.success) {
-          var code = result.reason && result.reason.indexOf('見つかりません') !== -1
-            ? 'NOT_FOUND'
-            : 'INVALID_PARAM';
-          return _err(code, result.reason);
-        }
-        return _ok({ request_id: params.requestId, notify_status: result.notifyStatus || 'skipped', notify_error: result.notifyError || '' });
-      }
+      // approve / reject は POST 経由のみ受け付ける（GET で secret が URL に露出するのを防ぐ）
+      case 'approve':
+      case 'reject':
+        return _err('INVALID_PARAM', 'このエンドポイントは POST でのみ利用可能です。');
 
       default:
         return _err('INVALID_PARAM', '不明な action です: ' + action);
