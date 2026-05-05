@@ -248,25 +248,7 @@
       </button>
     </div>
 
-    <!-- 日報 / 今週 トグル -->
-    <div class="flex gap-2 mb-4">
-      <button onclick="setCalMode('daily')" id="btn-mode-daily"
-        class="filter-tab">日報</button>
-      <button onclick="setCalMode('weekly')" id="btn-mode-weekly"
-        class="filter-tab active">今週</button>
-      <div class="flex-1"></div>
-      <button onclick="refreshCalendar()"
-        class="text-xs text-indigo-600 font-semibold flex items-center gap-1">
-        <svg width="13" height="13" viewBox="0 0 24 24" fill="none"
-             stroke="currentColor" stroke-width="2.5" stroke-linecap="round">
-          <path d="M3 12a9 9 0 0 1 9-9 9.75 9.75 0 0 1 6.74 2.74L21 8"/>
-          <path d="M21 3v5h-5"/>
-        </svg>
-        更新
-      </button>
-    </div>
-
-    <!-- 週ヘッダー（今週モード時のみ表示） -->
+    <!-- 週ヘッダー -->
     <div id="week-header" class="mb-4">
       <div class="flex items-center justify-between mb-2">
         <button onclick="shiftWeek(-1)" class="p-2 rounded-xl hover:bg-gray-100 transition-colors">
@@ -276,12 +258,23 @@
           </svg>
         </button>
         <span id="week-range-label" class="text-sm font-bold text-gray-600"></span>
-        <button onclick="shiftWeek(1)" class="p-2 rounded-xl hover:bg-gray-100 transition-colors">
-          <svg width="18" height="18" viewBox="0 0 24 24" fill="none"
-               stroke="#6b7280" stroke-width="2.5" stroke-linecap="round">
-            <path d="M9 18l6-6-6-6"/>
-          </svg>
-        </button>
+        <div class="flex items-center gap-1">
+          <button onclick="shiftWeek(1)" class="p-2 rounded-xl hover:bg-gray-100 transition-colors">
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="none"
+                 stroke="#6b7280" stroke-width="2.5" stroke-linecap="round">
+              <path d="M9 18l6-6-6-6"/>
+            </svg>
+          </button>
+          <button onclick="refreshCalendar()"
+            class="text-xs text-indigo-600 font-semibold flex items-center gap-1 px-2 py-1.5">
+            <svg width="13" height="13" viewBox="0 0 24 24" fill="none"
+                 stroke="currentColor" stroke-width="2.5" stroke-linecap="round">
+              <path d="M3 12a9 9 0 0 1 9-9 9.75 9.75 0 0 1 6.74 2.74L21 8"/>
+              <path d="M21 3v5h-5"/>
+            </svg>
+            更新
+          </button>
+        </div>
       </div>
       <div id="week-days" class="flex gap-1"></div>
     </div>
@@ -316,11 +309,11 @@
       <div class="w-8 h-8 border-4 border-indigo-500 border-t-transparent rounded-full spinner mx-auto"></div>
     </div>
 
-    <!-- 日報サマリー（daily モード時のみ表示） -->
-    <div id="daily-summary" class="hidden mb-4"></div>
+    <!-- 日報サマリー -->
+    <div id="daily-summary" class="mb-4"></div>
 
-    <!-- 月次CSVボタン（daily モード時のみ表示） -->
-    <div id="monthly-csv-bar" class="hidden mb-4">
+    <!-- 月次CSVボタン -->
+    <div id="monthly-csv-bar" class="mb-4">
       <div class="flex items-center gap-2">
         <input id="csv-month-input" type="month"
           class="border-2 border-gray-200 rounded-xl px-3 py-1.5 text-sm
@@ -1008,7 +1001,6 @@ let state = {
   allSales:        [],
 
   activeTab:    'calendar',
-  calMode:      'weekly',  // 'daily' | 'weekly'
   calDate:      todayStr(),
   weekOffset:   0,         // 今週から何週ずれているか
   studioFilter: 'all',
@@ -1321,12 +1313,6 @@ function setTab(tab) {
 
 // ─── カレンダータブ ────────────────────────────────────────────────────────────
 
-function setCalMode(mode) {
-  state.calMode = mode;
-  document.getElementById('btn-mode-daily').classList.toggle('active',  mode === 'daily');
-  document.getElementById('btn-mode-weekly').classList.toggle('active', mode === 'weekly');
-  renderCalendar();
-}
 
 function setStudio(studio) {
   state.studioFilter = studio;
@@ -1367,31 +1353,17 @@ async function selectCalDate(dateStr) {
   } finally {
     document.getElementById('cal-spinner').classList.add('hidden');
   }
-  if (state.calMode === 'weekly') renderWeekHeader();
   renderCalendar();
 }
 
 function renderCalendar() {
   document.getElementById('cal-date-label').textContent = fmtDate(state.calDate);
-  const isDaily = state.calMode === 'daily';
-  // weekly ヘッダーの表示制御
-  document.getElementById('week-header').classList.toggle('hidden', isDaily);
-  // daily 専用要素の表示制御
-  document.getElementById('cal-date-header').classList.toggle('hidden', !isDaily);
-  document.getElementById('daily-summary').classList.toggle('hidden', !isDaily);
-  document.getElementById('monthly-csv-bar').classList.toggle('hidden', !isDaily);
-  document.getElementById('lesson-list').classList.toggle('hidden', !isDaily);
-  document.getElementById('lesson-empty').classList.toggle('hidden', true);
-
-  if (isDaily) {
-    renderDailySummary();
-    renderLessonList();
-    // 月入力欄を今月に初期化（未設定の場合のみ）
-    const mi = document.getElementById('csv-month-input');
-    if (!mi.value) mi.value = state.calDate.slice(0, 7);
-  } else {
-    renderWeekHeader();
-  }
+  renderWeekHeader();
+  renderDailySummary();
+  renderLessonList();
+  // 月入力欄を今月に初期化（未設定の場合のみ）
+  const mi = document.getElementById('csv-month-input');
+  if (!mi.value) mi.value = state.calDate.slice(0, 7);
 }
 
 /** 日報サマリー（生徒ごとのコマ数・券種集計）を描画する */
