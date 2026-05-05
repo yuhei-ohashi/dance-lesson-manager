@@ -193,11 +193,15 @@ function doGet(e) {
           var result = getLessonsByDate(params.date);
           return _ok(result);
         }
+        if (params.from && params.to) {
+          var result = getLessonsByDateRange(params.from, params.to);
+          return _ok(result);
+        }
         if (params.studentId) {
           var result = getLessonsByStudent(params.studentId);
           return _ok(result);
         }
-        return _err('INVALID_PARAM', 'date または studentId のいずれかを指定してください。');
+        return _err('INVALID_PARAM', 'date / from+to / studentId のいずれかを指定してください。');
       }
 
       // ── アクティブ生徒一覧（管理者専用） ────────────────────────────────────
