@@ -154,6 +154,128 @@
     /* セクション折り畳み矢印 */
     .collapse-arrow { transition: transform 0.2s; display: inline-block; }
     .collapse-arrow.open { transform: rotate(180deg); }
+
+    /* ─── 縦型タイムラインカレンダー ─── */
+    #vertical-calendar {
+      position: relative;
+      background: white;
+      border-radius: 16px;
+      border: 1px solid #f0f1f3;
+      box-shadow: 0 1px 4px rgba(0,0,0,0.06);
+      overflow: hidden;
+      margin-bottom: 10px;
+    }
+    .vcal-hour-label {
+      position: absolute;
+      left: 0;
+      width: 44px;
+      font-size: 10px;
+      font-weight: 600;
+      color: #9ca3af;
+      text-align: right;
+      padding-right: 8px;
+      transform: translateY(-50%);
+      pointer-events: none;
+      user-select: none;
+      z-index: 2;
+    }
+    .vcal-hour-line {
+      position: absolute;
+      left: 44px;
+      right: 0;
+      height: 1px;
+      background: #f3f4f6;
+    }
+    .vcal-hour-line.major {
+      background: #e5e7eb;
+    }
+    .vcal-block-band {
+      position: absolute;
+      left: 44px;
+      right: 0;
+      background: #f3f4f6;
+      border-left: 3px solid #d1d5db;
+      display: flex;
+      align-items: flex-start;
+      padding: 4px 6px;
+      gap: 4px;
+      overflow: hidden;
+      box-sizing: border-box;
+    }
+    .vcal-block-band-label {
+      font-size: 10px;
+      color: #6b7280;
+      font-weight: 600;
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
+      line-height: 1.3;
+    }
+    .vcal-zone-band {
+      position: absolute;
+      left: 44px;
+      right: 0;
+      pointer-events: none;
+    }
+    .vcal-lesson-card {
+      position: absolute;
+      border-radius: 8px;
+      padding: 4px 8px;
+      cursor: pointer;
+      border-left: 3px solid;
+      background: #eff6ff;
+      border-color: #3b82f6;
+      box-shadow: 0 1px 3px rgba(0,0,0,0.08);
+      overflow: hidden;
+      box-sizing: border-box;
+      transition: box-shadow 0.15s;
+      z-index: 3;
+    }
+    .vcal-lesson-card:hover { box-shadow: 0 3px 8px rgba(0,0,0,0.14); }
+    .vcal-lesson-card.studio-saito  { background: #f0fdf4; border-color: #22c55e; }
+    .vcal-lesson-card.studio-sendai { background: #fff7ed; border-color: #f97316; }
+    .vcal-lesson-card.studio-izumi  { background: #eff6ff; border-color: #3b82f6; }
+    .vcal-lesson-name {
+      font-size: 11px;
+      font-weight: 700;
+      color: #1f2937;
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
+    }
+    .vcal-lesson-meta {
+      font-size: 10px;
+      color: #6b7280;
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
+      margin-top: 1px;
+    }
+    .vcal-lesson-time {
+      font-size: 10px;
+      font-weight: 600;
+      color: #4b5563;
+      white-space: nowrap;
+    }
+    .vcal-now-line {
+      position: absolute;
+      left: -44px; /* コンテンツコンテナは44pxオフセットのため、ラベル側まで延ばす */
+      right: 0;
+      height: 2px;
+      background: #ef4444;
+      z-index: 5;
+      pointer-events: none;
+    }
+    .vcal-now-line::before {
+      content: '';
+      position: absolute;
+      left: 44px;
+      top: -3px;
+      width: 8px;
+      height: 8px;
+      border-radius: 50%;
+      background: #ef4444;
+    }
   </style>
 </head>
 <body>
@@ -325,6 +447,9 @@
 
     <!-- 日報サマリー -->
     <div id="daily-summary" class="mb-4"></div>
+
+    <!-- 縦型タイムラインカレンダー -->
+    <div id="vertical-calendar" class="mb-4" style="display:none;"></div>
 
     <!-- 月次CSVボタン -->
     <div id="monthly-csv-bar" class="mb-4">
@@ -1462,6 +1587,7 @@ function setStudio(studio) {
   ['all','saito','sendai','izumi'].forEach(s => {
     document.getElementById('sf-' + s).classList.toggle('active', s === studio);
   });
+  renderVerticalCalendar();
   renderLessonList();
 }
 
@@ -1473,6 +1599,7 @@ async function refreshCalendar() {
     });
     state.calLessons = (data || []).filter(l => l.status !== 'cancelled');
     updateHeaderSub();
+    renderVerticalCalendar();
     renderLessonList();
   } catch(e) {
     showToast('更新失敗: ' + e.message);
@@ -1487,9 +1614,10 @@ async function selectCalDate(dateStr) {
   document.getElementById('lesson-list').innerHTML = '';
   document.getElementById('lesson-empty').classList.add('hidden');
   try {
-    const data = await apiFetch({
-      action: 'lessons', date: dateStr, secret: adminSecret,
-    });
+    const [data] = await Promise.all([
+      apiFetch({ action: 'lessons', date: dateStr, secret: adminSecret }),
+      ensureBlocksLoaded(),
+    ]);
     state.calLessons = (data || []).filter(l => l.status !== 'cancelled');
   } catch(e) {
     showToast('取得失敗: ' + e.message);
@@ -1503,10 +1631,233 @@ function renderCalendar() {
   document.getElementById('cal-date-label').textContent = fmtDate(state.calDate);
   renderWeekHeader();
   renderDailySummary();
+  renderVerticalCalendar();
   renderLessonList();
   // 月入力欄を今月に初期化（未設定の場合のみ）
   const mi = document.getElementById('csv-month-input');
   if (!mi.value) mi.value = state.calDate.slice(0, 7);
+}
+
+// ─── 縦型タイムラインカレンダー ───────────────────────────────────────────────
+
+const VCAL_START_MIN  = 8 * 60;   // 8:00 開始
+const VCAL_END_MIN    = 22 * 60;  // 22:00 終了
+const VCAL_PX_PER_MIN = 1.3;      // 1分 = 1.3px
+
+function timeStrToMin(hhmm) {
+  if (!hhmm) return null;
+  const [h, m] = hhmm.split(':').map(Number);
+  return h * 60 + (m || 0);
+}
+
+function minToTop(min) {
+  return Math.max(0, (min - VCAL_START_MIN) * VCAL_PX_PER_MIN);
+}
+
+function getDayOfWeekMon0(dateStr) {
+  const d = new Date(dateStr + 'T00:00:00');
+  return (d.getDay() + 6) % 7; // 0=月〜6=日
+}
+
+function getBlocksForDate(dateStr) {
+  const dow = getDayOfWeekMon0(dateStr);
+  return (state.allBlocks || []).filter(b => {
+    const isRecurring = b.is_recurring === true || b.is_recurring === 'TRUE' || b.is_recurring === true;
+    if (isRecurring) {
+      return Number(b.day_of_week) === dow;
+    } else {
+      return b.specific_date === dateStr;
+    }
+  });
+}
+
+// ゾーン定義（スプレッドシートに登録済みの内容をクライアント側で保持）
+const ZONE_DEFINITIONS = [
+  { dow: 0, start: '10:00', end: '18:00', studio: 'saito'  },
+  { dow: 1, start: '10:00', end: '13:30', studio: 'saito'  },
+  { dow: 1, start: '14:30', end: '18:00', studio: 'sendai' },
+  { dow: 2, start: '10:00', end: '18:00', studio: 'sendai' },
+  { dow: 3, start: '10:00', end: '18:00', studio: 'sendai' },
+  { dow: 4, start: '12:30', end: '18:00', studio: 'izumi'  },
+  { dow: 5, start: '10:00', end: '18:00', studio: 'sendai' },
+];
+
+const ZONE_BG = {
+  saito:  'rgba(220,252,231,0.55)',   // 薄緑
+  sendai: 'rgba(255,247,237,0.55)',   // 薄オレンジ
+  izumi:  'rgba(219,234,254,0.55)',   // 薄青
+};
+
+function getZonesForDate(dateStr) {
+  const dow = getDayOfWeekMon0(dateStr);
+  return ZONE_DEFINITIONS.filter(z => z.dow === dow);
+}
+
+async function ensureBlocksLoaded() {
+  if (state.allBlocks && state.allBlocks.length > 0) return;
+  try {
+    state.allBlocks = await apiFetch({ action: 'blocks', secret: adminSecret }) || [];
+  } catch(e) {
+    // ブロック取得失敗は無視（縦型カレンダーはブロックなしで表示）
+  }
+}
+
+function renderVerticalCalendar() {
+  const el = document.getElementById('vertical-calendar');
+  if (!el) return;
+
+  const lessons = state.calLessons.filter(l => {
+    if (state.studioFilter === 'all') return true;
+    return l.studio_id === state.studioFilter;
+  });
+
+  const blocks = getBlocksForDate(state.calDate);
+  const zones  = getZonesForDate(state.calDate);
+
+  // レッスンもブロックも何もない日は非表示
+  if (lessons.length === 0 && blocks.length === 0) {
+    el.style.display = 'none';
+    return;
+  }
+  el.style.display = 'block';
+
+  // 表示時間範囲を動的に決定（レッスン・ブロック・ゾーンを考慮）
+  let minStart = VCAL_START_MIN;
+  let maxEnd   = VCAL_END_MIN;
+
+  [...lessons, ...blocks].forEach(item => {
+    const s = timeStrToMin(item.start_time);
+    const e = timeStrToMin(item.end_time);
+    if (s !== null) minStart = Math.min(minStart, Math.floor(s / 60) * 60);
+    if (e !== null) maxEnd   = Math.max(maxEnd, Math.ceil(e / 60) * 60);
+  });
+  zones.forEach(z => {
+    const s = timeStrToMin(z.start);
+    const e = timeStrToMin(z.end);
+    if (s !== null) minStart = Math.min(minStart, Math.floor(s / 60) * 60);
+    if (e !== null) maxEnd   = Math.max(maxEnd, Math.ceil(e / 60) * 60);
+  });
+
+  // 前後に30分の余裕（ゾーンありのため広げすぎない）
+  const displayStart = Math.max(0, minStart - 30);
+  const displayEnd   = Math.min(24 * 60, maxEnd + 30);
+  const totalHeight  = (displayEnd - displayStart) * VCAL_PX_PER_MIN;
+
+  // 時間ラベル・グリッド線（1時間ごと）
+  const hourLines = [];
+  for (let m = Math.ceil(displayStart / 60) * 60; m <= displayEnd; m += 60) {
+    const top = (m - displayStart) * VCAL_PX_PER_MIN;
+    const h   = Math.floor(m / 60);
+    const isMajor = m % 120 === 0;
+    hourLines.push(`
+      <div class="vcal-hour-label" style="top:${top}px;">${String(h).padStart(2,'0')}:00</div>
+      <div class="vcal-hour-line ${isMajor?'major':''}" style="top:${top}px;"></div>
+    `);
+  }
+
+  // ゾーン背景帯
+  const zoneBands = zones
+    .filter(z => {
+      if (state.studioFilter !== 'all' && z.studio !== state.studioFilter) return false;
+      return true;
+    })
+    .map(z => {
+      const s = timeStrToMin(z.start);
+      const e = timeStrToMin(z.end);
+      if (s === null || e === null) return '';
+      const top = (s - displayStart) * VCAL_PX_PER_MIN;
+      const h   = (e - s) * VCAL_PX_PER_MIN;
+      return `<div class="vcal-zone-band" style="top:${top}px;height:${h}px;background:${ZONE_BG[z.studio]||'transparent'};"></div>`;
+    }).join('');
+
+  // ブロック帯
+  const blockBands = blocks.map(b => {
+    const s = timeStrToMin(b.start_time);
+    const e = timeStrToMin(b.end_time);
+    if (s === null || e === null) return '';
+    const top = (s - displayStart) * VCAL_PX_PER_MIN;
+    const h   = Math.max(20, (e - s) * VCAL_PX_PER_MIN);
+    const label = b.label || 'ブロック';
+    const timeStr = (b.start_time || '') + '〜' + (b.end_time || '');
+    return `
+      <div class="vcal-block-band" style="top:${top}px;height:${h}px;">
+        <span style="font-size:11px;margin-right:2px;">🚫</span>
+        <span class="vcal-block-band-label">${escapeHtml(label)}（${timeStr}）</span>
+      </div>`;
+  }).join('');
+
+  // レッスンカード（重なり処理）
+  const sortedLessons = [...lessons].sort((a, b) =>
+    (a.start_time || '').localeCompare(b.start_time || ''));
+
+  // 重なり検出して列を割り当て
+  const columns = [];
+  const lessonCols = sortedLessons.map(l => {
+    const s = timeStrToMin(l.start_time) ?? displayStart;
+    const e = timeStrToMin(l.end_time)   ?? (s + 60);
+    let col = 0;
+    while (columns[col] && columns[col] > s) col++;
+    columns[col] = e;
+    return col;
+  });
+  const maxCol = lessonCols.length > 0 ? Math.max(...lessonCols) + 1 : 1;
+
+  // レッスンカードはコンテンツ専用コンテナ内で100%幅を使う
+  const lessonCards = sortedLessons.map((lesson, i) => {
+    const s = timeStrToMin(lesson.start_time);
+    const e = timeStrToMin(lesson.end_time);
+    if (s === null) return '';
+
+    const top = (s - displayStart) * VCAL_PX_PER_MIN;
+    const hpx = Math.max(28, ((e ?? s + 60) - s) * VCAL_PX_PER_MIN - 2);
+    const col    = lessonCols[i];
+    const colPct = 100 / maxCol;
+    const leftPct  = col * colPct;
+    const widthPct = colPct;
+
+    const student  = state.studentMap[String(lesson.student_id)] || {};
+    const name     = student.name || lesson.student_name_input || '（名前未設定）';
+    const studioId = lesson.studio_id || '';
+    const studioLbl = STUDIO_LABELS[studioId] || studioId;
+    const timeStr  = (lesson.start_time || '') + '〜' + (lesson.end_time || '');
+    const ticketLbl = ticketTypeLabel(lesson.ticket_type_id || student.ticket_type_id || '');
+
+    const isShort = hpx < 44;
+
+    // 左・幅はコンテンツコンテナ（44px以降）の中でのパーセンテージ
+    return `
+      <div class="vcal-lesson-card ${STUDIO_COLORS[studioId] || ''}"
+           style="top:${top}px;height:${hpx}px;left:calc(${leftPct}% + 2px);width:calc(${widthPct}% - 4px);"
+           onclick="openLessonSheet(${lesson.lesson_id})">
+        ${isShort
+          ? `<div class="vcal-lesson-name">${escapeHtml(name)} <span class="vcal-lesson-time" style="font-weight:400;">${timeStr}</span></div>`
+          : `<div class="vcal-lesson-name">${escapeHtml(name)}</div>
+             <div class="vcal-lesson-meta">${studioLbl ? '@'+studioLbl : ''}${ticketLbl ? ' · '+ticketLbl : ''}</div>
+             <div class="vcal-lesson-time">${timeStr}</div>`
+        }
+      </div>`;
+  }).join('');
+
+  // 現在時刻ライン（今日のみ）
+  let nowLine = '';
+  const nowMin = (new Date()).getHours() * 60 + (new Date()).getMinutes();
+  if (state.calDate === todayStr() && nowMin >= displayStart && nowMin <= displayEnd) {
+    const nowTop = (nowMin - displayStart) * VCAL_PX_PER_MIN;
+    nowLine = `<div class="vcal-now-line" style="top:${nowTop}px;"></div>`;
+  }
+
+  el.innerHTML = `
+    <div style="padding:10px 0 4px;">
+      <div style="position:relative;height:${totalHeight}px;">
+        ${hourLines.join('')}
+        ${zoneBands}
+        ${blockBands}
+        <div style="position:absolute;left:44px;right:0;top:0;bottom:0;">
+          ${lessonCards}
+          ${nowLine}
+        </div>
+      </div>
+    </div>`;
 }
 
 /** 日報サマリー（生徒ごとのコマ数・券種集計）を描画する */
@@ -2461,6 +2812,7 @@ async function confirmCancelLesson() {
     closeCancelDialog();
     state.calLessons = state.calLessons.filter(l => String(l.lesson_id) !== String(id));
     updateHeaderSub();
+    renderVerticalCalendar();
     renderLessonList();
     showToast('レッスンをキャンセルしました');
   } catch(e) {
@@ -2566,6 +2918,7 @@ async function saveLessonDetail() {
       lesson.lesson_count   = count;
       lesson.note           = note;
     }
+    renderVerticalCalendar();
     renderLessonList();
     showToast('変更を保存しました ✅');
   } catch(e) {
@@ -2780,6 +3133,7 @@ async function submitAddLesson() {
     if (date === state.calDate) {
       state.calLessons.push(newLesson);
       updateHeaderSub();
+      renderVerticalCalendar();
       renderLessonList();
     }
 
