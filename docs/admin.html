@@ -1232,6 +1232,16 @@
         </button>
       </div>
 
+      <!-- キャンセル -->
+      <div class="card mb-4" style="border: 2px solid #fee2e2;">
+        <p class="text-xs font-bold text-red-500 mb-3">レッスンをキャンセル</p>
+        <button onclick="openCancelFromSheet()"
+          class="w-full py-2.5 border-2 border-red-400 text-red-500 rounded-xl font-bold text-sm
+                 hover:bg-red-50 transition-colors">
+          このレッスンをキャンセルする
+        </button>
+      </div>
+
       <!-- レッスンメモ追加フォーム -->
       <div class="card mb-4" style="border: 2px solid #fde68a;">
         <p class="text-xs font-bold text-amber-600 mb-2">＋ レッスンメモを記録</p>
@@ -1991,14 +2001,6 @@ function renderLessonList() {
         </div>
         ${lesson.note ? `<p class="text-xs text-amber-700 mt-1 bg-amber-50 rounded-lg px-2 py-1">${escapeHtml(lesson.note)}</p>` : ''}
       </div>
-      <button onclick="event.stopPropagation(); openCancelDialog(${lesson.lesson_id}, '${escapeHtml(name)}')"
-        class="text-gray-300 hover:text-red-400 transition-colors flex-shrink-0
-               min-w-[44px] min-h-[44px] flex items-center justify-center -mr-2">
-        <svg width="14" height="14" viewBox="0 0 24 24" fill="none"
-             stroke="currentColor" stroke-width="2.5" stroke-linecap="round">
-          <path d="M18 6L6 18M6 6l12 12"/>
-        </svg>
-      </button>
     </div>`;
   }).join('');
 }
@@ -3052,6 +3054,27 @@ function closeLessonSheet(e) {
   if (e && e.target !== document.getElementById('lesson-sheet-backdrop')) return;
   document.getElementById('lesson-sheet-backdrop').classList.remove('open');
   state.lessonSheetId = null;
+}
+
+/**
+ * 詳細シート内のキャンセルボタンから呼ばれる。
+ * シートを閉じてからキャンセルダイアログを開く（最終確認はダイアログで行う）。
+ */
+function openCancelFromSheet() {
+  const lessonId = state.lessonSheetId;
+  if (!lessonId) return;
+
+  const lesson  = state.calLessons.find(l => String(l.lesson_id) === String(lessonId));
+  if (!lesson) return;
+
+  const student = state.studentMap[String(lesson.student_id)] || {};
+  const name    = student.name || lesson.student_name_input || '（名前未設定）';
+
+  // シートを閉じてからダイアログを開く
+  document.getElementById('lesson-sheet-backdrop').classList.remove('open');
+  state.lessonSheetId = null;
+
+  openCancelDialog(lessonId, name);
 }
 
 /** 対象生徒の過去メモをシート内に描画する */
