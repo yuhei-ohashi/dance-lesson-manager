@@ -96,6 +96,8 @@
       background: white; border-radius: 20px;
       padding: 24px; width: 100%; max-width: 360px;
       box-shadow: 0 20px 60px rgba(0,0,0,0.2);
+      /* 画面が小さい端末・キーボード表示時でもはみ出さないよう上限を設ける */
+      max-height: 90dvh; overflow-y: auto;
     }
 
     /* トースト */
@@ -3686,6 +3688,66 @@ document.addEventListener('keydown', e => {
     el.classList.remove('open');
   });
 });
+
+// ─── iOS キーボード表示時のレイアウト崩れ対策 ─────────────────────────────────
+//
+// iOS Safari では仮想キーボードが表示されても window.innerHeight は変わらず、
+// window.visualViewport.height だけが縮小する。そのため position:fixed の
+// ダイアログ・シートが入力欄ごとキーボードに隠れる問題が起きる。
+// visualViewport の resize イベントでキーボード高さを検出し、スタイルを動的調整する。
+(function setupIosKeyboardFix() {
+  if (!window.visualViewport) return;
+
+  let rafId = null;
+
+  function adjust() {
+    if (rafId) cancelAnimationFrame(rafId);
+    rafId = requestAnimationFrame(function() {
+      const vv  = window.visualViewport;
+      // キーボード高さ = ウィンドウ全体高さ − 視覚的に見えている高さ − ページスクロール量
+      const kbH = Math.max(0, window.innerHeight - vv.height - vv.offsetTop);
+
+      // ── 全ダイアログをリセット（キーボードが閉じたとき用）
+      document.querySelectorAll('.dialog-backdrop').forEach(function(el) {
+        el.style.alignItems    = '';
+        el.style.paddingTop    = '';
+        el.style.paddingBottom = '';
+        const dlg = el.querySelector('.dialog');
+        if (dlg) { dlg.style.overflowY = ''; dlg.style.maxHeight = ''; }
+      });
+
+      // ── 全シートをリセット
+      document.querySelectorAll('.sheet').forEach(function(el) {
+        el.style.maxHeight = '';
+      });
+
+      if (kbH <= 50) return; // キーボードが出ていない（または誤検知）
+
+      // ── ダイアログ: 上詰め配置にしてキーボードに被らないよう調整
+      const dialogBackdrop = document.querySelector('.dialog-backdrop.open');
+      if (dialogBackdrop) {
+        dialogBackdrop.style.alignItems    = 'flex-start';
+        dialogBackdrop.style.paddingTop    = '12px';
+        dialogBackdrop.style.paddingBottom = (kbH + 12) + 'px';
+        // ダイアログ本体: 見える高さ内でスクロール可能にする
+        const dlg = dialogBackdrop.querySelector('.dialog');
+        if (dlg) {
+          dlg.style.overflowY = 'auto';
+          dlg.style.maxHeight = (vv.height - 24) + 'px';
+        }
+      }
+
+      // ── ボトムシート: 見える高さに縮小してスクロール可能にする
+      const sheet = document.querySelector('.sheet-backdrop.open .sheet');
+      if (sheet) {
+        sheet.style.maxHeight = (vv.height - 8) + 'px';
+      }
+    });
+  }
+
+  window.visualViewport.addEventListener('resize', adjust);
+  window.visualViewport.addEventListener('scroll', adjust);
+})();
 </script>
 
 </body>
