@@ -212,6 +212,13 @@ function doGet(e) {
         return _ok(result);
       }
 
+      // ── ブロック一覧（管理者専用） ──────────────────────────────────────────
+      case 'blocks': {
+        _requireAdminSecret(params);
+        var result = getActiveBlocks();
+        return _ok(result);
+      }
+
       // ── 承認待ち予約リクエスト一覧（管理者専用） ────────────────────────────
       case 'booking_requests': {
         _requireAdminSecret(params);
@@ -489,6 +496,32 @@ function doPost(e) {
           return _err(code, result.reason);
         }
         return _ok({ request_id: body.requestId });
+      }
+
+      // ── ブロック追加（管理者専用）───────────────────────────────────────────
+      case 'block_add': {
+        _requireAdminSecret(body);
+        _requireParams(body, ['label', 'start_time', 'end_time']);
+        var isRecurring = body.is_recurring === true || body.is_recurring === 'true';
+        var blockId = addBlock({
+          label:         body.label,
+          sub_label:     body.sub_label     || '',
+          day_of_week:   Number(body.day_of_week),
+          start_time:    body.start_time,
+          end_time:      body.end_time,
+          is_recurring:  isRecurring,
+          specific_date: body.specific_date || '',
+        });
+        return _ok({ block_id: blockId });
+      }
+
+      // ── ブロック削除（無効化）（管理者専用）─────────────────────────────────
+      case 'block_delete': {
+        _requireAdminSecret(body);
+        _requireParams(body, ['blockId']);
+        var ok = deactivateBlock(Number(body.blockId));
+        if (!ok) return _err('NOT_FOUND', 'ブロックが見つかりません: ' + body.blockId);
+        return _ok({ block_id: body.blockId });
       }
 
       // ── 生徒追加（管理者専用）───────────────────────────────────────────────
