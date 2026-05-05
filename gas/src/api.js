@@ -536,24 +536,25 @@ function doPost(e) {
           'lesson_date', 'start_time', 'end_time', 'student_id', 'studio_id',
         ]);
 
-        var lessonId = withLock(function() {
-          if (hasDuplicateConfirmedLesson(
-            body.lesson_date, body.start_time, body.studio_id
-          )) {
-            throw { _errResponse: _err('SLOT_UNAVAILABLE',
-              '同日時・同スタジオに既に確定済みのレッスンがあります。') };
-          }
-          return addLesson({
-            lesson_date:        body.lesson_date,
-            start_time:         body.start_time,
-            end_time:           body.end_time,
-            student_id:         body.student_id,
-            studio_id:          body.studio_id,
-            level:              body.level        || '',
-            lesson_count:       body.lesson_count != null ? body.lesson_count : 1,
-            note:               body.note         || '',
-            status:             'confirmed',
-          });
+        // addLesson() が内部で withLock を取得するため、ここでは二重ロックを避ける。
+        // 重複チェックは参照のみなのでロック外で実施し、書き込みは addLesson() に委ねる。
+        if (hasDuplicateConfirmedLesson(
+          body.lesson_date, body.start_time, body.studio_id
+        )) {
+          return _err('SLOT_UNAVAILABLE',
+            '同日時・同スタジオに既に確定済みのレッスンがあります。');
+        }
+        var lessonId = addLesson({
+          lesson_date:        body.lesson_date,
+          start_time:         body.start_time,
+          end_time:           body.end_time,
+          student_id:         body.student_id,
+          studio_id:          body.studio_id,
+          level:              body.level           || '',
+          lesson_count:       body.lesson_count != null ? body.lesson_count : 1,
+          note:               body.note            || '',
+          ticket_type_id:     body.ticket_type_id  || '',
+          status:             'confirmed',
         });
         return _ok({ lesson_id: lessonId });
       }
@@ -592,12 +593,13 @@ function doPost(e) {
         _requireParams(body, ['lessonId']);
 
         var lessonFields = {};
-        if (body.level        !== undefined) lessonFields.level        = body.level;
-        if (body.lesson_count !== undefined) lessonFields.lesson_count = Number(body.lesson_count);
-        if (body.note         !== undefined) lessonFields.note         = body.note;
-        if (body.studio_id    !== undefined) lessonFields.studio_id    = body.studio_id;
-        if (body.start_time   !== undefined) lessonFields.start_time   = body.start_time;
-        if (body.end_time     !== undefined) lessonFields.end_time     = body.end_time;
+        if (body.level          !== undefined) lessonFields.level          = body.level;
+        if (body.lesson_count   !== undefined) lessonFields.lesson_count   = Number(body.lesson_count);
+        if (body.note           !== undefined) lessonFields.note           = body.note;
+        if (body.studio_id      !== undefined) lessonFields.studio_id      = body.studio_id;
+        if (body.start_time     !== undefined) lessonFields.start_time     = body.start_time;
+        if (body.end_time       !== undefined) lessonFields.end_time       = body.end_time;
+        if (body.ticket_type_id !== undefined) lessonFields.ticket_type_id = body.ticket_type_id;
 
         var updated = updateLesson(body.lessonId, lessonFields);
         if (!updated) return _err('NOT_FOUND', 'レッスンが見つかりません: ' + body.lessonId);
