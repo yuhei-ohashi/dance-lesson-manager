@@ -16,8 +16,9 @@
  *   生徒向け（認証なし）: availability, availability_week, booking_request
  *   管理者専用（ADMIN_SECRET 必須）: students, booking_requests, approve, reject, lessons,
  *                                    tasks, lesson_memos, sales
- *   doPost の書き込み系（approve / reject / cancel_lesson / task_add / task_complete /
- *                        task_delete / lesson_memo_add / lesson_memo_update /
+ *   doPost の書き込み系（approve / reject / cancel_lesson / student_add /
+ *                        task_add / task_complete / task_delete /
+ *                        lesson_memo_add / lesson_memo_update /
  *                        add_lesson / sale_add / sale_delete）も ADMIN_SECRET を必須とする
  */
 
@@ -445,6 +446,20 @@ function doPost(e) {
         _requireAdminSecret(body);
         _requireParams(body, ['requestId']);
 
+        // link_student_id が指定された場合は既存生徒と紐づけてから承認
+        if (body.link_student_id) {
+          var reqSheet = getSheet(BOOKING_REQUESTS_SHEET);
+          var reqRow   = findRowById(reqSheet, body.requestId);
+          if (reqRow === -1) return _err('NOT_FOUND', 'リクエストが見つかりません: ' + body.requestId);
+          var reqObj = getRowAsObject(reqSheet, reqRow);
+          // 既存生徒に LINE ユーザーID を紐づける
+          if (reqObj.line_user_id) {
+            updateStudent(Number(body.link_student_id), { line_user_id: reqObj.line_user_id });
+          }
+          // 予約リクエストの student_id を既存生徒IDに上書き
+          updateCell(reqSheet, reqRow, 'student_id', Number(body.link_student_id));
+        }
+
         var lessonOptions = {};
         if (body.level        !== undefined) lessonOptions.level        = body.level;
         if (body.lesson_count !== undefined) lessonOptions.lesson_count = body.lesson_count;
@@ -474,6 +489,18 @@ function doPost(e) {
           return _err(code, result.reason);
         }
         return _ok({ request_id: body.requestId });
+      }
+
+      // ── 生徒追加（管理者専用）───────────────────────────────────────────────
+      case 'student_add': {
+        _requireAdminSecret(body);
+        _requireParams(body, ['name']);
+        var studentId = addStudent({
+          name:           body.name,
+          ticket_type_id: body.ticket_type_id || '',
+          note:           body.note           || '',
+        });
+        return _ok({ student_id: studentId });
       }
 
       // ── タスク追加（管理者専用）─────────────────────────────────────────────
