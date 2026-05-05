@@ -198,6 +198,60 @@
     }
     .field::placeholder { color: #d1d5db; }
     .field:focus { outline: none; border-color: #6366f1; }
+
+    /* ─── 週グリッドカレンダー ────────────────────────────────────────── */
+    #week-grid-wrap { overflow-x: auto; -webkit-overflow-scrolling: touch; }
+
+    /* グリッド本体: 時刻列 + 7日列 */
+    .wg-table {
+      display: grid;
+      grid-template-columns: 34px repeat(7, 1fr);
+      gap: 2px 3px;
+      min-width: 280px;
+    }
+
+    /* 曜日ヘッダーセル */
+    .wg-day-head {
+      text-align: center; padding: 0 2px 10px;
+    }
+    .wg-day-name { display: block; font-size: 10px; font-weight: 700; color: #9ca3af; }
+    .wg-day-num  {
+      display: inline-flex; align-items: center; justify-content: center;
+      width: 26px; height: 26px; font-size: 13px; font-weight: 800; color: #111827;
+      border-radius: 50%;
+    }
+    .wg-day-head.is-today .wg-day-name { color: #818cf8; }
+    .wg-day-head.is-today .wg-day-num  {
+      background: linear-gradient(135deg,#6366f1,#8b5cf6); color: white;
+    }
+    .wg-day-head.is-sat .wg-day-name { color: #60a5fa; }
+    .wg-day-head.is-sat .wg-day-num  { color: #3b82f6; }
+    .wg-day-head.is-sun .wg-day-name { color: #f87171; }
+    .wg-day-head.is-sun .wg-day-num  { color: #ef4444; }
+
+    /* 時刻ラベル */
+    .wg-time {
+      font-size: 10px; font-weight: 600; color: #9ca3af;
+      display: flex; align-items: center; justify-content: flex-end;
+      padding-right: 4px; height: 38px; white-space: nowrap;
+    }
+
+    /* セル */
+    .wg-cell {
+      height: 38px; border-radius: 8px;
+      display: flex; align-items: center; justify-content: center;
+      font-size: 14px; font-weight: 700;
+    }
+    .wg-cell.avail {
+      background: #dcfce7; color: #16a34a;
+      cursor: pointer;
+      transition: transform 0.1s ease, background 0.1s ease;
+    }
+    .wg-cell.avail:active { transform: scale(0.88); background: #bbf7d0; }
+    .wg-cell.unavail { background: #f9fafb; color: #d1d5db; font-size: 11px; }
+    .wg-cell.empty   { background: transparent; }
+    /* 空きコーナーセル（時刻列のヘッダー行） */
+    .wg-corner { height: auto; }
   </style>
 </head>
 <body>
@@ -276,56 +330,35 @@
   <!-- スクロール可能なコンテンツ領域 -->
   <div class="flex-1 overflow-y-auto bg-white">
 
-    <!-- カレンダーグリッド -->
-    <div class="px-3 pt-4 pb-3">
-      <div id="cal-spinner" class="flex justify-center py-8">
-        <div class="w-8 h-8 border-4 border-indigo-500 border-t-transparent rounded-full spinner"></div>
-      </div>
-      <div id="cal-grid"
-           style="display:none; grid-template-columns:repeat(7,1fr); gap:4px;"></div>
-    </div>
+    <!-- 週グリッドカレンダー -->
+    <div id="week-grid-wrap" class="px-3 pt-4 pb-6">
 
-    <!-- 日付未選択のときのヒントテキスト -->
-    <p id="cal-hint" class="text-center text-xs text-gray-400 pb-5">
-      空き枠のある日をタップしてください
-    </p>
-
-    <!-- ════ スロットセクション（日付タップ後に表示） ════ -->
-    <div id="slots-section" style="display:none;">
-
-      <!-- 選択日付の帯 -->
-      <div class="day-selected-bar">
-        <div class="flex items-center gap-2">
-          <h2 id="slots-heading" class="flex-1 font-bold text-indigo-600 text-sm"></h2>
-          <!-- 更新ボタン: タップすると空き状況を再取得する -->
-          <button class="refresh-btn" onclick="refreshSlots()" aria-label="空き状況を更新">
-            <svg width="14" height="14" viewBox="0 0 24 24" fill="none"
-                 stroke="#6b7280" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
-              <polyline points="23 4 23 10 17 10"/>
-              <polyline points="1 20 1 14 7 14"/>
-              <path d="M3.51 9a9 9 0 0 1 14.85-3.36L23 10M1 14l4.64 4.36A9 9 0 0 0 20.49 15"/>
-            </svg>
-          </button>
-          <span id="slots-count" class="count-badge" style="display:none;"></span>
-        </div>
-        <!-- スロット取得時刻（取得完了後に表示） -->
-        <p id="slots-updated" class="text-xs mt-1.5" style="color:#a5b4fc;display:none;"></p>
-      </div>
-
-      <!-- スロット読み込み中スピナー -->
-      <div id="slots-spinner" class="flex justify-center py-12">
+      <!-- 読み込み中スピナー -->
+      <div id="week-grid-spinner" class="flex justify-center py-12">
         <div class="w-8 h-8 border-4 border-indigo-500 border-t-transparent rounded-full spinner"></div>
       </div>
 
-      <!-- スロット一覧（時間帯グループ別） -->
-      <div id="slots-list" class="px-4 pb-10" style="display:none;"></div>
+      <!-- グリッド本体（JS が描画） -->
+      <div id="week-grid" style="display:none;"></div>
 
-      <!-- 空き枠がない場合 -->
-      <p id="slots-empty" class="text-center text-gray-400 text-sm py-12 px-4"
+      <!-- この週に空き枠が1つもない場合 -->
+      <p id="week-grid-empty" class="text-center text-gray-400 text-sm py-12"
          style="display:none;">
-        この日は空き枠がありません
+        この週は空き枠がありません
       </p>
 
+      <!-- グリッドの凡例 -->
+      <div id="week-grid-legend" class="flex items-center gap-4 mt-4 justify-center"
+           style="display:none!important;">
+        <span class="flex items-center gap-1 text-xs text-gray-500">
+          <span style="display:inline-block;width:18px;height:18px;border-radius:5px;background:#dcfce7;"></span>
+          空き
+        </span>
+        <span class="flex items-center gap-1 text-xs text-gray-500">
+          <span style="display:inline-block;width:18px;height:18px;border-radius:5px;background:#f9fafb;"></span>
+          受付不可
+        </span>
+      </div>
     </div>
 
     <!-- iOS ホームバー対応の底部パディング -->
@@ -443,10 +476,11 @@ const STUDIO_LABELS = {
 let lineUserId       = '';   // LINE ユーザー ID
 let lineDisplayName  = '';   // LINE 表示名（予約フォームの初期値に使う）
 let currentWeekStart = null; // 現在表示中の週の月曜日（Date オブジェクト）
-let currentDayData   = null; // API から取得したスロット一覧
+let currentDayData   = null; // 予約シートを開いた日のスロット一覧
 let selectedDate     = '';   // 選択中の日付（YYYY-MM-DD）
 let selectedSlotIdx  = -1;   // 選択中のスロット index
 let selectedDuration = 30;   // 選択中のレッスン時間（分）
+let weekSlotsData    = {};   // { 'YYYY-MM-DD': { slots: [...] } } 週の全日分キャッシュ
 
 // ─── ユーティリティ ────────────────────────────────────────────────────────────
 
@@ -479,10 +513,27 @@ function jsDayToSys(jsDay) {
 /**
  * GAS Web App API を fetch() で呼ぶ共通ヘルパー。
  * 成功時は json.data を返し、失敗時は Error を throw する。
+ *
+ * 書き込み系アクション（booking_request）は POST で送信する。
+ * 生徒の名前・メモ・LINE ID を URL に載せないためのセキュリティ対策。
+ * 読み取り系（availability / availability_week）は認証不要なので GET のまま。
  */
 async function apiFetch(queryParams) {
-  const url = API_URL + '?' + new URLSearchParams(queryParams).toString();
-  const res = await fetch(url, { redirect: 'follow' });
+  const POST_ACTIONS = ['booking_request'];
+  let res;
+  if (POST_ACTIONS.includes(queryParams.action)) {
+    // POST: body に JSON を乗せて送信（Content-Type: text/plain で CORS プリフライトを回避）
+    res = await fetch(API_URL, {
+      method: 'POST',
+      redirect: 'follow',
+      headers: { 'Content-Type': 'text/plain' },
+      body: JSON.stringify(queryParams),
+    });
+  } else {
+    // GET: クエリパラメータとして送信（読み取り専用）
+    const url = API_URL + '?' + new URLSearchParams(queryParams).toString();
+    res = await fetch(url, { redirect: 'follow' });
+  }
   if (!res.ok) throw new Error(`HTTP エラー: ${res.status}`);
   const json = await res.json();
   if (!json.success) {
@@ -539,11 +590,13 @@ async function init() {
   }
 }
 
-// ─── 週間カレンダー ────────────────────────────────────────────────────────────
+// ─── 週グリッドカレンダー ──────────────────────────────────────────────────────
 
+/**
+ * 指定の月曜日から始まる週の空き枠グリッドを読み込んで描画する。
+ * 7日分の availability を並列で取得し、縦軸=時間帯・横軸=曜日のグリッドを表示する。
+ */
 async function loadWeek(mondayDate) {
-  const weekStartDate = fmtDate(mondayDate);
-
   // ヘッダーの週ラベルを更新（例: 4/28（月）〜 5/4（日））
   const sunDate = new Date(mondayDate);
   sunDate.setDate(sunDate.getDate() + 6);
@@ -558,70 +611,128 @@ async function loadWeek(mondayDate) {
   prevBtn.style.opacity = isThisWeek ? '0.3' : '1';
   prevBtn.disabled      = isThisWeek;
 
-  // スピナーを表示、グリッドとスロットを非表示
-  document.getElementById('cal-spinner').style.display   = 'flex';
-  document.getElementById('cal-grid').style.display      = 'none';
-  document.getElementById('slots-section').style.display = 'none';
-  document.getElementById('cal-hint').style.display      = 'block';
+  // 今日から4週先（上限）を超えたら「次の週へ」ボタンを無効化
+  const maxWeek = new Date(thisWeek);
+  maxWeek.setDate(maxWeek.getDate() + 4 * 7);
+  const isMaxWeek = mondayDate.getTime() >= maxWeek.getTime();
+  const nextBtn   = document.getElementById('btn-next');
+  nextBtn.style.opacity = isMaxWeek ? '0.3' : '1';
+  nextBtn.disabled      = isMaxWeek;
+
+  // スピナーを表示してグリッドを隠す
+  document.getElementById('week-grid-spinner').style.display = 'flex';
+  document.getElementById('week-grid').style.display         = 'none';
+  document.getElementById('week-grid-empty').style.display   = 'none';
 
   try {
-    const summary = await apiFetch({ action: 'availability_week', weekStartDate });
-    renderCalendar(summary);
+    // 月曜〜日曜の日付文字列を生成
+    const dates = Array.from({ length: 7 }, (_, i) => {
+      const d = new Date(mondayDate);
+      d.setDate(d.getDate() + i);
+      return fmtDate(d);
+    });
 
-    // 週の中で最初に空き枠がある日を自動選択する（1タップ削減）
-    const todayStr   = fmtDate(new Date());
-    const firstAvail = summary.find(day => day.available_count > 0 && day.date >= todayStr);
-    if (firstAvail) {
-      await selectDate(firstAvail.date);
-    }
+    // 7日分の空き枠データを並列取得
+    const results = await Promise.all(
+      dates.map(date => apiFetch({ action: 'availability', date }))
+    );
+
+    // キャッシュに保存
+    weekSlotsData = {};
+    const days = dates.map((date, i) => {
+      weekSlotsData[date] = results[i];
+      return { date, slots: results[i].slots || [] };
+    });
+
+    renderWeekGrid(days);
+
   } catch (err) {
     showError('カレンダーの読み込みに失敗しました。\n時間をおいて再試行してください。');
   }
 }
 
-/** 週サマリーデータをカレンダーグリッドとして描画する */
-function renderCalendar(summary) {
+/**
+ * 7日分のスロットデータを週グリッドとして描画する。
+ * 縦軸 = 空き枠が1つ以上存在する時間帯（重複排除・昇順ソート）
+ * 横軸 = 月〜日の7列
+ * セルをタップすると openBookingSheetFromGrid() を呼ぶ。
+ */
+function renderWeekGrid(days) {
   const todayStr = fmtDate(new Date());
-  const grid     = document.getElementById('cal-grid');
 
-  grid.innerHTML = summary.map((day, i) => {
-    const isToday = day.date === todayStr;
-    const isPast  = day.date < todayStr;
-    const canBook = day.available_count > 0 && !isPast;
-    const dateNum = parseInt(day.date.split('-')[2], 10);
+  // 週全体に登場する start_time を収集（重複なし・昇順）
+  const timesSet = new Set();
+  days.forEach(d => (d.slots || []).forEach(s => timesSet.add(s.start_time)));
+  const times = [...timesSet].sort();
 
-    // 曜日テキストの色: 土=青, 日=赤, その他=グレー系
-    const dayColor = i === 5 ? '#3b82f6'
-                   : i === 6 ? '#ef4444'
-                   : (isToday || canBook)
-                     ? (isToday ? 'rgba(255,255,255,0.75)' : '#6b7280')
-                     : '#c4c9d1';
+  document.getElementById('week-grid-spinner').style.display = 'none';
 
-    if (canBook) {
-      const bg = isToday
-        ? 'background:linear-gradient(135deg,#6366f1,#8b5cf6);box-shadow:0 4px 14px rgba(99,102,241,0.45);'
-        : 'background:white;box-shadow:0 1px 6px rgba(0,0,0,0.08);border:1px solid rgba(0,0,0,0.06);';
-      const numColor = isToday ? 'white' : '#111827';
-      const cntColor = isToday ? 'rgba(255,255,255,0.9)' : '#6366f1';
+  if (times.length === 0) {
+    document.getElementById('week-grid-empty').style.display = 'block';
+    return;
+  }
 
-      // 空き枠あり: 日付下に小さなドットで示す
-      const dotColor = isToday ? 'rgba(255,255,255,0.9)' : '#6366f1';
-      return `<button class="day-card can-book" style="${bg}" onclick="selectDate('${day.date}')">
-        <span style="font-size:11px;font-weight:700;color:${dayColor};margin-bottom:3px;">${DAY_NAMES[i]}</span>
-        <span style="font-size:18px;font-weight:800;color:${numColor};line-height:1;">${dateNum}</span>
-        <span style="display:block;width:6px;height:6px;border-radius:50%;background:${dotColor};margin-top:5px;"></span>
-      </button>`;
-    } else {
-      return `<div class="day-card" style="background:#f9fafb;">
-        <span style="font-size:11px;font-weight:700;color:#d1d5db;margin-bottom:3px;">${DAY_NAMES[i]}</span>
-        <span style="font-size:18px;font-weight:800;color:#d1d5db;line-height:1;">${dateNum}</span>
-        <span style="display:block;width:6px;height:6px;border-radius:50%;background:#e5e7eb;margin-top:5px;"></span>
-      </div>`;
-    }
-  }).join('');
+  // ─── HTML 生成 ───────────────────────────────────────────────────
+  let html = '<div class="wg-table">';
 
-  document.getElementById('cal-spinner').style.display = 'none';
-  document.getElementById('cal-grid').style.display    = 'grid';
+  // ヘッダー行: 左上コーナー + 7つの日付ヘッダー
+  html += '<div class="wg-corner"></div>';
+  days.forEach((d, i) => {
+    const [, , dd] = d.date.split('-');
+    const isToday = d.date === todayStr;
+    const cls = ['wg-day-head', isToday ? 'is-today' : '', i === 5 ? 'is-sat' : '', i === 6 ? 'is-sun' : '']
+      .filter(Boolean).join(' ');
+    html += `<div class="${cls}">
+      <span class="wg-day-name">${DAY_NAMES[i]}</span>
+      <span class="wg-day-num">${parseInt(dd, 10)}</span>
+    </div>`;
+  });
+
+  // スロット行: 各時刻 × 各日のセル
+  times.forEach(time => {
+    // 時刻ラベル（例: 10:00）
+    html += `<div class="wg-time">${time}</div>`;
+
+    days.forEach(d => {
+      const slotArr = d.slots || [];
+      const slotIdx = slotArr.findIndex(s => s.start_time === time);
+
+      if (slotIdx === -1) {
+        // この日にはそのスロット自体が存在しない
+        html += '<div class="wg-cell empty"></div>';
+      } else {
+        const slot = slotArr[slotIdx];
+        const isPast = d.date < todayStr;
+
+        if (slot.available && !isPast) {
+          // タップ可能な空き枠
+          html += `<button class="wg-cell avail"
+            onclick="openBookingSheetFromGrid('${d.date}',${slotIdx})"
+            aria-label="${d.date} ${time} 空き">○</button>`;
+        } else {
+          // 受付不可（先生ブロック・既予約・過去日）
+          html += '<div class="wg-cell unavail">×</div>';
+        }
+      }
+    });
+  });
+
+  html += '</div>';
+
+  const gridEl = document.getElementById('week-grid');
+  gridEl.innerHTML = html;
+  gridEl.style.display = 'block';
+}
+
+/**
+ * グリッドのセルをタップしたとき: 対象の日・スロットの予約シートを開く。
+ * @param {string} dateStr  YYYY-MM-DD
+ * @param {number} slotIdx  weekSlotsData[dateStr].slots のインデックス
+ */
+function openBookingSheetFromGrid(dateStr, slotIdx) {
+  selectedDate   = dateStr;
+  currentDayData = weekSlotsData[dateStr];
+  openBookingSheet(slotIdx);
 }
 
 /** 前の週へ */
@@ -638,158 +749,11 @@ async function prevWeek() {
 async function nextWeek() {
   const next = new Date(currentWeekStart);
   next.setDate(next.getDate() + 7);
+  const maxWeek = getMonday(new Date());
+  maxWeek.setDate(maxWeek.getDate() + 4 * 7);
+  if (next.getTime() > maxWeek.getTime()) return;
   currentWeekStart = next;
   await loadWeek(currentWeekStart);
-}
-
-// ─── 日次スロット一覧 ─────────────────────────────────────────────────────────
-
-/** カレンダーで日付をタップしたとき: スロット一覧を取得して同じ画面に表示する */
-async function selectDate(dateStr) {
-  selectedDate = dateStr;
-
-  // 選択日付の帯に「○月○日（曜）の空き状況」を表示
-  const [, m, d] = dateStr.split('-');
-  const sysDay   = jsDayToSys(new Date(dateStr + 'T00:00:00').getDay());
-  document.getElementById('slots-heading').textContent =
-    `${parseInt(m)}月${parseInt(d)}日（${DAY_NAMES[sysDay]}）の空き状況`;
-
-  // スロットセクションを表示し、ヒントを非表示にする
-  document.getElementById('slots-section').style.display  = 'block';
-  document.getElementById('cal-hint').style.display       = 'none';
-  document.getElementById('slots-spinner').style.display  = 'flex';
-  document.getElementById('slots-list').style.display     = 'none';
-  document.getElementById('slots-empty').style.display    = 'none';
-  document.getElementById('slots-count').textContent      = '';
-
-  // スロットセクションが見えるようにスクロールする
-  document.getElementById('slots-section').scrollIntoView({
-    behavior: 'smooth', block: 'start'
-  });
-
-  try {
-    currentDayData = await apiFetch({ action: 'availability', date: dateStr });
-    renderSlots(currentDayData);
-  } catch (err) {
-    showError('スロットの読み込みに失敗しました。\n時間をおいて再試行してください。');
-  }
-}
-
-/**
- * スロット一覧を時間帯グループ別に描画する。
- *
- * 時間帯の区切り:
- *   朝      8〜11時台  (8:00〜11:30)
- *   昼      12〜16時台 (12:00〜16:30)
- *   夕方〜夜 17〜21時台 (17:00〜21:30)
- *
- * 各スロット:
- *   ◯（緑）= 空き → タップで予約シートを開く
- *   ✕（ピンク）= 受付不可 → タップ不可
- */
-function renderSlots(data) {
-  const slots     = data.slots || [];
-  const openCount = slots.filter(s => s.available).length;
-
-  document.getElementById('slots-spinner').style.display = 'none';
-
-  // 枠数バッジを更新
-  const countEl = document.getElementById('slots-count');
-  if (openCount > 0) {
-    countEl.textContent    = `${openCount} 枠空き`;
-    countEl.style.display  = 'inline-block';
-  } else {
-    countEl.textContent   = '空き枠なし';
-    countEl.style.display = 'inline-block';
-    countEl.style.background = '#f3f4f6';
-    countEl.style.color      = '#9ca3af';
-  }
-
-  // 取得時刻を表示（「先生のスケジュール反映済み」）
-  const now     = new Date();
-  const hh      = String(now.getHours()).padStart(2, '0');
-  const min     = String(now.getMinutes()).padStart(2, '0');
-  const updEl   = document.getElementById('slots-updated');
-  updEl.textContent   = `📋 先生のスケジュール反映済み（${now.getMonth()+1}/${now.getDate()} ${hh}:${min} 更新）`;
-  updEl.style.display = 'block';
-
-  if (openCount === 0) {
-    document.getElementById('slots-empty').style.display = 'block';
-    return;
-  }
-
-  const TIME_GROUPS = [
-    { label: '朝（8〜11時台）',        from: 8,  to: 12 },
-    { label: '昼（12〜16時台）',        from: 12, to: 17 },
-    { label: '夕方〜夜（17〜21時台）', from: 17, to: 22 },
-  ];
-
-  let html = '';
-
-  TIME_GROUPS.forEach(group => {
-    // この時間帯に該当するスロットを抽出（元の index も保持する）
-    const groupItems = slots
-      .map((slot, idx) => ({ slot, idx }))
-      .filter(({ slot }) => {
-        const hour = parseInt(slot.start_time.split(':')[0], 10);
-        return hour >= group.from && hour < group.to;
-      });
-
-    if (groupItems.length === 0) return;
-
-    html += `<p class="time-group-label">${group.label}</p>`;
-    html += '<div class="space-y-2 mb-2">';
-
-    groupItems.forEach(({ slot, idx }) => {
-      if (slot.available) {
-        // 空き枠: 緑カード + ◯サークル + スタジオ名 + > 矢印
-        const studioLabel = STUDIO_LABELS[slot.studio_id] || '';
-        const studioLine  = studioLabel
-          ? `<span class="slot-avail-studio">@${studioLabel}</span>`
-          : '';
-        html += `
-          <button class="slot-row available" onclick="openBookingSheet(${idx})">
-            <span class="slot-avail-time">${slot.start_time}</span>
-            <div class="slot-avail-circle">◯</div>
-            <div class="slot-avail-body">
-              <span class="slot-avail-label">空き</span>
-              ${studioLine}
-            </div>
-            <span class="slot-arrow">›</span>
-          </button>`;
-      } else {
-        // 受付不可: グレー×サークル（タップ不可）
-        html += `
-          <div class="slot-row">
-            <span class="slot-time-gray">${slot.start_time}</span>
-            <div class="slot-unavail-circle">×</div>
-            <span style="font-size:13px;color:#9ca3af;font-weight:500;">受付不可</span>
-          </div>`;
-      }
-    });
-
-    html += '</div>';
-  });
-
-  const list = document.getElementById('slots-list');
-  list.innerHTML = html;
-  list.style.display = 'block';
-}
-
-/** 更新ボタンをタップしたとき: 現在の日付のスロットを再取得する */
-async function refreshSlots() {
-  if (!selectedDate) return;
-  document.getElementById('slots-spinner').style.display  = 'flex';
-  document.getElementById('slots-list').style.display     = 'none';
-  document.getElementById('slots-empty').style.display    = 'none';
-  document.getElementById('slots-count').style.display    = 'none';
-  document.getElementById('slots-updated').style.display  = 'none';
-  try {
-    currentDayData = await apiFetch({ action: 'availability', date: selectedDate });
-    renderSlots(currentDayData);
-  } catch (err) {
-    showError('スロットの読み込みに失敗しました。\n時間をおいて再試行してください。');
-  }
 }
 
 // ─── 予約確認シート ────────────────────────────────────────────────────────────

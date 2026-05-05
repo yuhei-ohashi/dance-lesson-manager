@@ -105,12 +105,14 @@
       position: fixed; bottom: 82px; left: 50%;
       transform: translateX(-50%);
       background: #1f2937; color: white;
-      padding: 10px 18px; border-radius: 99px;
+      padding: 10px 18px; border-radius: 20px;
       font-size: 13px; font-weight: 600;
       z-index: 100; opacity: 0;
-      transition: opacity 0.2s; pointer-events: none; white-space: nowrap;
+      transition: opacity 0.2s; pointer-events: none;
+      white-space: normal; max-width: min(92vw, 360px);
+      text-align: center;
     }
-    #toast.show { opacity: 1; }
+    #toast.show { opacity: 1; pointer-events: auto; }
 
     /* 週カレンダー */
     .week-day {
@@ -329,8 +331,9 @@
 ════════════════════════════════════════════════════════ -->
 <div id="screen-app" style="display:none;">
 
-  <!-- アプリヘッダー -->
-  <div class="grad text-white px-4 pt-4 pb-3 sticky top-0 z-30">
+  <!-- アプリヘッダー（sticky + ノッチ・Dynamic Island 対応） -->
+  <div class="grad text-white px-4 pb-3 sticky top-0 z-30"
+       style="padding-top: max(16px, env(safe-area-inset-top, 16px));">
     <div class="flex items-center justify-between">
       <div>
         <h1 class="text-base font-bold leading-tight">ダンス手帳</h1>
@@ -1462,13 +1465,13 @@ function avatarChar(name) {
 
 /** トーストを表示する（テキストのみ・UNDOなし） */
 let _toastTimer = null;
-function showToast(msg) {
+function showToast(msg, duration = 2500) {
   const el = document.getElementById('toast');
   clearTimeout(_toastTimer);
   _undoCallback = null;
   el.textContent = msg;
   el.classList.add('show');
-  _toastTimer = setTimeout(() => el.classList.remove('show'), 2500);
+  _toastTimer = setTimeout(() => el.classList.remove('show'), duration);
 }
 
 // ─── API ヘルパー ─────────────────────────────────────────────────────────────
@@ -1560,6 +1563,7 @@ async function showApp() {
     await loadAllData();
   } catch(e) {
     console.error(e);
+    showToast('データの読み込みに失敗しました。再読み込みしてください', 5000);
   }
 
   document.getElementById('app-loading').style.display = 'none';
@@ -2980,14 +2984,23 @@ async function deleteTaskAction(taskId) {
   renderTasks();
 
   showUndoToast('タスクを削除しました', async () => {
-    // 取り消し：ローカルに戻す（サーバー再追加はしない）
+    // 取り消し：ローカルに先に戻してからサーバーへ再登録
     if (task.is_done || task.is_done === 'TRUE') {
       state.doneTasks.unshift(task);
     } else {
       state.pendingTasks.unshift(task);
     }
     renderTasks();
-    showToast('削除を取り消しました');
+    try {
+      await apiPost('task_add', {
+        text:      task.text      || '',
+        is_urgent: isBool(task.is_urgent),
+        due_date:  task.due_date  || '',
+      });
+      showToast('削除を取り消しました');
+    } catch(e) {
+      showToast('取り消しに失敗しました: ' + e.message);
+    }
   });
 
   try {
@@ -3900,15 +3913,37 @@ async function deleteSaleAction(saleId) {
   const sale = state.allSales.find(s => String(s.sale_id) === String(saleId));
   if (!sale) return;
 
+  // 削除前確認：金額・日付を見せて誤タップを防ぐ
+  const amountStr = Number(sale.amount).toLocaleString('ja-JP');
+  const confirmed = window.confirm(
+    `この売上を削除しますか？\n\n日付：${sale.sale_date}\n金額：¥${amountStr}\n\n※ 削除後も「取り消す」で元に戻せます。`
+  );
+  if (!confirmed) return;
+
   // 楽観的削除
   state.allSales = state.allSales.filter(s => String(s.sale_id) !== String(saleId));
   renderSales();
 
-  showUndoToast('売上を削除しました', () => {
+  showUndoToast('売上を削除しました', async () => {
+    // 取り消し：ローカルに先に戻してからサーバーへ再登録
     state.allSales.push(sale);
     state.allSales.sort((a, b) => b.sale_date > a.sale_date ? 1 : -1);
     renderSales();
-    showToast('削除を取り消しました');
+    try {
+      await apiPost('sale_add', {
+        sale_date:      sale.sale_date      || '',
+        student_id:     sale.student_id     || '',
+        student_name:   sale.student_name   || '',
+        amount:         sale.amount,
+        type:           sale.type,
+        payment_status: sale.payment_status || 'paid',
+        memo:           sale.memo           || '',
+        lesson_id:      sale.lesson_id      || '',
+      });
+      showToast('削除を取り消しました');
+    } catch(e) {
+      showToast('取り消しに失敗しました: ' + e.message);
+    }
   });
 
   try {
