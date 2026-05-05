@@ -705,15 +705,20 @@
       <div class="flex gap-2">
         <div class="flex-1">
           <label class="block text-xs font-bold text-gray-600 mb-1">開始 <span class="text-red-500">*</span></label>
-          <input id="al-start" type="time" step="1800"
+          <select id="al-start" onchange="onAlStartChange(this.value)"
             class="w-full border-2 border-gray-200 rounded-xl px-3 py-2 text-sm
-                   focus:outline-none focus:border-indigo-500 transition-colors">
+                   focus:outline-none focus:border-indigo-500 transition-colors bg-white">
+            <option value="">--:--</option>
+          </select>
         </div>
         <div class="flex-1">
-          <label class="block text-xs font-bold text-gray-600 mb-1">終了 <span class="text-red-500">*</span></label>
-          <input id="al-end" type="time" step="1800"
-            class="w-full border-2 border-gray-200 rounded-xl px-3 py-2 text-sm
-                   focus:outline-none focus:border-indigo-500 transition-colors">
+          <label class="block text-xs font-bold text-gray-600 mb-1">終了（自動）</label>
+          <div id="al-end-display"
+            class="w-full border-2 border-gray-100 rounded-xl px-3 py-2 text-sm
+                   bg-gray-50 text-gray-500">
+            --:--
+          </div>
+          <input type="hidden" id="al-end">
         </div>
       </div>
       <div>
@@ -1177,6 +1182,56 @@ function ticketTypeLabel(id) {
   if (!id) return '';
   const tt = state.ticketTypeMap[id];
   return tt ? tt.label : id;
+}
+
+/**
+ * 30分刻みの時刻リスト（"HH:MM" 形式）を返す。
+ * デフォルト: 08:00〜22:00
+ */
+function _timeSlots(startHour, endHour) {
+  startHour = startHour ?? 8;
+  endHour   = endHour   ?? 22;
+  const slots = [];
+  for (let h = startHour; h <= endHour; h++) {
+    slots.push((h < 10 ? '0' : '') + h + ':00');
+    if (h < endHour) slots.push((h < 10 ? '0' : '') + h + ':30');
+  }
+  return slots;
+}
+
+/** 開始時刻 select を 30 分刻みで初期化し、selectedTime を選択状態にする */
+function _populateStartSelect(selectId, selectedTime) {
+  const sel = document.getElementById(selectId);
+  if (!sel) return;
+  const slots = _timeSlots();
+  sel.innerHTML =
+    `<option value="">--:--</option>` +
+    slots.map(t =>
+      `<option value="${t}"${t === selectedTime ? ' selected' : ''}>${t}</option>`
+    ).join('');
+}
+
+/** HH:MM に 30 分を加算して HH:MM を返す */
+function _addMinutes(hhmm, minutes) {
+  const [h, m] = hhmm.split(':').map(Number);
+  const total = h * 60 + m + minutes;
+  const nh = Math.floor(total / 60) % 24;
+  const nm = total % 60;
+  return (nh < 10 ? '0' : '') + nh + ':' + (nm < 10 ? '0' : '') + nm;
+}
+
+/** 開始時刻が変わったとき、終了時刻を +30分 で自動セット */
+function onAlStartChange(val) {
+  const endDisplay = document.getElementById('al-end-display');
+  const endInput   = document.getElementById('al-end');
+  if (!val) {
+    endDisplay.textContent = '--:--';
+    endInput.value = '';
+    return;
+  }
+  const endTime = _addMinutes(val, 30);
+  endDisplay.textContent = endTime;
+  endInput.value = endTime;
 }
 
 /**
@@ -2161,12 +2216,15 @@ function openAddLessonDialog() {
     `<option value="${escapeHtml(s.name)}" data-id="${s.student_id}">`
   ).join('');
 
+  // 開始時刻 select を 30分刻みで再描画
+  _populateStartSelect('al-start', '');
+  document.getElementById('al-end-display').textContent = '--:--';
+  document.getElementById('al-end').value = '';
+
   // 券種selectを最新のマスターで再描画
   _populateTicketTypeSelect('al-ticket-type', '');
 
   document.getElementById('al-date').value  = state.calDate;
-  document.getElementById('al-start').value = '';
-  document.getElementById('al-end').value   = '';
   document.getElementById('al-student-name').value = '';
   document.getElementById('al-student-id').value   = '';
   document.getElementById('al-count').value  = '1';
@@ -2200,8 +2258,8 @@ async function submitAddLesson() {
   errEl.classList.add('hidden');
 
   if (!date)    { errEl.textContent = '日付を入力してください'; errEl.classList.remove('hidden'); return; }
-  if (!start)   { errEl.textContent = '開始時刻を入力してください'; errEl.classList.remove('hidden'); return; }
-  if (!end)     { errEl.textContent = '終了時刻を入力してください'; errEl.classList.remove('hidden'); return; }
+  if (!start)   { errEl.textContent = '開始時刻を選択してください'; errEl.classList.remove('hidden'); return; }
+  if (!end)     { errEl.textContent = '開始時刻を選択してください（終了時刻が自動セットされます）'; errEl.classList.remove('hidden'); return; }
   if (!stuName) { errEl.textContent = '生徒名を入力してください'; errEl.classList.remove('hidden'); return; }
   if (!stuId)   { errEl.textContent = '生徒を選択してください（候補から選んでください）'; errEl.classList.remove('hidden'); return; }
 
