@@ -351,30 +351,23 @@
          style="display:none;">
         この週は空き枠がありません
       </p>
+
+      <!-- 凡例（グリッド上部・データ取得後に表示） -->
+      <div id="week-grid-footer" class="flex items-center gap-3 pb-2" style="display:none;">
+        <span class="flex items-center gap-1.5 text-xs text-gray-500">
+          <span style="display:inline-block;width:20px;height:20px;border-radius:6px;background:#dcfce7;font-size:13px;line-height:20px;text-align:center;color:#16a34a;font-weight:700;">○</span>
+          空き
+        </span>
+        <span class="flex items-center gap-1.5 text-xs text-gray-500">
+          <span style="display:inline-block;width:20px;height:20px;border-radius:6px;background:#f3f4f6;font-size:12px;line-height:20px;text-align:center;color:#d1d5db;font-weight:700;">×</span>
+          受付不可
+        </span>
+      </div>
     </div>
 
     <!-- グリッド本体（横スクロール領域） -->
-    <div id="week-grid-wrap" class="px-3 pb-2" style="display:none;">
+    <div id="week-grid-wrap" class="px-3 pb-6" style="display:none;">
       <div id="week-grid"></div>
-    </div>
-
-    <!-- 凡例 ＋ 横スクロールヒント -->
-    <div id="week-grid-footer" class="pb-4 px-3" style="display:none;">
-      <div class="flex items-center justify-between mt-3">
-        <!-- 凡例 -->
-        <div class="flex items-center gap-3">
-          <span class="flex items-center gap-1.5 text-xs text-gray-500">
-            <span style="display:inline-block;width:20px;height:20px;border-radius:6px;background:#dcfce7;font-size:13px;line-height:20px;text-align:center;color:#16a34a;font-weight:700;">○</span>
-            空き
-          </span>
-          <span class="flex items-center gap-1.5 text-xs text-gray-500">
-            <span style="display:inline-block;width:20px;height:20px;border-radius:6px;background:#f3f4f6;font-size:12px;line-height:20px;text-align:center;color:#d1d5db;font-weight:700;">×</span>
-            受付不可
-          </span>
-        </div>
-        <!-- 横スクロールヒント（小さい画面だけ表示） -->
-        <p class="text-xs text-indigo-300 font-medium">← 横にスクロール →</p>
-      </div>
     </div>
 
     <!-- iOS ホームバー対応の底部パディング -->
