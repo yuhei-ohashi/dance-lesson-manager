@@ -536,25 +536,25 @@ function doPost(e) {
           'lesson_date', 'start_time', 'end_time', 'student_id', 'studio_id',
         ]);
 
-        var lessonId = withLock(function() {
-          if (hasDuplicateConfirmedLesson(
-            body.lesson_date, body.start_time, body.studio_id
-          )) {
-            throw { _errResponse: _err('SLOT_UNAVAILABLE',
-              '同日時・同スタジオに既に確定済みのレッスンがあります。') };
-          }
-          return addLesson({
-            lesson_date:        body.lesson_date,
-            start_time:         body.start_time,
-            end_time:           body.end_time,
-            student_id:         body.student_id,
-            studio_id:          body.studio_id,
-            level:              body.level           || '',
-            lesson_count:       body.lesson_count != null ? body.lesson_count : 1,
-            note:               body.note            || '',
-            ticket_type_id:     body.ticket_type_id  || '',
-            status:             'confirmed',
-          });
+        // addLesson() が内部で withLock を取得するため、ここでは二重ロックを避ける。
+        // 重複チェックは参照のみなのでロック外で実施し、書き込みは addLesson() に委ねる。
+        if (hasDuplicateConfirmedLesson(
+          body.lesson_date, body.start_time, body.studio_id
+        )) {
+          return _err('SLOT_UNAVAILABLE',
+            '同日時・同スタジオに既に確定済みのレッスンがあります。');
+        }
+        var lessonId = addLesson({
+          lesson_date:        body.lesson_date,
+          start_time:         body.start_time,
+          end_time:           body.end_time,
+          student_id:         body.student_id,
+          studio_id:          body.studio_id,
+          level:              body.level           || '',
+          lesson_count:       body.lesson_count != null ? body.lesson_count : 1,
+          note:               body.note            || '',
+          ticket_type_id:     body.ticket_type_id  || '',
+          status:             'confirmed',
         });
         return _ok({ lesson_id: lessonId });
       }
