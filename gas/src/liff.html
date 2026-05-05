@@ -355,14 +355,27 @@ function jsDayToSys(jsDay) {
  * 使い方:
  *   const data = await apiFetch({ action: 'availability_week', weekStartDate: '2026-04-28' });
  *
- * GAS の doGet に対して GET リクエストを送り、
- * { success: true, data: ... } のレスポンスを受け取る。
+ * booking_request は個人情報（氏名・LINE ID）を含むため POST で送信する。
+ * availability 系は認証不要の読み取りのみなので GET を使用する。
  * GAS は 302 リダイレクトを返すことがあるが、
  * fetch() はデフォルトでリダイレクトを自動的に追う。
  */
 async function apiFetch(queryParams) {
-  const url = API_URL + '?' + new URLSearchParams(queryParams).toString();
-  const res = await fetch(url, { redirect: 'follow' });
+  const POST_ACTIONS = ['booking_request'];
+  let res;
+  if (POST_ACTIONS.includes(queryParams.action)) {
+    // POST: 氏名・LINE ID が URL に露出しないよう body に乗せて送信。
+    // Content-Type を text/plain にすることで GAS の CORS プリフライトを回避する。
+    res = await fetch(API_URL, {
+      method: 'POST',
+      redirect: 'follow',
+      headers: { 'Content-Type': 'text/plain' },
+      body: JSON.stringify(queryParams),
+    });
+  } else {
+    const url = API_URL + '?' + new URLSearchParams(queryParams).toString();
+    res = await fetch(url, { redirect: 'follow' });
+  }
   if (!res.ok) {
     throw new Error(`HTTP エラー: ${res.status}`);
   }

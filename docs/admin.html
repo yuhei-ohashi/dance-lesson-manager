@@ -2983,28 +2983,28 @@ async function deleteTaskAction(taskId) {
   state.doneTasks    = state.doneTasks.filter(t => String(t.task_id) !== String(taskId));
   renderTasks();
 
-  showUndoToast('タスクを削除しました', async () => {
-    // 取り消し：ローカルに先に戻してからサーバーへ再登録
-    if (task.is_done || task.is_done === 'TRUE') {
-      state.doneTasks.unshift(task);
-    } else {
-      state.pendingTasks.unshift(task);
-    }
-    renderTasks();
-    try {
-      await apiPost('task_add', {
-        text:      task.text      || '',
-        is_urgent: isBool(task.is_urgent),
-        due_date:  task.due_date  || '',
-      });
-      showToast('削除を取り消しました');
-    } catch(e) {
-      showToast('取り消しに失敗しました: ' + e.message);
-    }
-  });
-
   try {
     await apiPost('task_delete', { taskId });
+    // サーバー削除が成功した場合のみ UNDO を表示する（失敗時は元行が残っているため UNDO すると二重登録になる）
+    showUndoToast('タスクを削除しました', async () => {
+      // 取り消し：ローカルに先に戻してからサーバーへ再登録
+      if (task.is_done || task.is_done === 'TRUE') {
+        state.doneTasks.unshift(task);
+      } else {
+        state.pendingTasks.unshift(task);
+      }
+      renderTasks();
+      try {
+        await apiPost('task_add', {
+          text:      task.text      || '',
+          is_urgent: isBool(task.is_urgent),
+          due_date:  task.due_date  || '',
+        });
+        showToast('削除を取り消しました');
+      } catch(e) {
+        showToast('取り消しに失敗しました: ' + e.message);
+      }
+    });
   } catch(e) {
     // サーバー削除失敗時はローカルに戻す
     if (task.is_done || task.is_done === 'TRUE') {
@@ -3924,32 +3924,33 @@ async function deleteSaleAction(saleId) {
   state.allSales = state.allSales.filter(s => String(s.sale_id) !== String(saleId));
   renderSales();
 
-  showUndoToast('売上を削除しました', async () => {
-    // 取り消し：ローカルに先に戻してからサーバーへ再登録
-    state.allSales.push(sale);
-    state.allSales.sort((a, b) => b.sale_date > a.sale_date ? 1 : -1);
-    renderSales();
-    try {
-      await apiPost('sale_add', {
-        sale_date:      sale.sale_date      || '',
-        student_id:     sale.student_id     || '',
-        student_name:   sale.student_name   || '',
-        amount:         sale.amount,
-        type:           sale.type,
-        payment_status: sale.payment_status || 'paid',
-        memo:           sale.memo           || '',
-        lesson_id:      sale.lesson_id      || '',
-      });
-      showToast('削除を取り消しました');
-    } catch(e) {
-      showToast('取り消しに失敗しました: ' + e.message);
-    }
-  });
-
   try {
     await apiPost('sale_delete', { saleId });
+    // サーバー削除が成功した場合のみ UNDO を表示する（失敗時は元行が残っているため UNDO すると二重登録になる）
+    showUndoToast('売上を削除しました', async () => {
+      // 取り消し：ローカルに先に戻してからサーバーへ再登録
+      state.allSales.push(sale);
+      state.allSales.sort((a, b) => b.sale_date > a.sale_date ? 1 : -1);
+      renderSales();
+      try {
+        await apiPost('sale_add', {
+          sale_date:      sale.sale_date      || '',
+          student_id:     sale.student_id     || '',
+          student_name:   sale.student_name   || '',
+          amount:         sale.amount,
+          type:           sale.type,
+          payment_status: sale.payment_status || 'paid',
+          memo:           sale.memo           || '',
+          lesson_id:      sale.lesson_id      || '',
+        });
+        showToast('削除を取り消しました');
+      } catch(e) {
+        showToast('取り消しに失敗しました: ' + e.message);
+      }
+    });
   } catch(e) {
     state.allSales.push(sale);
+    state.allSales.sort((a, b) => b.sale_date > a.sale_date ? 1 : -1);
     renderSales();
     showToast('削除失敗: ' + e.message);
   }
