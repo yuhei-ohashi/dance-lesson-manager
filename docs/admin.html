@@ -445,6 +445,9 @@
       <div class="w-8 h-8 border-4 border-indigo-500 border-t-transparent rounded-full spinner mx-auto"></div>
     </div>
 
+    <!-- 今日期限タスクバナー -->
+    <div id="task-due-banner" class="hidden mb-3"></div>
+
     <!-- 日報サマリー -->
     <div id="daily-summary" class="mb-4"></div>
 
@@ -533,6 +536,12 @@
         class="w-full border-2 border-gray-200 rounded-xl px-3 py-2.5 text-sm
                focus:outline-none focus:border-indigo-500 transition-colors mb-3"
         onkeydown="if(event.key==='Enter') submitAddTask()">
+      <div class="mb-3">
+        <label class="block text-xs font-bold text-gray-500 mb-1">期限日（任意）</label>
+        <input id="new-task-due" type="date"
+          class="w-full border-2 border-gray-200 rounded-xl px-3 py-2 text-sm
+                 focus:outline-none focus:border-indigo-500 transition-colors">
+      </div>
       <label class="flex items-center gap-2 text-sm text-gray-700 cursor-pointer mb-3">
         <input id="new-task-urgent" type="checkbox"
           class="w-4 h-4 rounded accent-orange-500">
@@ -663,12 +672,18 @@
     </button>
     <button onclick="setTab('tasks')" id="nav-tasks"
       class="flex-1 flex flex-col items-center justify-center py-3 gap-0.5
-             text-xs font-bold text-gray-400 transition-colors">
-      <svg width="22" height="22" viewBox="0 0 24 24" fill="none"
-           stroke="currentColor" stroke-width="2" stroke-linecap="round">
-        <path d="M9 11l3 3L22 4"/>
-        <path d="M21 12v7a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11"/>
-      </svg>
+             text-xs font-bold text-gray-400 transition-colors relative">
+      <div class="relative">
+        <svg width="22" height="22" viewBox="0 0 24 24" fill="none"
+             stroke="currentColor" stroke-width="2" stroke-linecap="round">
+          <path d="M9 11l3 3L22 4"/>
+          <path d="M21 12v7a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11"/>
+        </svg>
+        <span id="task-due-badge"
+          class="hidden absolute -top-1.5 -right-1.5 min-w-[16px] h-4 px-0.5
+                 bg-red-500 text-white text-[9px] font-black rounded-full
+                 flex items-center justify-center leading-none"></span>
+      </div>
       <span>タスク</span>
     </button>
     <button onclick="setTab('sales')" id="nav-sales"
@@ -915,6 +930,12 @@
     <input id="edit-task-text" type="text"
       class="w-full border-2 border-gray-200 rounded-xl px-3 py-2.5 text-sm
              focus:outline-none focus:border-indigo-500 transition-colors mb-3">
+    <div class="mb-3">
+      <label class="block text-xs font-bold text-gray-500 mb-1">期限日（任意）</label>
+      <input id="edit-task-due" type="date"
+        class="w-full border-2 border-gray-200 rounded-xl px-3 py-2 text-sm
+               focus:outline-none focus:border-indigo-500 transition-colors">
+    </div>
     <label class="flex items-center gap-2 text-sm text-gray-700 cursor-pointer mb-4">
       <input id="edit-task-urgent" type="checkbox"
         class="w-4 h-4 rounded accent-orange-500">
@@ -1444,6 +1465,7 @@ async function loadAllData() {
 
   updateHeaderSub();
   updateReqBanner();
+  updateTaskDueBadge();
 }
 
 /** ticket_type_id を人間が読めるラベルに変換する（例: "bundle5" → "5枚チケット"） */
@@ -2515,6 +2537,53 @@ async function submitAddMemo() {
 
 // ─── タスクタブ ───────────────────────────────────────────────────────────────
 
+/** ナビバッジ（赤丸）とカレンダーバナーを更新する */
+function updateTaskDueBadge() {
+  const today    = todayStr();
+  const tomorrow = (() => { const d = new Date(today + 'T00:00:00'); d.setDate(d.getDate()+1); return d.toISOString().slice(0,10); })();
+
+  const urgent = state.pendingTasks.filter(t =>
+    t.due_date && (t.due_date <= today || t.due_date === tomorrow)
+  );
+
+  // ナビバッジ
+  const badge = document.getElementById('task-due-badge');
+  if (badge) {
+    if (urgent.length > 0) {
+      badge.textContent = urgent.length;
+      badge.classList.remove('hidden');
+      badge.classList.add('flex');
+    } else {
+      badge.classList.add('hidden');
+      badge.classList.remove('flex');
+    }
+  }
+
+  // カレンダータブのバナー（今日が期限のタスクのみ）
+  const banner = document.getElementById('task-due-banner');
+  if (banner) {
+    const todayDue = state.pendingTasks.filter(t => t.due_date && t.due_date <= today);
+    if (todayDue.length > 0) {
+      banner.classList.remove('hidden');
+      banner.innerHTML = `
+        <div class="flex items-center gap-2 bg-red-50 border border-red-200 rounded-xl px-3 py-2.5
+                    cursor-pointer" onclick="setTab('tasks')">
+          <span class="text-base">🔔</span>
+          <div class="flex-1">
+            <p class="text-xs font-bold text-red-700">期限切れ・本日期限のタスクが${todayDue.length}件あります</p>
+            <p class="text-xs text-red-500 mt-0.5">${todayDue.map(t => escapeHtml(t.text)).join('、')}</p>
+          </div>
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="none"
+               stroke="#dc2626" stroke-width="2.5" stroke-linecap="round">
+            <path d="M9 18l6-6-6-6"/>
+          </svg>
+        </div>`;
+    } else {
+      banner.classList.add('hidden');
+    }
+  }
+}
+
 function renderTasks() {
   const today = fmtDate(todayStr());
   const cnt   = state.pendingTasks.length;
@@ -2542,10 +2611,27 @@ function renderTasks() {
       document.getElementById('done-list').innerHTML = done.map(t => taskRowHtml(t, true)).join('');
     }
   }
+  updateTaskDueBadge();
+}
+
+function taskDueBadgeHtml(dueDate, isDone) {
+  if (!dueDate || isDone) return '';
+  const today    = todayStr();
+  const tomorrow = (() => { const d = new Date(today + 'T00:00:00'); d.setDate(d.getDate()+1); return d.toISOString().slice(0,10); })();
+  if (dueDate < today) {
+    return `<span class="badge" style="background:#fee2e2;color:#991b1b;">⚠ 期限超過</span>`;
+  } else if (dueDate === today) {
+    return `<span class="badge" style="background:#fee2e2;color:#991b1b;">今日まで</span>`;
+  } else if (dueDate === tomorrow) {
+    return `<span class="badge" style="background:#fef3c7;color:#92400e;">明日まで</span>`;
+  } else {
+    return `<span class="badge" style="background:#f3f4f6;color:#374151;">${fmtDate(dueDate)}まで</span>`;
+  }
 }
 
 function taskRowHtml(task, isDone) {
   const isUrgent = isBool(task.is_urgent);
+  const dueBadge = taskDueBadgeHtml(task.due_date, isDone);
   return `
   <div class="task-row" id="task-row-${task.task_id}">
     ${!isDone ? `
@@ -2563,6 +2649,7 @@ function taskRowHtml(task, isDone) {
       <p class="text-sm ${isDone ? 'text-gray-400 line-through' : 'text-gray-800'} leading-snug">
         ${isUrgent && !isDone ? '<span class="text-orange-500 mr-1">⚡</span>' : ''}${escapeHtml(task.text)}
       </p>
+      ${dueBadge ? `<div class="mt-1">${dueBadge}</div>` : ''}
     </div>
     ${!isDone ? `
     <button onclick="openTaskEditDialog(${task.task_id})"
@@ -2593,18 +2680,21 @@ function toggleTaskForm() {
 
 async function submitAddTask() {
   const text     = document.getElementById('new-task-text').value.trim();
+  const dueDate  = document.getElementById('new-task-due').value || '';
   const isUrgent = document.getElementById('new-task-urgent').checked;
   if (!text) { showToast('タスクを入力してください'); return; }
 
   try {
-    const result = await apiPost('task_add', { text, is_urgent: isUrgent });
-    const newTask = { task_id: result.task_id, text, is_urgent: isUrgent, is_done: false };
+    const result = await apiPost('task_add', { text, is_urgent: isUrgent, due_date: dueDate });
+    const newTask = { task_id: result.task_id, text, is_urgent: isUrgent, due_date: dueDate, is_done: false };
     state.pendingTasks.unshift(newTask);
     if (isUrgent) state.pendingTasks.sort((a,b) => isBool(b.is_urgent) - isBool(a.is_urgent));
     showToast('タスクを追加しました');
     document.getElementById('new-task-text').value = '';
+    document.getElementById('new-task-due').value  = '';
     document.getElementById('new-task-urgent').checked = false;
     toggleTaskForm();
+    updateTaskDueBadge();
     renderTasks();
   } catch(e) {
     showToast('追加失敗: ' + e.message);
@@ -2669,6 +2759,7 @@ function openTaskEditDialog(taskId) {
   if (!task) return;
   state.editingTaskId = taskId;
   document.getElementById('edit-task-text').value     = task.text || '';
+  document.getElementById('edit-task-due').value      = task.due_date || '';
   document.getElementById('edit-task-urgent').checked = isBool(task.is_urgent);
   document.getElementById('task-edit-dialog-backdrop').classList.add('open');
 }
@@ -2680,18 +2771,22 @@ function closeTaskEditDialog() {
 
 async function confirmEditTask() {
   const text     = document.getElementById('edit-task-text').value.trim();
+  const dueDate  = document.getElementById('edit-task-due').value || '';
   const isUrgent = document.getElementById('edit-task-urgent').checked;
   if (!text) { showToast('タスクを入力してください'); return; }
 
-  // タスク更新はAPIになし（task_addとdeleteで代用） → フロント側のみ更新
-  // 実際はtask_updateエンドポイントが必要だが、今回は再作成で対応
+  const taskId = state.editingTaskId;
   try {
-    await apiPost('task_delete', { taskId: state.editingTaskId });
-    const result = await apiPost('task_add', { text, is_urgent: isUrgent });
-    state.pendingTasks = state.pendingTasks.filter(t => String(t.task_id) !== String(state.editingTaskId));
-    state.pendingTasks.unshift({ task_id: result.task_id, text, is_urgent: isUrgent, is_done: false });
-    showToast('更新しました');
+    await apiPost('task_update', { taskId, text, is_urgent: isUrgent, due_date: dueDate });
+    const task = state.pendingTasks.find(t => String(t.task_id) === String(taskId));
+    if (task) {
+      task.text      = text;
+      task.is_urgent = isUrgent;
+      task.due_date  = dueDate;
+    }
+    showToast('更新しました ✅');
     closeTaskEditDialog();
+    updateTaskDueBadge();
     renderTasks();
   } catch(e) {
     showToast('更新失敗: ' + e.message);

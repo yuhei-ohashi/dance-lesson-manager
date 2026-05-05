@@ -8,6 +8,7 @@
  *   D: is_done    BOOLEAN
  *   E: done_at    TEXT (YYYY-MM-DD HH:MM, NULL可)
  *   F: created_at TEXT (YYYY-MM-DD HH:MM)
+ *   G: due_date   TEXT (YYYY-MM-DD, NULL可) ← 期限日
  */
 
 var TASKS_SHEET = 'tasks';
@@ -59,11 +60,17 @@ function getPendingTasks() {
  * @param {Object} data
  * @param {string} data.text
  * @param {boolean} [data.is_urgent]  デフォルト false
+ * @param {string}  [data.due_date]   YYYY-MM-DD（任意）
  * @returns {number} 追加した task_id
  */
 function addTask(data) {
   return withLock(function() {
     var sheet = getSheet(TASKS_SHEET);
+    // due_date 列がなければヘッダーを追加しておく
+    var headers = sheet.getRange(1, 1, 1, sheet.getLastColumn()).getValues()[0];
+    if (headers.indexOf('due_date') === -1) {
+      sheet.getRange(1, sheet.getLastColumn() + 1).setValue('due_date');
+    }
     var taskId = getNextId(sheet);
     appendRow(sheet, [
       taskId,
@@ -72,6 +79,7 @@ function addTask(data) {
       false,
       '',
       nowDateTime(),
+      data.due_date || '',
     ]);
     return taskId;
   });
@@ -128,7 +136,7 @@ function deleteTask(taskId) {
  * タスクを更新する。
  *
  * @param {number} taskId
- * @param {Object} data  更新可能: text, is_urgent
+ * @param {Object} data  更新可能: text, is_urgent, due_date
  * @returns {boolean}
  */
 function updateTask(taskId, data) {
@@ -138,6 +146,31 @@ function updateTask(taskId, data) {
     if (rowNumber === -1) return false;
     if (data.text !== undefined)      updateCell(sheet, rowNumber, 'text', data.text);
     if (data.is_urgent !== undefined) updateCell(sheet, rowNumber, 'is_urgent', data.is_urgent);
+    if (data.due_date !== undefined) {
+      // due_date 列がなければ自動追加する
+      var headers = sheet.getRange(1, 1, 1, sheet.getLastColumn()).getValues()[0];
+      if (headers.indexOf('due_date') === -1) {
+        var nextCol = sheet.getLastColumn() + 1;
+        sheet.getRange(1, nextCol).setValue('due_date');
+      }
+      updateCell(sheet, rowNumber, 'due_date', data.due_date);
+    }
     return true;
   });
+}
+
+/**
+ * tasks シートに due_date ヘッダー列を追加する（一回限り実行）。
+ * スプレッドシートに G 列ヘッダーがない場合に GAS エディタから手動実行する。
+ */
+function setupTasksDueDateColumn() {
+  var sheet = getSheet(TASKS_SHEET);
+  var headers = sheet.getRange(1, 1, 1, sheet.getLastColumn()).getValues()[0];
+  if (headers.indexOf('due_date') === -1) {
+    var nextCol = sheet.getLastColumn() + 1;
+    sheet.getRange(1, nextCol).setValue('due_date');
+    Logger.log('due_date 列を追加しました（列' + nextCol + '）');
+  } else {
+    Logger.log('due_date 列はすでに存在します');
+  }
 }

@@ -543,6 +543,7 @@ function doPost(e) {
         var taskId = addTask({
           text:      body.text,
           is_urgent: body.is_urgent === true || body.is_urgent === 'true',
+          due_date:  body.due_date || '',
         });
         return _ok({ task_id: taskId });
       }
@@ -561,6 +562,21 @@ function doPost(e) {
         _requireAdminSecret(body);
         _requireParams(body, ['taskId']);
         var ok = deleteTask(body.taskId);
+        if (!ok) return _err('NOT_FOUND', 'タスクが見つかりません: ' + body.taskId);
+        return _ok({ task_id: body.taskId });
+      }
+
+      // ── タスク更新（管理者専用）─────────────────────────────────────────────
+      case 'task_update': {
+        _requireAdminSecret(body);
+        _requireParams(body, ['taskId']);
+        var ok = updateTask(body.taskId, {
+          text:      body.text,
+          is_urgent: body.is_urgent !== undefined
+                       ? (body.is_urgent === true || body.is_urgent === 'true')
+                       : undefined,
+          due_date:  body.due_date !== undefined ? (body.due_date || '') : undefined,
+        });
         if (!ok) return _err('NOT_FOUND', 'タスクが見つかりません: ' + body.taskId);
         return _ok({ task_id: body.taskId });
       }
