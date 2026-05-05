@@ -989,9 +989,36 @@
       <div>
         <label class="block text-xs font-bold text-gray-600 mb-1">日付 <span class="text-red-500">*</span></label>
         <input id="al-date" type="date"
+          oninput="updateAlRepeatPreview()"
           class="w-full border-2 border-gray-200 rounded-xl px-3 py-2 text-sm
                  focus:outline-none focus:border-indigo-500 transition-colors">
       </div>
+
+      <!-- 繰り返し設定 -->
+      <div>
+        <label class="block text-xs font-bold text-gray-600 mb-1">繰り返し</label>
+        <div class="flex gap-4 text-sm text-gray-700">
+          <label class="flex items-center gap-1.5 cursor-pointer">
+            <input type="radio" name="al-repeat" id="al-repeat-once" value="once" checked
+                   onchange="onAlRepeatChange()">
+            単発
+          </label>
+          <label class="flex items-center gap-1.5 cursor-pointer">
+            <input type="radio" name="al-repeat" id="al-repeat-weekly" value="weekly"
+                   onchange="onAlRepeatChange()">
+            毎週繰り返し
+          </label>
+        </div>
+        <div id="al-repeat-options" class="hidden mt-2">
+          <label class="block text-xs font-bold text-gray-600 mb-1">繰り返し終了日 <span class="text-red-500">*</span></label>
+          <input id="al-repeat-until" type="date"
+            oninput="updateAlRepeatPreview()"
+            class="w-full border-2 border-gray-200 rounded-xl px-3 py-2 text-sm
+                   focus:outline-none focus:border-indigo-500 transition-colors">
+          <p id="al-repeat-preview" class="text-xs text-indigo-600 font-semibold mt-1"></p>
+        </div>
+      </div>
+
       <div class="flex gap-2">
         <div class="flex-1">
           <label class="block text-xs font-bold text-gray-600 mb-1">開始 <span class="text-red-500">*</span></label>
@@ -3100,11 +3127,71 @@ function openAddLessonDialog() {
   document.getElementById('al-count').value  = '1';
   document.getElementById('al-note').value   = '';
   document.getElementById('al-err').classList.add('hidden');
+
+  // 繰り返し設定をリセット
+  document.getElementById('al-repeat-once').checked = true;
+  document.getElementById('al-repeat-options').classList.add('hidden');
+  document.getElementById('al-repeat-until').value = '';
+  document.getElementById('al-repeat-preview').textContent = '';
+  document.getElementById('al-submit-btn').textContent = '追加する';
+
   document.getElementById('add-lesson-dialog-backdrop').classList.add('open');
 }
 
 function closeAddLessonDialog() {
   document.getElementById('add-lesson-dialog-backdrop').classList.remove('open');
+}
+
+// ─── 毎週繰り返し関連 ─────────────────────────────────────────────────────────
+
+function onAlRepeatChange() {
+  const isWeekly = document.getElementById('al-repeat-weekly').checked;
+  document.getElementById('al-repeat-options').classList.toggle('hidden', !isWeekly);
+  updateAlRepeatPreview();
+  // ボタンテキストを更新
+  _updateAlSubmitBtn();
+}
+
+function updateAlRepeatPreview() {
+  const date  = document.getElementById('al-date').value;
+  const until = document.getElementById('al-repeat-until').value;
+  const preview = document.getElementById('al-repeat-preview');
+  if (!preview) return;
+
+  if (!date || !until || until < date) {
+    preview.textContent = '';
+    _updateAlSubmitBtn();
+    return;
+  }
+  const count = calcWeeklyCount(date, until);
+  const DAY_NAMES = ['日','月','火','水','木','金','土'];
+  const dow = DAY_NAMES[new Date(date + 'T00:00:00').getDay()];
+  preview.textContent = `毎週${dow}曜 全${count}回（${fmtDate(date)}〜${fmtDate(until)}）`;
+  _updateAlSubmitBtn();
+}
+
+function calcWeeklyCount(startDate, endDate) {
+  let d = new Date(startDate + 'T00:00:00');
+  const end = new Date(endDate + 'T00:00:00');
+  let count = 0;
+  while (d <= end) { count++; d.setDate(d.getDate() + 7); }
+  return count;
+}
+
+function _updateAlSubmitBtn() {
+  const btn = document.getElementById('al-submit-btn');
+  if (!btn) return;
+  const isWeekly = document.getElementById('al-repeat-weekly').checked;
+  if (!isWeekly) { btn.textContent = '追加する'; return; }
+
+  const date  = document.getElementById('al-date').value;
+  const until = document.getElementById('al-repeat-until').value;
+  if (date && until && until >= date) {
+    const n = calcWeeklyCount(date, until);
+    btn.textContent = `${n}件追加する`;
+  } else {
+    btn.textContent = '追加する';
+  }
 }
 
 function onAlStudentInput(val) {
@@ -3176,6 +3263,8 @@ async function submitAddLesson() {
   const note       = document.getElementById('al-note').value.trim();
   const errEl      = document.getElementById('al-err');
   const btn        = document.getElementById('al-submit-btn');
+  const isWeekly   = document.getElementById('al-repeat-weekly').checked;
+  const repeatUntil = document.getElementById('al-repeat-until').value;
 
   errEl.classList.add('hidden');
 
@@ -3185,6 +3274,72 @@ async function submitAddLesson() {
   if (!stuName) { errEl.textContent = '生徒名を入力してください'; errEl.classList.remove('hidden'); return; }
   if (!stuId)   { errEl.textContent = '生徒を選択してください（候補から選んでください）'; errEl.classList.remove('hidden'); return; }
 
+  // 繰り返し追加（毎週）
+  if (isWeekly) {
+    if (!repeatUntil || repeatUntil < date) {
+      errEl.textContent = '繰り返し終了日を正しく入力してください（開始日以降の日付が必要です）';
+      errEl.classList.remove('hidden'); return;
+    }
+    // 日付リストを生成
+    const dates = [];
+    let d = new Date(date + 'T00:00:00');
+    const endDate = new Date(repeatUntil + 'T00:00:00');
+    while (d <= endDate) {
+      dates.push(d.toISOString().slice(0, 10));
+      d.setDate(d.getDate() + 7);
+    }
+    // 上限チェック（最大52件）
+    if (dates.length > 52) {
+      errEl.textContent = `繰り返し件数が多すぎます（最大52回まで）。終了日を早めてください。`;
+      errEl.classList.remove('hidden'); return;
+    }
+
+    btn.disabled = true;
+    try {
+      for (let i = 0; i < dates.length; i++) {
+        btn.textContent = `${i + 1}/${dates.length}件追加中...`;
+        const result = await apiPost('add_lesson', {
+          lesson_date:    dates[i],
+          start_time:     start,
+          end_time:       end,
+          student_id:     stuId,
+          studio_id:      studio,
+          ticket_type_id: ticketType,
+          lesson_count:   1,
+          note,
+        });
+        // カレンダー表示中の日付分だけローカル state に反映
+        if (dates[i] === state.calDate) {
+          state.calLessons.push({
+            lesson_id:          result.lesson_id,
+            lesson_date:        dates[i],
+            start_time:         start,
+            end_time:           end,
+            student_id:         stuId,
+            student_name_input: stuName,
+            studio_id:          studio,
+            ticket_type_id:     ticketType,
+            lesson_count:       1,
+            note,
+            status: 'confirmed',
+          });
+        }
+      }
+      updateHeaderSub();
+      renderVerticalCalendar();
+      renderLessonList();
+      closeAddLessonDialog();
+      showToast(`${dates.length}件のレッスンを追加しました ✅`);
+    } catch(e) {
+      errEl.textContent = e.message || '追加に失敗しました';
+      errEl.classList.remove('hidden');
+    } finally {
+      btn.disabled = false; btn.textContent = '追加する';
+    }
+    return;
+  }
+
+  // 単発追加（既存の処理）
   btn.disabled = true; btn.textContent = '追加中...';
   try {
     const result = await apiPost('add_lesson', {
@@ -3199,7 +3354,6 @@ async function submitAddLesson() {
     });
 
     // ローカル state に追加してすぐ反映
-    const student = state.studentMap[String(stuId)] || {};
     const newLesson = {
       lesson_id:          result.lesson_id,
       lesson_date:        date,
