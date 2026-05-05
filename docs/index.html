@@ -381,10 +381,17 @@
 <div id="booking-overlay" class="overlay" onclick="onOverlayTap(event)">
   <div class="sheet">
 
-    <!-- ハンドルバー -->
-    <div class="w-10 h-1 bg-gray-200 rounded-full mx-auto mb-5"></div>
-
-    <h3 class="text-lg font-bold text-gray-800 mb-4">予約リクエスト</h3>
+    <!-- タイトル行（左: 見出し、右: × 閉じるボタン） -->
+    <div class="flex items-center justify-between mb-4">
+      <h3 class="text-lg font-bold text-gray-800">予約リクエスト</h3>
+      <button onclick="document.getElementById('booking-overlay').classList.remove('open')"
+        aria-label="閉じる"
+        style="width:40px;height:40px;border-radius:50%;background:#f3f4f6;border:none;
+               display:flex;align-items:center;justify-content:center;cursor:pointer;
+               font-size:20px;color:#6b7280;flex-shrink:0;">
+        ✕
+      </button>
+    </div>
 
     <!-- 選択日時（ハイライトカード） -->
     <div class="rounded-2xl p-4 mb-5"
