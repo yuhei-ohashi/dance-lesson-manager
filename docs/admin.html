@@ -248,6 +248,20 @@
       </button>
     </div>
 
+    <!-- ブロック管理ボタン -->
+    <div class="flex justify-end mb-2">
+      <button onclick="openBlocksSheet()"
+        class="flex items-center gap-1.5 text-xs text-gray-500 font-semibold
+               border border-gray-200 rounded-xl px-3 py-1.5 hover:bg-gray-50 transition-colors">
+        <svg width="13" height="13" viewBox="0 0 24 24" fill="none"
+             stroke="currentColor" stroke-width="2.5" stroke-linecap="round">
+          <rect x="3" y="11" width="18" height="11" rx="2"/>
+          <path d="M7 11V7a5 5 0 0 1 10 0v4"/>
+        </svg>
+        ブロック管理
+      </button>
+    </div>
+
     <!-- 週ヘッダー -->
     <div id="week-header" class="mb-4">
       <div class="flex items-center justify-between mb-2">
@@ -575,6 +589,125 @@
         <div class="text-3xl mb-2">🎉</div>
         <p class="text-gray-500 font-semibold text-sm">承認待ちはありません</p>
       </div>
+    </div>
+  </div>
+</div>
+
+<!-- ════════════════════════════════════════════════════════
+     ボトムシート: ブロック管理
+════════════════════════════════════════════════════════ -->
+<div id="blocks-sheet-backdrop" class="sheet-backdrop" onclick="closeBlocksSheet(event)">
+  <div class="sheet" onclick="event.stopPropagation()">
+    <div class="sheet-handle"></div>
+    <div class="px-4 pb-4">
+
+      <!-- ヘッダー -->
+      <div class="flex items-center justify-between mb-4">
+        <h2 class="text-base font-bold text-gray-800">ブロック管理（予約不可時間）</h2>
+        <button onclick="closeBlocksSheet()"
+          class="w-8 h-8 rounded-full bg-gray-100 flex items-center justify-center
+                 text-gray-500 hover:bg-gray-200 transition-colors text-lg leading-none">
+          ×
+        </button>
+      </div>
+
+      <!-- 追加フォームトグル -->
+      <button onclick="toggleBlockForm()"
+        class="w-full flex items-center justify-center gap-2 py-2.5 mb-4
+               border-2 border-dashed border-indigo-300 rounded-2xl
+               text-indigo-600 font-bold text-sm hover:bg-indigo-50 transition-colors">
+        <svg width="14" height="14" viewBox="0 0 24 24" fill="none"
+             stroke="currentColor" stroke-width="3" stroke-linecap="round">
+          <path d="M12 5v14M5 12h14"/>
+        </svg>
+        ブロックを追加
+      </button>
+
+      <!-- 追加フォーム（デフォルト非表示） -->
+      <div id="block-add-form" class="hidden mb-4 p-4 bg-gray-50 rounded-2xl space-y-3">
+        <div>
+          <label class="block text-xs font-bold text-gray-600 mb-1">ラベル <span class="text-red-500">*</span></label>
+          <input id="bl-label" type="text" placeholder="例: 移動"
+            class="w-full border-2 border-gray-200 rounded-xl px-3 py-2 text-sm
+                   focus:outline-none focus:border-indigo-500 transition-colors bg-white">
+        </div>
+        <div>
+          <label class="block text-xs font-bold text-gray-600 mb-1">補足（任意）</label>
+          <input id="bl-sub-label" type="text" placeholder="例: 仙台SS → 齊藤DG"
+            class="w-full border-2 border-gray-200 rounded-xl px-3 py-2 text-sm
+                   focus:outline-none focus:border-indigo-500 transition-colors bg-white">
+        </div>
+        <div>
+          <label class="block text-xs font-bold text-gray-600 mb-1">種類</label>
+          <select id="bl-type" onchange="onBlTypeChange(this.value)"
+            class="w-full border-2 border-gray-200 rounded-xl px-3 py-2 text-sm
+                   focus:outline-none focus:border-indigo-500 transition-colors bg-white">
+            <option value="recurring">毎週繰り返し</option>
+            <option value="once">特定日のみ</option>
+          </select>
+        </div>
+        <!-- 繰り返し: 曜日 -->
+        <div id="bl-dow-row">
+          <label class="block text-xs font-bold text-gray-600 mb-1">曜日</label>
+          <select id="bl-dow"
+            class="w-full border-2 border-gray-200 rounded-xl px-3 py-2 text-sm
+                   focus:outline-none focus:border-indigo-500 transition-colors bg-white">
+            <option value="0">月曜日</option>
+            <option value="1">火曜日</option>
+            <option value="2">水曜日</option>
+            <option value="3">木曜日</option>
+            <option value="4">金曜日</option>
+            <option value="5">土曜日</option>
+            <option value="6">日曜日</option>
+          </select>
+        </div>
+        <!-- 特定日: 日付 -->
+        <div id="bl-date-row" class="hidden">
+          <label class="block text-xs font-bold text-gray-600 mb-1">日付</label>
+          <input id="bl-date" type="date"
+            class="w-full border-2 border-gray-200 rounded-xl px-3 py-2 text-sm
+                   focus:outline-none focus:border-indigo-500 transition-colors bg-white">
+        </div>
+        <div class="flex gap-2">
+          <div class="flex-1">
+            <label class="block text-xs font-bold text-gray-600 mb-1">開始 <span class="text-red-500">*</span></label>
+            <select id="bl-start" onchange="onBlStartChange(this.value)"
+              class="w-full border-2 border-gray-200 rounded-xl px-3 py-2 text-sm
+                     focus:outline-none focus:border-indigo-500 transition-colors bg-white">
+              <option value="">--:--</option>
+            </select>
+          </div>
+          <div class="flex-1">
+            <label class="block text-xs font-bold text-gray-600 mb-1">終了 <span class="text-red-500">*</span></label>
+            <select id="bl-end"
+              class="w-full border-2 border-gray-200 rounded-xl px-3 py-2 text-sm
+                     focus:outline-none focus:border-indigo-500 transition-colors bg-white">
+              <option value="">--:--</option>
+            </select>
+          </div>
+        </div>
+        <p id="bl-err" class="text-red-500 text-xs hidden"></p>
+        <button id="bl-submit-btn" onclick="submitAddBlock()"
+          class="w-full py-2.5 grad text-white font-bold text-sm rounded-xl
+                 hover:opacity-90 transition-opacity">
+          追加する
+        </button>
+      </div>
+
+      <!-- ローディング -->
+      <div id="blocks-sheet-spinner" class="hidden text-center py-10">
+        <div class="w-8 h-8 border-4 border-indigo-500 border-t-transparent rounded-full spinner mx-auto"></div>
+      </div>
+
+      <!-- ブロック一覧 -->
+      <div id="blocks-sheet-list"></div>
+
+      <!-- 空状態 -->
+      <div id="blocks-sheet-empty" class="hidden text-center py-10">
+        <div class="text-3xl mb-2">🔓</div>
+        <p class="text-gray-500 font-semibold text-sm">ブロックは登録されていません</p>
+      </div>
+
     </div>
   </div>
 </div>
@@ -1003,6 +1136,7 @@ let state = {
   studentMap:      {},   // studentId → student object
   ticketTypeMap:   {},   // ticket_type_id → { label, color_hex, bg_hex, count }
   calLessons:      [],   // 現在表示中の日付のレッスン
+  allBlocks:       [],   // ブロック一覧（シートを開いたときに取得）
   allMemos:        [],
   pendingRequests: [],
   pendingTasks:    [],
@@ -1711,6 +1845,179 @@ async function reloadRequests() {
     state.pendingRequests = await apiFetch({ action:'booking_requests', secret:adminSecret }) || [];
     updateReqBanner();
   } catch(e) { /* silent */ }
+}
+
+// ─── ブロック管理シート ────────────────────────────────────────────────────────
+
+const DAY_NAMES_JA = ['月','火','水','木','金','土','日'];
+
+async function openBlocksSheet() {
+  document.getElementById('blocks-sheet-backdrop').classList.add('open');
+  document.getElementById('blocks-sheet-spinner').classList.remove('hidden');
+  document.getElementById('blocks-sheet-list').innerHTML = '';
+  document.getElementById('blocks-sheet-empty').classList.add('hidden');
+  // 追加フォームを閉じてリセット
+  document.getElementById('block-add-form').classList.add('hidden');
+  _resetBlockForm();
+  try {
+    state.allBlocks = await apiFetch({ action: 'blocks', secret: adminSecret }) || [];
+    renderBlocksSheet();
+  } catch(e) {
+    showToast('取得失敗: ' + e.message);
+  } finally {
+    document.getElementById('blocks-sheet-spinner').classList.add('hidden');
+  }
+}
+
+function closeBlocksSheet(e) {
+  if (e && e.target !== document.getElementById('blocks-sheet-backdrop')) return;
+  document.getElementById('blocks-sheet-backdrop').classList.remove('open');
+}
+
+function renderBlocksSheet() {
+  const blocks = state.allBlocks || [];
+  if (blocks.length === 0) {
+    document.getElementById('blocks-sheet-empty').classList.remove('hidden');
+    return;
+  }
+  document.getElementById('blocks-sheet-empty').classList.add('hidden');
+
+  const dow = b => DAY_NAMES_JA[Number(b.day_of_week)] || '';
+  document.getElementById('blocks-sheet-list').innerHTML = blocks.map(b => {
+    const typeLabel = (b.is_recurring === true || b.is_recurring === 'TRUE')
+      ? `毎週 ${dow(b)}曜日`
+      : `特定日 ${fmtDate(b.specific_date)}`;
+    return `
+    <div class="card mb-3" id="block-card-${b.block_id}">
+      <div class="flex items-start justify-between gap-2">
+        <div class="flex-1 min-w-0">
+          <p class="text-sm font-bold text-gray-900">${escapeHtml(b.label)}${b.sub_label ? ' <span class="text-gray-400 font-normal text-xs">/ ' + escapeHtml(b.sub_label) + '</span>' : ''}</p>
+          <p class="text-xs text-indigo-600 font-semibold mt-0.5">${typeLabel}</p>
+          <p class="text-xs text-gray-500 mt-0.5">${escapeHtml(b.start_time)} 〜 ${escapeHtml(b.end_time)}</p>
+        </div>
+        <button onclick="deleteBlock(${b.block_id})"
+          class="flex-shrink-0 px-3 py-1.5 text-xs font-bold text-red-500
+                 border border-red-200 rounded-xl hover:bg-red-50 transition-colors">
+          削除
+        </button>
+      </div>
+    </div>`;
+  }).join('');
+}
+
+function toggleBlockForm() {
+  const form = document.getElementById('block-add-form');
+  const isHidden = form.classList.contains('hidden');
+  form.classList.toggle('hidden', !isHidden);
+  if (isHidden) {
+    _resetBlockForm();
+    // 開始時刻 select を 30分刻みで生成
+    _populateStartSelect('bl-start', '');
+    document.getElementById('bl-end').innerHTML = '<option value="">--:--</option>';
+  }
+}
+
+function _resetBlockForm() {
+  document.getElementById('bl-label').value     = '';
+  document.getElementById('bl-sub-label').value = '';
+  document.getElementById('bl-type').value      = 'recurring';
+  document.getElementById('bl-dow').value       = '0';
+  document.getElementById('bl-date').value      = '';
+  document.getElementById('bl-err').classList.add('hidden');
+  onBlTypeChange('recurring');
+}
+
+function onBlTypeChange(val) {
+  document.getElementById('bl-dow-row').classList.toggle('hidden',  val !== 'recurring');
+  document.getElementById('bl-date-row').classList.toggle('hidden', val !== 'once');
+}
+
+function onBlStartChange(val) {
+  // 終了 select を「開始+30分以降」で再生成
+  const endSel = document.getElementById('bl-end');
+  endSel.innerHTML = '<option value="">--:--</option>';
+  if (!val) return;
+  const [h, m] = val.split(':').map(Number);
+  let totalMin = h * 60 + m + 30;
+  while (totalMin <= 24 * 60) {
+    const hh = String(Math.floor(totalMin / 60)).padStart(2, '0');
+    const mm = String(totalMin % 60).padStart(2, '0');
+    const v  = hh + ':' + mm;
+    const opt = document.createElement('option');
+    opt.value = v; opt.textContent = v;
+    if (totalMin === h * 60 + m + 30) opt.selected = true;
+    endSel.appendChild(opt);
+    totalMin += 30;
+  }
+}
+
+async function submitAddBlock() {
+  const label    = document.getElementById('bl-label').value.trim();
+  const subLabel = document.getElementById('bl-sub-label').value.trim();
+  const type     = document.getElementById('bl-type').value;
+  const dow      = document.getElementById('bl-dow').value;
+  const date     = document.getElementById('bl-date').value;
+  const start    = document.getElementById('bl-start').value;
+  const end      = document.getElementById('bl-end').value;
+  const errEl    = document.getElementById('bl-err');
+  const btn      = document.getElementById('bl-submit-btn');
+
+  errEl.classList.add('hidden');
+  if (!label)             { errEl.textContent = 'ラベルを入力してください'; errEl.classList.remove('hidden'); return; }
+  if (!start)             { errEl.textContent = '開始時刻を選択してください'; errEl.classList.remove('hidden'); return; }
+  if (!end)               { errEl.textContent = '終了時刻を選択してください'; errEl.classList.remove('hidden'); return; }
+  if (type === 'once' && !date) { errEl.textContent = '日付を入力してください'; errEl.classList.remove('hidden'); return; }
+
+  btn.disabled = true; btn.textContent = '追加中...';
+  try {
+    const isRecurring = type === 'recurring';
+    const result = await apiPost('block_add', {
+      label,
+      sub_label:     subLabel,
+      is_recurring:  isRecurring,
+      day_of_week:   Number(dow),
+      specific_date: isRecurring ? '' : date,
+      start_time:    start,
+      end_time:      end,
+    });
+    // ローカル state に即反映
+    const newBlock = {
+      block_id:      result.block_id,
+      label, sub_label: subLabel,
+      is_recurring:  isRecurring,
+      day_of_week:   Number(dow),
+      specific_date: isRecurring ? '' : date,
+      start_time:    start,
+      end_time:      end,
+      is_active:     true,
+    };
+    state.allBlocks = state.allBlocks || [];
+    state.allBlocks.push(newBlock);
+    renderBlocksSheet();
+    document.getElementById('block-add-form').classList.add('hidden');
+    showToast('ブロックを追加しました ✅');
+  } catch(e) {
+    errEl.textContent = e.message || '追加に失敗しました';
+    errEl.classList.remove('hidden');
+  } finally {
+    btn.disabled = false; btn.textContent = '追加する';
+  }
+}
+
+async function deleteBlock(blockId) {
+  if (!confirm('このブロックを削除しますか？')) return;
+  try {
+    await apiPost('block_delete', { blockId });
+    state.allBlocks = (state.allBlocks || []).filter(b => b.block_id !== blockId);
+    const card = document.getElementById('block-card-' + blockId);
+    if (card) card.remove();
+    if ((state.allBlocks || []).length === 0) {
+      document.getElementById('blocks-sheet-empty').classList.remove('hidden');
+    }
+    showToast('ブロックを削除しました');
+  } catch(e) {
+    showToast('削除に失敗しました: ' + e.message);
+  }
 }
 
 // ─── 生徒メモタブ ──────────────────────────────────────────────────────────────
