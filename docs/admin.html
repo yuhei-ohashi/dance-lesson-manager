@@ -1079,10 +1079,13 @@ async function apiFetch(params) {
 
 /** GAS Web App を POST で呼ぶ */
 async function apiPost(action, body) {
+  // GASはOPTIONSプリフライトを返さないため、application/jsonだとCORSエラーになる。
+  // text/plainはプリフライト不要の「シンプルリクエスト」として扱われ、
+  // GASはe.postData.contentsでbodyを読み取れるため動作に影響なし。
   const res = await fetch(API_URL, {
     method: 'POST',
     redirect: 'follow',
-    headers: { 'Content-Type': 'application/json' },
+    headers: { 'Content-Type': 'text/plain' },
     body: JSON.stringify({ action, secret: adminSecret, ...body }),
   });
   if (!res.ok) throw new Error('HTTP ' + res.status);
